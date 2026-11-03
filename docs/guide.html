@@ -11,7 +11,7 @@
 </div></header>
 
 <main><div class="layout">
-<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#subtitles">Subtitles</a><a href="#iptv">IPTV</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
+<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#subtitles">Subtitles</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
 <article>
 <h1>User guide</h1>
 <p class="sub">Everything you need to use FMHYPlay on a TV or a phone.</p>
@@ -36,6 +36,23 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <li>Hold <kbd>OK</kbd> (long-press on a phone) on a site for favorites and mirrors.</li>
 </ul>
 <p>When a site starts a video, FMHYPlay takes it over and opens the native player. <kbd>Back</kbd> returns to the site, and a small <b>Native player</b> button in the corner brings the player back.</p>
+
+<h2 id="favorites">Favorites and My list</h2>
+<p>Mark what you use most so it is one press away.</p>
+<table><tr><th>What</th><th>How to mark it</th><th>Where it shows up</th></tr>
+<tr><td>A <b>site</b></td><td>Hold <kbd>OK</kbd> (long-press on a phone) on the site, then <i>Add to favorites</i>. The same menu removes it.</td><td>The <b>Favorites</b> row on Home</td></tr>
+<tr><td>A <b>title</b> (movie or series)</td><td>Hold <kbd>OK</kbd> or long-press its poster. A message confirms <i>Added to My list</i>; do it again to remove it. On the title page you can also press <i>+ My list</i>.</td><td>The <b>My list</b> row on Home</td></tr>
+<tr><td>An <b>IPTV channel</b></td><td>Hold <kbd>OK</kbd> or press <kbd>Menu</kbd> on the channel's card, then <i>Add to favorites</i> (a star appears on its name).</td><td>The <b>Favorites</b> row on the IPTV tab</td></tr></table>
+<p><i>Settings, Your data</i> clears favorites, watch history, IPTV history and My list.</p>
+
+<h2 id="addsite">Add your own site</h2>
+<p>Any website can live in the app, even one that is not in the FMHY lists.</p>
+<ol>
+<li>On <b>Home</b>, find the <b>Favorites</b> row and press the <b>+ Add a site</b> card.</li>
+<li>Type or paste the address (for example <code>example.com</code>; <code>https://</code> is added for you) and press <i>Add</i>.</li>
+<li>The site appears in Favorites. Open it like any other: the native player, ad blocking, the remote cursor and the Servers, Quality and Episodes buttons all work on it.</li>
+</ol>
+<p>Hold <kbd>OK</kbd> on it to remove it from your favorites.</p>
 
 <h2 id="remote">TV remote</h2>
 <table><tr><th>Where</th><th>Key</th><th>What it does</th></tr>
@@ -83,7 +100,20 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <li><b>Continue watching</b> and <b>Working</b> rows: the last channels you watched, and every channel that has played for you. Hold <kbd>OK</kbd> on a card to remove it or star it.</li>
 <li><b>Offline channels are hidden.</b> A background check tests channels a few at a time and remembers the result (working for a week, not working for two days). A channel that fails when you press play is hidden at once. <i>Settings, Hide offline channels</i> turns this off and <i>Check channels now</i> tests everything again.</li>
 <li><b>Search</b> by typing or by voice, and filter inside any list.</li>
-<li><b>+ Playlist</b> adds your own M3U or M3U8 link; its channels appear under <i>My playlists</i>. Remove a playlist in Settings.</li>
+<li><b>My playlists</b> is the first row: everything you added yourself (see below).</li>
+<li><b>+ Playlist</b> (top right) adds your own playlist or a single stream link.</li>
+</ul>
+
+<h2 id="addstream">Add a stream or playlist</h2>
+<p>Press <b>+ Playlist</b> on the IPTV tab (or <i>Settings, Add a playlist or stream</i>), paste a link and press <i>Add</i>. Two kinds of link work:</p>
+<table><tr><th>You paste</th><th>You get</th></tr>
+<tr><td>A <b>playlist</b>: an M3U file that lists channels (<code>#EXTINF</code> lines)</td><td>Every channel in it, with its name, logo and group, in the <b>My playlists</b> row at the top of the IPTV tab</td></tr>
+<tr><td>A single <b>stream</b>: an <code>.m3u8</code> (HLS) link, for example a camera, a live feed or a channel your provider gave you</td><td>One channel in <b>My playlists</b>, named after the address (for example <code>cdn.example.com · news</code>). It plays in the native player like any other.</td></tr></table>
+<ul>
+<li>Links on your own network (a PC, a NAS, a media server) work too; they never go through WARP.</li>
+<li>Playlists are downloaded again every 12 hours and when you press <i>Settings, Refresh IPTV channels</i>. A single stream is kept as it is.</li>
+<li>Hold <kbd>OK</kbd> on a card in My playlists to star it. Remove a whole playlist in <i>Settings</i>: each one has its own row (press it, then <i>Remove</i>).</li>
+<li>If it says <i>Not a playlist or stream link</i>, open the link in a browser first: it should start with <code>#EXTM3U</code>.</li>
 </ul>
 
 <h2 id="sources">Your own sources</h2>

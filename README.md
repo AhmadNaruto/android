@@ -49,7 +49,8 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 - A directory of streaming sites that tracks the [FMHY](https://github.com/fmhy/edit) lists and refreshes itself
 - Movie and series catalog (posters, ratings, episodes) from Cinemeta, with search by typing or by voice
 - Opens a title's own page on many sites instead of searching for it
-- Continue watching, favorites, My list
+- Continue watching, **favorites** for sites and channels (hold OK to mark one), and My list for titles
+- **Add your own site**: any address becomes a favorite with the same player, ad blocking and remote control
 - Dark pages (WebView dark mode), a remote-friendly cursor mode, and focus navigation designed for D-pads
 
 **Network and privacy**
@@ -60,7 +61,8 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 **IPTV**
 - More than 11,000 public channels from [iptv-org](https://github.com/iptv-org/iptv), grouped by category and country, with logos
 - A background check hides channels that are offline, and a Working list remembers the ones that played for you
-- Add your own playlists by URL, star channels, filter and search by voice
+- **Add your own playlist or a single `.m3u8` stream link**; they sit in a My playlists row at the top. Links on your own network work too
+- Star channels, filter, and search by voice
 - Optional extra source list that you host yourself (see [docs](https://fmhyplay.github.io/android/guide.html#sources))
 
 **Engineering**
