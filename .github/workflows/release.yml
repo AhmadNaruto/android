@@ -26,8 +26,9 @@ jobs:
 
       - name: Android SDK
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-34" "build-tools;35.0.0" > /dev/null
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;35.0.0" > /dev/null
 
       - name: Build the WARP helper
         run: warp/build.sh
