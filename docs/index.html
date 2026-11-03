@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FMHYPlay: any streaming site, a real player</title>
+<meta name="description" content="A TV-first Android app that finds the video a streaming site plays and plays it in a native player, with ad blocking, an in-app WARP tunnel, IPTV and a remote-friendly interface.">
+<meta property="og:title" content="FMHYPlay: any streaming site, a real player"><meta property="og:description" content="A TV-first Android app that finds the video a streaming site plays and plays it in a native player, with ad blocking, an in-app WARP tunnel, IPTV and a remote-friendly interface."><meta property="og:image" content="banner.png">
+<meta name="theme-color" content="#120e1a"><link rel="icon" href="icon.png"><link rel="stylesheet" href="style.css">
+</head><body>
+<header class="nav"><div class="in">
+<a class="brand" href="index.html"><img src="icon.png" alt=""><span>FMHY<b>Play</b></span></a>
+<nav><a href="index.html" class="on">Overview</a><a href="guide.html">User guide</a><a href="build.html">Build</a><a href="https://github.com/fmhyplay/android">GitHub</a></nav>
+</div></header>
+
+<main>
+<section class="hero">
+<h1>Any streaming site,<br>a <b>real player</b>.</h1>
+<p class="lead">FMHYPlay opens the sites you choose, finds the video they play and plays it natively: hardware decoding, nothing painted over the picture, and a remote-friendly interface.</p>
+<a class="btn p" href="https://github.com/fmhyplay/android/releases/latest">Download</a><a class="btn s" href="guide.html">User guide</a><a class="btn s" href="build.html">Build from source</a>
+<img class="shot" src="screenshots/player.jpg" alt="The native player">
+</section>
+
+<h2>What it does</h2>
+<p class="sub">Streaming sites are built for a mouse. FMHYPlay keeps the site and replaces the part that does not work on a TV.</p>
+<div class="grid">
+<div class="card"><h3>Native player</h3><p>Finds the stream the page starts and plays it in ExoPlayer with the hardware decoder. Quality with frame rate, audio, subtitles, speed and zoom.</p></div>
+<div class="card"><h3>Drives the site for you</h3><p>The player's Servers, Quality and Episodes buttons press the site's own buttons, even inside cross-origin iframes. You never go back to the page.</p></div>
+<div class="card"><h3>Subtitles built in</h3><p>OpenSubtitles search by title and episode, side-loaded without losing your place.</p></div>
+<div class="card"><h3>Built for the remote</h3><p>Focus navigation designed for D-pads, a cursor mode for stubborn pages, and a TV launcher. On a phone: brightness and volume swipes, double-tap to skip.</p></div>
+<div class="card"><h3>Ad blocking and WARP</h3><p>Domain, pop-up and redirect blocking, plus an optional in-app Cloudflare WARP tunnel for the app's traffic only, with no VPN permission.</p></div>
+<div class="card"><h3>IPTV</h3><p>More than 11,000 public channels by category and country. Offline ones are hidden by a background check; add your own playlists by URL.</p></div>
+</div>
+
+<h2>On the TV</h2>
+<p class="sub">Browse sites and a movie and series catalog, search by typing or voice, and pick up where you left off.</p>
+<div class="two"><img class="shot" src="screenshots/home.jpg" alt="Home"><img class="shot" src="screenshots/sites.jpg" alt="Sites"></div>
+<div class="two" style="margin-top:16px"><img class="shot" src="screenshots/iptv.jpg" alt="IPTV"><img class="shot" src="screenshots/quality.jpg" alt="Quality"></div>
+
+<h2>On the phone</h2>
+<p class="sub">The same app and the same player, on a touch screen.</p>
+<div class="phones"><img src="screenshots/phone-home.jpg" alt="Phone home"><img src="screenshots/phone-player.jpg" alt="Phone player" style="height:240px;align-self:center"></div>
+
+<h2>Under the hood</h2>
+<div class="grid">
+<div class="card"><h3>No Gradle</h3><p>Plain Java and the Android SDK command-line tools, about 11 MB per APK. A clean clone builds with two commands.</p></div>
+<div class="card"><h3>Signed releases</h3><p>Pushing a tag builds both APKs on GitHub Actions, signs them with the project key and publishes a release with checksums.</p></div>
+<div class="card"><h3>Private by design</h3><p>No accounts, no analytics, no telemetry. The tunnel is a userspace WireGuard client that only carries this app's traffic.</p></div>
+</div>
+</main>
+<footer>MIT licensed. FMHYPlay does not host or distribute any media and is not affiliated with FMHY, Cloudflare, Stremio, OpenSubtitles or iptv-org.<br>
+<a href="https://github.com/fmhyplay/android">Source</a> · <a href="https://github.com/fmhyplay/android/releases/latest">Releases</a> · <a href="https://github.com/fmhyplay/android/blob/main/THIRD_PARTY.md">Third-party notices</a></footer>
+</body></html>
