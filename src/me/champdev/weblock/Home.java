@@ -492,6 +492,22 @@ public class Home extends Activity {
         if (!status.isEmpty()) col.addView(note(status));
         else if (App.tv && !Iptv.history().isEmpty()) col.addView(note("Hold OK on a channel to remove it or add it to favorites"));
         int cols = App.tv ? 6 : 3;
+        // What you added yourself (playlists and single stream links) comes first
+        List<Iptv.Channel> own = Iptv.list("mine", "");
+        if (!own.isEmpty()) {
+            col.addView(heading("My playlists  \u00B7  " + own.size()));
+            LinearLayout mr = row();
+            for (Iptv.Channel c : own.subList(0, Math.min(14, own.size()))) mr.addView(channelCard(c, cols, "mine"));
+            if (own.size() > 14) {
+                TextView more = text("All  " + own.size() + "  \u203A", sp(17, 15), TEXT, true);
+                more.setGravity(Gravity.CENTER);
+                more.setLayoutParams(cardParams(squareDp(cols), squareDp(cols)));
+                more.setBackground(rounded(0xFF2A2236, dp(14)));
+                focusable(more, dp(14));
+                more.setOnClickListener(v -> openIptv("mine", "", "My playlists", false));
+                mr.addView(more);
+            }
+        }
         // Recently watched channels and stars, as rows like Continue watching on Home (movies stay on Home, channels stay here)
         List<Iptv.Channel> recent = Iptv.history();
         if (!recent.isEmpty()) {
@@ -676,7 +692,7 @@ public class Home extends Activity {
     /** Ask for an M3U link, download it, and show its channels under My playlists. */
     void addPlaylistDialog() {
         EditText in = WebActivity.field(this, "https://example.com/playlist.m3u", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        new AlertDialog.Builder(this).setTitle("Add IPTV playlist").setMessage("A link to an M3U or M3U8 playlist").setView(WebActivity.box(this, in))
+        new AlertDialog.Builder(this).setTitle("Add a playlist or stream").setMessage("A playlist (M3U) or a single stream link (.m3u8)").setView(WebActivity.box(this, in))
             .setPositiveButton("Add", (d, w) -> {
                 String url = in.getText().toString().trim();
                 if (url.isEmpty()) return;
@@ -754,7 +770,7 @@ public class Home extends Activity {
         col.addView(settingRow("Extra source list", "More playlists and title links, from a text file you choose (it starts on the project's own list).", extrasValue, v -> extrasDialog()));
         extrasValue.setText(Iptv.extrasUrl().isEmpty() ? "None" : Iptv.extrasUrl().equals(Iptv.DEFAULT_EXTRAS) ? "Default" : "Custom");
         extrasValue.setTextColor(Iptv.extrasUrl().isEmpty() ? MUTED : GREEN);
-        col.addView(settingRow("Add IPTV playlist", "Paste a link to your own M3U playlist. Its channels show under My playlists.", null, v -> addPlaylistDialog()));
+        col.addView(settingRow("Add a playlist or stream", "Paste a playlist or a single stream link (.m3u8). It shows under My playlists.", null, v -> addPlaylistDialog()));
         for (String url : Iptv.mine()) {
             int n = Iptv.parse(Iptv.read(Iptv.mineFile(url)), false).size();
             col.addView(settingRow(url.replaceFirst("(?i)^https?://", ""), n + (n == 1 ? " channel" : " channels") + ". Press to remove.", null, v ->
@@ -874,10 +890,14 @@ public class Home extends Activity {
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
         ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.ic_play);
+        logo.setImageResource(R.drawable.ic_logo);
         logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
         top.addView(logo, new LinearLayout.LayoutParams(u(44, 30), u(44, 30)));
         TextView name = text("FMHYPlay", sp(26, 20), TEXT, true);
+        // Written like the project banner: FMHY in white, Play in the accent red
+        android.text.SpannableString brand = new android.text.SpannableString("FMHYPlay");
+        brand.setSpan(new android.text.style.ForegroundColorSpan(ACCENT), 4, 8, 0);
+        name.setText(brand);
         name.setPadding(dp(4), 0, 0, 0);
         top.addView(name);
         h.addView(top);

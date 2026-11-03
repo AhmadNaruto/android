@@ -328,7 +328,7 @@ final class Iptv {
             String links = special("deeplinks");
             if (!links.isEmpty() && saveText(links, "deeplinks.json")) Sites.reloadDeeplinks();
             for (int i = 0; i < adultSources().size(); i++) save(adultSources().get(i)[1], "iptv-adult" + i + ".m3u");
-            for (String url : mine()) save(url, mineFile(url));
+            for (String url : mine()) fetchMine(url);
             synchronized (Iptv.class) { cache = null; }
             return ok;
         } finally {
@@ -361,13 +361,43 @@ final class Iptv {
         return false;
     }
 
-    /** Downloads and adds a playlist; null when it worked, else what went wrong. Call off the main thread. */
+    /**
+     * Downloads one of your playlists. A bare stream link (an HLS playlist, not a list of channels) becomes a playlist of one channel,
+     * named after its address, so a single .m3u8 can be added the same way.
+     */
+    static boolean fetchMine(String url) {
+        try {
+            String text = download(url);
+            if (!text.trim().startsWith("#EXTM3U")) return false;
+            if (parse(text, false).isEmpty() && text.contains("#EXT-X-"))
+                text = "#EXTM3U\n#EXTINF:-1 group-title=\"My streams\"," + streamName(url) + "\n" + url + "\n";
+            try (FileOutputStream out = new FileOutputStream(file(mineFile(url)))) { out.write(text.getBytes(StandardCharsets.UTF_8)); }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /** "cdn.example.com · news" for https://cdn.example.com/live/news/index.m3u8: the host plus the last part of the path that says something. */
+    static String streamName(String url) {
+        Uri u = Uri.parse(url);
+        String host = String.valueOf(u.getHost()).replaceFirst("^www\\.", ""), pick = "";
+        List<String> seg = u.getPathSegments();
+        for (int i = seg.size() - 1; i >= 0 && pick.isEmpty(); i--) {
+            String part = seg.get(i).replaceAll("(?i)\\.(m3u8?|mpd|ts)$", "");
+            if (!part.matches("(?i)index|master|playlist|manifest|stream|live|chunklist.*|\\d+")) pick = part;
+        }
+        String name = pick.isEmpty() ? host : host + " \u00B7 " + pick;
+        return name.codePoints().anyMatch(Character::isLetter) ? name : "Stream " + name;   // a name needs a letter, an IP address has none
+    }
+
+    /** Downloads and adds a playlist or a single stream link; null when it worked, else what went wrong. Call off the main thread. */
     static String addPlaylist(String raw) {
         String url = raw.trim();
         if (!url.matches("(?i)https?://.+")) url = "https://" + url;
         List<String> now = mine();
         if (now.contains(url)) return "Already added";
-        if (!save(url, mineFile(url))) return "Not an M3U playlist, or the link can't be reached";
+        if (!fetchMine(url)) return "Not a playlist or stream link, or it can't be reached";
         int n = parse(read(mineFile(url)), false).size();
         if (n == 0) { file(mineFile(url)).delete(); return "No channels in that playlist"; }
         now.add(url);
@@ -492,7 +522,7 @@ final class Iptv {
         Map<String, List<Channel>> m = new LinkedHashMap<>();
         for (Channel c : all()) {
             String[] keys = by.equals("cat") ? c.cats : new String[]{c.country};
-            for (String k : keys) if (!k.isEmpty()) m.computeIfAbsent(k, x -> new ArrayList<>()).add(c);
+            for (String k : keys) if (!k.isEmpty() && !(by.equals("cat") && k.equals(MINE))) m.computeIfAbsent(k, x -> new ArrayList<>()).add(c);
         }
         List<Map.Entry<String, List<Channel>>> es = new ArrayList<>(m.entrySet());
         if (by.equals("cat")) es.sort((a, b) -> a.getKey().compareToIgnoreCase(b.getKey()));
@@ -611,6 +641,11 @@ final class Iptv {
         switch (type) {
             case "fav": return favorites();
             case "working": return working();
+            case "mine": {
+                List<Channel> own = new ArrayList<>();
+                for (Channel c : all()) if (c.cats[0].equals(MINE)) own.add(c);
+                return own;
+            }
             case "adult": return bySource(adult());
             case "cat": case "country": {
                 List<Channel> g = groups(type).get(key);
