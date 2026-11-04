@@ -120,8 +120,6 @@ public class WebActivity extends Activity {
     static WebActivity active;
     final java.util.Map<String, String[]> servers = new java.util.LinkedHashMap<>(), qualities = new java.util.LinkedHashMap<>();
     String pendingServer;
-    int[] pendingEpisode;      // season, episode the native player asked for: pressed on the page when we resume
-    boolean episodeFound;
     volatile boolean scanDone;
     // Title to type into the site's own search box (set when you tap Watch on a movie or episode); cleared once typed
     volatile String pendingQuery;
@@ -421,13 +419,6 @@ public class WebActivity extends Activity {
         pendingServer = key;
     }
 
-    /** From the native player's Episodes list: same trip as a server switch, but the page is told to open that season and episode. */
-    void switchEpisode(int season, int episode) {
-        pendingEpisode = new int[]{season, episode};
-    }
-
-    final Runnable episodeMissing = () -> { if (!episodeFound && !isFinishing()) toast("Couldn't find that episode on the page, pick it there"); };
-
     static String header(Map<String, String> m, String name) {
         for (Map.Entry<String, String> e : m.entrySet()) if (e.getKey().equalsIgnoreCase(name) && !e.getValue().isEmpty()) return e.getValue();
         return null;
@@ -560,10 +551,6 @@ public class WebActivity extends Activity {
             runOnUiThread(WebActivity.this::playNative);
         }
 
-        @JavascriptInterface public void episodeFound() {
-            episodeFound = true;
-        }
-
         @JavascriptInterface public void searched() {
             pendingQuery = null;
         }
@@ -640,6 +627,9 @@ public class WebActivity extends Activity {
     @Override protected void onActivityResult(int req, int res, Intent data) {
         if (req == REQ_PLAY) {
             // Back from the player: offer the way back (a server switch keeps the page going, it is about to load the new stream)
+            // The episode the catalog opened may not be the one picked on the site from here on
+            getIntent().removeExtra("season");
+            getIntent().removeExtra("episode");
             web.evaluateJavascript(CHIP, null);
             if (pendingServer == null) web.evaluateJavascript("postMessage({fp:'pause'},'*')", null);
             return;
@@ -773,15 +763,6 @@ public class WebActivity extends Activity {
             pendingServer = null;
             sniffer.fresh();
             web.evaluateJavascript("postMessage({fp:'click',k:" + JSONObject.quote(k) + "},'*')", null);
-        }
-        if (pendingEpisode != null) {
-            int[] e = pendingEpisode;
-            pendingEpisode = null;
-            episodeFound = false;
-            sniffer.switching();
-            web.evaluateJavascript("postMessage({fp:'episode',s:" + e[0] + ",e:" + e[1] + "},'*')", null);
-            App.main.removeCallbacks(episodeMissing);
-            App.main.postDelayed(episodeMissing, 8000);
         }
         web.onResume();
         web.resumeTimers();

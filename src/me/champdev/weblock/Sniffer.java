@@ -39,12 +39,15 @@ final class Sniffer {
         this.onFound = onFound;
     }
 
-    /** A new page (host or path changed) starts over; the same page keeps what it has. Main thread. */
+    /**
+     * A new page (host or path changed) starts over; the same page keeps what it has. Main thread.
+     * After a hand-off the site's player is still alive while the next episode loads, so the stream just watched stays ignored until a different one shows up.
+     */
     void page(String url) {
         String k = path(url);
         if (k.equals(key)) return;
         key = k;
-        fresh();
+        if (handed.isEmpty()) fresh(); else switching();
     }
 
     /** Forget what was seen and watch for the next stream (new page, or another server picked). */
@@ -55,7 +58,7 @@ final class Sniffer {
         handed = "";
     }
 
-    /** Another episode was picked: forget the current stream but ignore it (its playlists, its folder) until a different one shows up. */
+    /** Another episode is coming: forget the current stream but ignore it (its playlists, its folder) until a different one shows up. */
     void switching() {
         stale.clear();
         for (Hit h : manifests) stale.add(path(h.url));

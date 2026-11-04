@@ -1,0 +1,81 @@
+// javac -d /tmp/sniffer $(find test/stubs -name '*.java') src/me/champdev/weblock/Sniffer.java test/SnifferTest.java && java -cp /tmp/sniffer me.champdev.weblock.SnifferTest
+package me.champdev.weblock;
+
+import android.os.Handler;
+
+public class SnifferTest {
+    static int fails;
+
+    static void check(String name, Object got, Object want) {
+        if (!got.equals(want)) { fails++; System.out.println("FAIL " + name + ": got " + got + " want " + want); }
+    }
+
+    /** A sniffer that counts how many times it offered a stream to the player. */
+    static final class Rig {
+        int found;
+        final Sniffer s = new Sniffer(() -> { }, () -> found++);
+
+        Rig play(String page, String stream) {
+            s.page(page);
+            s.request(stream, null);
+            Handler.drain();
+            return this;
+        }
+    }
+
+    static final String SITE1 = "https://site.example/watch/1", SITE2 = "https://site.example/watch/2";
+    static final String X = "https://cdn.a/hls/ep1/master.m3u8", X_VARIANT = "https://cdn.a/hls/ep1/720/index.m3u8";
+    static final String Y = "https://cdn.b/hls/ep2/master.m3u8";
+
+    public static void main(String[] a) {
+        Rig r = new Rig().play(SITE1, X);
+        check("first stream is offered once", r.found, 1);
+        check("and it is the one asked for", r.s.best().url, X);
+
+        r.s.handedOff(r.s.best());
+        r.s.request(X, null);
+        r.s.request(X_VARIANT, null);
+        Handler.drain();
+        check("the stream handed over stays quiet, with its own playlists", r.found, 1);
+
+        r.s.page(SITE2);
+        r.s.request(X, null);
+        r.s.request(X_VARIANT, null);
+        Handler.drain();
+        check("next episode's page: the old player's requests are not mistaken for it", r.found, 1);
+        r.s.request(Y, null);
+        Handler.drain();
+        check("a different stream is offered", r.found, 2);
+        check("and it is the new one", r.s.best().url, Y);
+
+        // No hand-off yet: nothing was left behind, so the same stream asked for again after a page change still counts
+        Rig early = new Rig();
+        early.s.page(SITE1);
+        early.s.request(X, null);
+        early.s.page(SITE2);
+        early.s.request(X, null);
+        Handler.drain();
+        check("a page change before any hand-off still takes the stream", early.found, 1);
+        check("and keeps it for the menu", early.s.has(), true);
+
+        Rig back = new Rig().play(SITE1, X);
+        back.s.handedOff(back.s.best());
+        back.s.request(Y, null);
+        Handler.drain();
+        check("after Back, a stream from somewhere else is offered", back.found, 2);
+
+        // Files at a host root: the old one is blocked by its exact path only, never the whole host
+        Rig root = new Rig().play(SITE1, "https://cdn.c/ep1.m3u8");
+        root.s.handedOff(root.s.best());
+        root.s.page(SITE2);
+        root.s.request("https://cdn.c/ep1.m3u8", null);
+        Handler.drain();
+        check("host root: the old file is ignored", root.found, 1);
+        root.s.request("https://cdn.c/ep2.m3u8", null);
+        Handler.drain();
+        check("host root: another file there is offered", root.found, 2);
+
+        System.out.println(fails == 0 ? "all passed" : fails + " failed");
+        if (fails > 0) System.exit(1);
+    }
+}

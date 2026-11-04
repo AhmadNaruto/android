@@ -83,16 +83,15 @@ public class PlayerActivity extends Activity {
     long hideAt;
     LinearLayout chipRow;
     final List<LinearLayout> chips = new ArrayList<>();
-    LinearLayout chipServers, chipQuality, chipAudio, chipSubs, chipSpeed, chipEpisodes, chipZoom;
+    LinearLayout chipServers, chipQuality, chipAudio, chipSubs, chipSpeed, chipZoom;
     String chipLayoutKey = "";
     LinearLayout topBar, bottomBar;      // padded for notches; the centre buttons stay centred
     View rew, fwd;                       // the -10 / +10 buttons beside play
-    TextView epLine;                     // "S1 E3 · episode name" under the title
+    TextView epLine;                     // "Season 1 · Episode 3" under the title
     LinearLayout gesture;                // brightness / volume swipe indicator
     ImageView gestureIcon;
     ProgressBar gestureBar;
     TextView gestureText;
-    Catalog.Title series;                // episode list for a series (Cinemeta), once loaded
     int zoom = 0;   // Fit at the start of every playback (the choice is not remembered)
     static final String[] ZOOMS = {"Fit", "Fill", "Stretch", "16:9", "4:3"};
     MediaItem.Builder mediaItem;   // kept so an OpenSubtitles pick can be added to the playing stream
@@ -310,7 +309,6 @@ public class PlayerActivity extends Activity {
         chipRow.setOrientation(LinearLayout.VERTICAL);
         chipRow.setGravity(Gravity.CENTER_HORIZONTAL);
         chipRow.setPadding(0, dp(6), 0, 0);
-        chipEpisodes = chip(R.drawable.ic_p_episodes, this::pickEpisode);
         chipServers = chip(R.drawable.ic_p_servers, () -> pickServer());
         chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
         chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, "Audio", false));
@@ -567,8 +565,6 @@ public class PlayerActivity extends Activity {
         float sp = player.getPlaybackParameters().speed;
         show(chipSpeed, true, "Speed \u00B7 " + speedLabel(sp), sp != 1f, speedLabel(sp));
         show(chipZoom, true, "Zoom \u00B7 " + ZOOMS[zoom], zoom != 0, ZOOMS[zoom]);
-        int[] pe = pageEpisode();
-        show(chipEpisodes, series != null, "Episodes", false, pe == null ? "" : (pe[0] > 0 ? "S" + pe[0] : "") + "E" + pe[1]);
         fitChips();
     }
 
@@ -722,7 +718,6 @@ public class PlayerActivity extends Activity {
         player.prepare();
         player.play();
         episodeLine();
-        loadSeries();
         showControls();
         App.main.post(tick);
     }
@@ -1008,85 +1003,13 @@ public class PlayerActivity extends Activity {
         return s > 0 || e > 0 ? new int[]{s, e} : null;
     }
 
-    /** Fetches the show's seasons and episodes (Cinemeta) when this looks like a series, so the Episodes button can appear. */
-    void loadSeries() {
-        Intent in = getIntent();
-        // A series page is known by the catalog screen, by an episode in its URL or title, or by a /tv/ or /series/ page (Movy shows every episode on /tv/<id>)
-        boolean tvPage = String.valueOf(in.getStringExtra("pageUrl")).matches("(?i).*://[^/]+(/[a-z]{2})?/(tv|series|show|shows|serie|tvshow)/.*");
-        if (!in.hasExtra("pageTitle") || !(in.getBooleanExtra("series", false) || pageEpisode() != null || tvPage)) return;
-        String imdb = in.getStringExtra("imdb");
-        String name = History.cleanTitle(String.valueOf(in.getStringExtra("pageTitle")), String.valueOf(in.getStringExtra("site")));
-        App.io.execute(() -> {
-            String id = imdb == null || imdb.isEmpty() ? Subs.imdbFor(name, true) : imdb;
-            if (id.isEmpty()) return;
-            Catalog.Title t = new Catalog.Title();
-            t.id = id;
-            t.type = "series";
-            t.name = name;
-            Catalog.fill(t);
-            runOnUiThread(() -> {
-                if (isFinishing() || t.episodes.isEmpty()) return;
-                series = t;
-                refreshChips();
-                episodeLine();
-            });
-        });
-    }
-
-    // "Season 1 · Episode 3 · name" under the title
+    // "Season 1 · Episode 3" under the title
     void episodeLine() {
         int[] pe = pageEpisode();
         if (pe == null) { epLine.setVisibility(View.GONE); return; }
         String label = (pe[0] > 0 ? "Season " + pe[0] + "  \u00B7  " : "") + "Episode " + pe[1];
-        if (series != null) for (Catalog.Episode e : series.episodes) if (e.season == pe[0] && e.number == pe[1] && !e.title.isEmpty()) label += "  \u00B7  " + e.title;
         epLine.setText(label);
         epLine.setVisibility(View.VISIBLE);
-    }
-
-    void pickEpisode() {
-        if (series == null) return;
-        java.util.TreeMap<Integer, Integer> seasons = new java.util.TreeMap<>();
-        for (Catalog.Episode e : series.episodes) seasons.merge(e.season, 1, Integer::sum);
-        if (seasons.size() <= 1) { listEpisodes(seasons.firstKey()); return; }
-        int[] cur = pageEpisode();
-        List<Integer> ids = new ArrayList<>(seasons.keySet());
-        List<String> labels = new ArrayList<>();
-        int at = 0;
-        for (int i = 0; i < ids.size(); i++) {
-            boolean now = cur != null && cur[0] == ids.get(i);
-            if (now) at = i;
-            labels.add((ids.get(i) == 0 ? "Specials" : "Season " + ids.get(i)) + "  \u00B7  " + seasons.get(ids.get(i)) + (now ? "  \u2713" : ""));
-        }
-        AlertDialog d = new AlertDialog.Builder(this).setTitle(series.name).setItems(labels.toArray(new String[0]), (dlg, i) -> listEpisodes(ids.get(i))).create();
-        d.show();
-        d.getListView().setSelection(at);
-    }
-
-    void listEpisodes(int season) {
-        List<Catalog.Episode> eps = new ArrayList<>();
-        for (Catalog.Episode e : series.episodes) if (e.season == season) eps.add(e);
-        eps.sort((a, b) -> a.number - b.number);
-        int[] cur = pageEpisode();
-        List<String> labels = new ArrayList<>();
-        int at = 0;
-        for (int i = 0; i < eps.size(); i++) {
-            Catalog.Episode e = eps.get(i);
-            boolean now = cur != null && cur[0] == season && cur[1] == e.number;
-            if (now) at = i;
-            labels.add(e.number + "   " + (e.title.isEmpty() ? "Episode " + e.number : e.title) + (now ? "   \u2713" : ""));
-        }
-        AlertDialog d = new AlertDialog.Builder(this).setTitle(season == 0 ? "Specials" : "Season " + season)
-            .setItems(labels.toArray(new String[0]), (dlg, i) -> switchEpisode(eps.get(i))).create();
-        d.show();
-        d.getListView().setSelection(Math.max(0, at - 2));
-    }
-
-    // Leave the player, press that season and episode on the page, and the new stream goes native by itself
-    void switchEpisode(Catalog.Episode e) {
-        WebActivity page = WebActivity.active;
-        if (page == null) { say("Open this from the site's page to switch episodes"); return; }
-        page.switchEpisode(e.season, e.number);
-        finish();
     }
 
     // ---- OpenSubtitles ----

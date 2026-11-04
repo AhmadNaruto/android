@@ -30,7 +30,7 @@
 Streaming sites are built for a desktop browser with a mouse. On a TV remote they are painful, they are full of pop-ups, and their embedded players stutter on weak hardware. FMHYPlay keeps the site (so you keep every title and server it offers) but takes over the part that goes wrong:
 
 - It **finds the video stream** the page starts and plays it in ExoPlayer with the hardware decoder, with nothing painted over the picture.
-- It **drives the site for you**: the player's Servers, Quality and Episodes buttons press the site's own buttons, so you never go back to the page to switch.
+- It **drives the site for you**: the player's Servers and Quality buttons press the site's own buttons, so you do not go back to the page to switch.
 - It **blocks ads and pop-ups**, **tunnels the app's own traffic** through Cloudflare WARP when you want it, and works with a **TV remote** and with **touch**.
 
 ## Features
@@ -39,8 +39,8 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 - Hands off automatically when a page starts an HLS or DASH stream; falls back to the page if the stream cannot be played
 - Replays the page's Referer, Origin and cookies, so streams that check them still play
 - Quality list with frame rate (for example 1080p60), audio and subtitle tracks, speed, and four zoom modes (Fit, Fill, Stretch, 16:9, 4:3)
-- **Servers, Quality and Episodes buttons that control the site's own player**, including players inside cross-origin iframes
-- Season and episode picker with names from Cinemeta; picking one presses it on the site and the new stream opens by itself
+- **Servers and Quality buttons that control the site's own player**, including players inside cross-origin iframes
+- Episodes are picked in the site's own player: press Back, choose one there, and the new stream opens by itself once it differs from the one you left
 - **OpenSubtitles** built in (search by title and episode, side-loaded without losing your place)
 - Phone gestures: swipe up and down on the left half for brightness and on the right half for volume, double-tap either side to jump 10 seconds
 - One layout on every screen size; resumes where you left off
@@ -117,7 +117,7 @@ The APKs appear in the project folder. Details, signing and the CI setup are in 
 1. The page loads in a WebView. A small script (`assets/frame.js`) runs in every frame, including cross-origin embeds.
 2. The WebView's requests are watched for HLS and DASH playlists; some sites hide them behind URLs without an extension, so downloads are also recognised by their first bytes.
 3. When a stream shows up, the page is paused and the stream goes to ExoPlayer with the same headers and cookies the page used.
-4. The same script reads the page's server, quality and episode lists. The player's buttons send a click back to it, the page switches, and the new stream is handed over the same way.
+4. The same script reads the page's server and quality lists. The player's buttons send a click back to it, the page switches, and the new stream is handed over the same way.
 
 ## Legal
 

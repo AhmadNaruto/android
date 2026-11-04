@@ -216,51 +216,6 @@
     };
   } catch (e) { }
 
-  // episode: press the season, then the episode, by what their labels say ("Season 2", "S2", "Episode 5", "EP 5", "S2E5", "5.")
-  const pickEpisode = async (sn, en) => {
-    const vis = e => { const r = e.getBoundingClientRect(); return r.width > 4 && r.height > 4; };
-    const tap = e => click(e.closest('a,button,[role=button],[role=tab],[role=option],li') || e);
-    const all = 'a,button,li,span,div,[role=tab],[role=button],[role=option],[role=menuitem]';
-    const find = r => [...document.querySelectorAll(all)].filter(e => vis(e) && label(e).length < 24 && leaf(e) && r.test(label(e)));
-    // Labels run together ("Lord SnowEpisode 3"), so no word boundary before "Episode"
-    const full = new RegExp('s0?' + sn + '\\s*[:.\\-]?\\s*e0?' + en + '(?!\\d)', 'i');
-    const word = new RegExp('(episode|ep\\.?|eps?)\\s*0?' + en + '(?!\\d)', 'i');
-    const lead = new RegExp('^0?' + en + '\\s*[.:\\-\u2013)]|^0?' + en + '$');
-    const entries = () => [...document.querySelectorAll('a,button,li,[role=button],[role=option],div,span')].filter(e => vis(e) && label(e).length < 90);
-    const listed = () => entries().filter(e => /episode\s*\d+/i.test(label(e))).length >= 3;
-    // prefer small, specific elements; the shape of the list decides the weak patterns
-    const hitFor = () => {
-      const els = entries();
-      const pick = re => els.filter(e => re.test(label(e)) && !/^download$/i.test(label(e)) && !(e.querySelector('a,button') && label(e).length > 40)).sort((a, b) => label(a).length - label(b).length)[0];
-      return pick(full) || pick(word) || pick(lead);
-    };
-    // While a video plays, the site's player keeps its episode list behind an "Episodes" button: open it
-    if (!listed()) {
-      await wake();
-      const toggle = find(/^episodes$/i)[0];
-      if (toggle) { tap(toggle); await wait(900); }
-    }
-    if (sn > 0) {
-      const re = new RegExp('^(season|s)\\s*0?' + sn + '$', 'i'), anySeason = /^(season|s)\s*\d+$/i;
-      for (const sel of document.querySelectorAll('select')) {
-        const o = [...sel.options].find(x => re.test(x.text.trim()));
-        if (o) { sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); await wait(900); }
-      }
-      let want = find(re);
-      const cur = find(anySeason);
-      if (want.length === 1 && cur.length === 1) { /* that is the picker already showing our season */ }
-      else if (!want.length && cur.length) {
-        // a season picker button ("Season 1"): open it, then press the season we want
-        tap(cur[0]);
-        await wait(700);
-        want = find(re);
-        if (want.length) { tap(want[want.length - 1]); await wait(900); }
-      } else if (want.length) { tap(want[want.length - 1]); await wait(900); }
-    }
-    const hit = hitFor();
-    if (hit) { tap(hit); window.FMHY && FMHY.episodeFound(); }
-  };
-
   const up = m => window === top ? (window.FMHY && FMHY.servers(JSON.stringify(m.items))) : parent.postMessage(m, '*');
   const down = m => { for (let i = 0; i < frames.length; i++) try { frames[i].postMessage(m, '*'); } catch (x) { } };
   addEventListener('message', async e => {
@@ -278,7 +233,6 @@
       if (items.length) up({ fp: 'reply', items: items.map((it, i) => ({ k: fid + ':' + i, label: it.label, on: it.on, kind: it.kind })) });
       if (window === top && window.FMHY) FMHY.scanDone();
     } else if (d.fp === 'reply') up(d);
-    else if (d.fp === 'episode') { down(d); pickEpisode(d.s, d.e); }
     else if (d.fp === 'click') {
       const i = items.findIndex((_, j) => fid + ':' + j === d.k);
       if (i >= 0) press(items[i]);

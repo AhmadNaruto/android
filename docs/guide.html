@@ -50,7 +50,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <ol>
 <li>On <b>Home</b>, find the <b>Favorites</b> row and press the <b>+ Add a site</b> card.</li>
 <li>Type or paste the address (for example <code>example.com</code>; <code>https://</code> is added for you) and press <i>Add</i>.</li>
-<li>The site appears in Favorites. Open it like any other: the native player, ad blocking, the remote cursor and the Servers, Quality and Episodes buttons all work on it.</li>
+<li>The site appears in Favorites. Open it like any other: the native player, ad blocking, the remote cursor and the Servers and Quality buttons all work on it.</li>
 </ol>
 <p>Hold <kbd>OK</kbd> on it to remove it from your favorites.</p>
 
@@ -63,7 +63,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <tr><td rowspan="5">Player</td><td><kbd>Left</kbd> <kbd>Right</kbd></td><td>Seek 10 s; hold to go faster (30 s, then 60 s)</td></tr>
 <tr><td><kbd>OK</kbd> / Play</td><td>Pause and play</td></tr>
 <tr><td><kbd>Up</kbd></td><td>Show the controls</td></tr>
-<tr><td><kbd>Down</kbd> / <kbd>Menu</kbd></td><td>Move to the buttons (Episodes, Servers, Quality, Audio, Subtitles, Speed, Zoom)</td></tr>
+<tr><td><kbd>Down</kbd> / <kbd>Menu</kbd></td><td>Move to the buttons (Servers, Quality, Audio, Subtitles, Speed, Zoom)</td></tr>
 <tr><td><kbd>Back</kbd></td><td>Close the player and return to the site</td></tr></table>
 <p>Seeking waits until you stop pressing, then jumps once, so holding the key does not make the stream reload on every step.</p>
 
@@ -88,8 +88,8 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <div class="note">For live channels the −10 and +10 buttons and the progress bar are hidden, since there is nothing to seek in.</div>
 
 <h2 id="episodes">Episodes and servers</h2>
-<p>For a series, the <b>Episodes</b> button lists seasons and episodes with their names and ticks the one playing. Choose one: the player closes, FMHYPlay presses that season and episode on the site, and the new stream opens by itself. If the site's layout hides the episode, a message says so and you can pick it on the page.</p>
-<p>The <b>Servers</b> button does the same for the site's server list (the buttons named Server, Source or Mirror, including ones behind a menu).</p>
+<p>To switch episode, press <b>Back</b> to return to the site's own player and choose the episode there. FMHYPlay ignores the stream you just left and waits for a different one, then opens it in the native player by itself.</p>
+<p>The <b>Servers</b> button lists the site's own servers (the buttons named Server, Source or Mirror, including ones behind a menu). Choose one: the player closes, FMHYPlay presses it on the site, and the new stream opens by itself.</p>
 
 <h2 id="subtitles">Subtitles</h2>
 <p>Open <b>Subtitles</b>, choose <i>Search OpenSubtitles</i>, then a language and a release. The file is added to the stream and playback continues from the same spot. Pick a release that matches your video (for example the same source and resolution) so the timing lines up. Search needs to know which title is playing: it comes from the catalog when you started from there, otherwise from the page's title and address.</p>
@@ -138,7 +138,7 @@ My channels|https://example.com/my-channels.m3u
 <tr><td>A site does not open</td><td>Turn WARP on, or try a mirror (hold <kbd>OK</kbd> on the site).</td></tr>
 <tr><td>The player does not start</td><td>Press Play on the page first. Some sites start the stream only after a click. Then use the <b>Native player</b> button.</td></tr>
 <tr><td>"Native player could not play this"</td><td>It goes back to the page, which still plays the video itself. Try another server from the page.</td></tr>
-<tr><td>No Servers or Episodes button</td><td>It appears only when the site's own buttons were found. Use the page's own controls for that site.</td></tr>
+<tr><td>No Servers button</td><td>It appears only when the site's own buttons were found. Use the page's own controls for that site.</td></tr>
 <tr><td>Picture looks zoomed after a quality change</td><td>Seen only on the Android emulator's software decoder; FMHYPlay restarts the decoder there. On a device, set Zoom back to Fit.</td></tr>
 <tr><td>IPTV channels disappear</td><td>They failed the check. Turn off <i>Hide offline channels</i>, or run <i>Check channels now</i> later.</td></tr></table>
 </article>
