@@ -57,7 +57,7 @@ base64 -i release.jks | pbcopy        # macOS; on Linux: base64 -w0 release.jks
 <h2 id="release">Publish a release</h2>
 <pre><code>git tag v2.12.0
 git push origin v2.12.0</code></pre>
-<p>The workflow takes the version from the tag (<code>v2.12.0</code> becomes version name <code>2.12.0</code> and version code <code>21200</code>, so codes always rise with the tag), builds and signs both APKs, writes <code>SHA256SUMS.txt</code> and creates the GitHub release with generated notes. Build releases only this way, so the version codes stay in order.</p>
+<p>The workflow takes the version from the tag (<code>v2.12.0</code> becomes version name <code>2.12.0</code> and version code <code>21200</code>, so codes always rise with the tag), builds and signs both APKs, writes <code>SHA256SUMS.txt</code> and creates the GitHub release with that version's section of <code>CHANGELOG.md</code> as its notes, so write it before you tag. Build releases only this way, so the version codes stay in order.</p>
 
 <h2 id="emulator">Emulator testing</h2>
 <p><code>TEST_EXPORT=1 ./build.sh</code> builds <code>FMHYPlay-TV-test.apk</code> and <code>FMHYPlay-Android-test.apk</code>. They export the browser and IPTV screens so you can open a test page from the command line, and the TV one also answers the Home key (an emulator image without a launcher shows a black screen otherwise).</p>
