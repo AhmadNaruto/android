@@ -2,6 +2,10 @@
 
 Each release is a tag `vMAJOR.MINOR.PATCH` that publishes both APKs. The notes for a version are its section here. Earlier releases are on the Releases page.
 
+## 2.14.3
+
+- Search shows movies and series as a poster grid that fills the page (6 a row on TV, 3 on phones), like the Movies tab, with up to 20 of each instead of one row.
+
 ## 2.14.2
 
 - Search finds movies and series much faster: it asks the catalog for both at the same time on its own connection, instead of waiting behind poster downloads. Titles from every country are in it.
