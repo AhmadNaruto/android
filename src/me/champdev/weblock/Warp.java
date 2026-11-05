@@ -39,7 +39,8 @@ final class Warp {
             mine = ++gen;
         }
         set(State.CONNECTING, "");
-        App.io.execute(() -> {
+        // Its own thread: it reads the helper's output for as long as WARP runs, and would hold one of the shared pool's few threads
+        new Thread(() -> {
             Process p = null;
             try {
                 String bin = App.app.getApplicationInfo().nativeLibraryDir + "/libwarp.so";
@@ -68,7 +69,7 @@ final class Warp {
                 if (p != null) p.destroy();
                 if (end(mine)) set(State.FAILED, String.valueOf(e.getMessage()));
             }
-        });
+        }, "warp").start();
     }
 
     /** Marks generation `mine` finished; false if it was already replaced or stopped, so the caller must stay quiet. */
