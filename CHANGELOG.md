@@ -2,6 +2,10 @@
 
 Each release is a tag `vMAJOR.MINOR.PATCH` that publishes both APKs. The notes for a version are its section here. Earlier releases are on the Releases page.
 
+## 2.14.1
+
+- Settings, Check channels now showed "0 offline" right after you added or removed a playlist. It now shows the real count.
+
 ## 2.14.0
 
 - Simkl: Settings, Simkl, Connect shows a code; enter it at simkl.com/pin (sign in or make a free Simkl account there). After that, movies and episodes opened from Movies, TV or Anime and watched in the native player are marked watched on Simkl once you pass 80%, and Simkl's "watching now" follows play and pause.
