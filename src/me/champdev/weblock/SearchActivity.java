@@ -119,9 +119,9 @@ public class SearchActivity extends Home {
             results.addView(heading("Movies & series"));
             results.addView(searching());
         } else if (haveTitles) {
-            results.addView(heading("Movies & series"));
-            LinearLayout row = row(results);
-            for (Catalog.Title t : titles) row.addView(posterCard(t, posterW()));
+            results.addView(heading("Movies & series  \u00B7  " + titles.size()));
+            Grid grid = new Grid(results, App.tv ? 6 : 3);   // same poster grid as the Movies tab
+            for (Catalog.Title t : titles) grid.add(posterCard(t, grid.cell));
         } else if (failed) {
             results.addView(heading("Movies & series"));
             results.addView(note("Can't reach the movie catalog. Check WARP in Settings, then search again."));
@@ -153,7 +153,7 @@ public class SearchActivity extends Home {
         Warp.whenSettled(() -> CompletableFuture.supplyAsync(() -> Catalog.list("movie", extra), lane)   // movies and series at the same time
             .thenCombine(CompletableFuture.supplyAsync(() -> Catalog.list("series", extra), lane), (movies, series) -> {
                 List<Catalog.Title> all = new ArrayList<>();
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 20; i++) {   // everything the catalog returns (20 a kind at most)
                     if (movies != null && i < movies.size()) all.add(movies.get(i));
                     if (series != null && i < series.size()) all.add(series.get(i));
                 }
