@@ -19,13 +19,13 @@ public class App extends Application {
     static final Handler main = new Handler(Looper.getMainLooper());
     static final ExecutorService io = Executors.newFixedThreadPool(4);
     static boolean tv;
+    static String flavor = "";   // "tv" or "android": which APK this is (updates fetch the same one)
 
     @Override public void onCreate() {
         super.onCreate();
         app = this;
         prefs = getSharedPreferences("fmhyplay", MODE_PRIVATE);
         // The TV and Android builds each carry a "flavor" asset; anything else (old builds) guesses from the device
-        String flavor = "";
         try (java.io.InputStream in = getAssets().open("flavor")) { byte[] b = new byte[16]; flavor = new String(b, 0, Math.max(0, in.read(b))).trim(); } catch (java.io.IOException ignored) { }
         // Phones and tablets (touchscreen, not in TV mode) are never "tv", whichever APK was installed
         boolean looksLikeTv = getSystemService(UiModeManager.class).getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION

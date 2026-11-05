@@ -18,12 +18,12 @@
 
 <h2 id="requirements">Requirements</h2>
 <ul><li>Android SDK with <b>platform 34</b> and any <b>build-tools</b> (set <code>ANDROID_HOME</code>, or use <code>~/Library/Android/sdk</code>)</li>
-<li>JDK 17 or newer</li><li>Go (version in <code>warp/go.mod</code>) for the WARP helper</li><li><code>curl</code>, <code>zip</code>, <code>openssl</code></li></ul>
+<li>JDK 17 or newer</li><li>Go (version in <code>warp/go.mod</code>) and the <b>Android NDK</b> (any recent one, from the SDK manager or <code>ANDROID_NDK_HOME</code>) for the WARP helper</li><li><code>curl</code>, <code>zip</code>, <code>openssl</code></li></ul>
 
 <h2 id="build">Build</h2>
 <pre><code>git clone https://github.com/fmhyplay/android
 cd android
-warp/build.sh     # cross-compiles the WARP helper into jni/
+warp/build.sh     # builds the WARP helper into jni/ with the NDK
 ./build.sh        # downloads the data files, then builds both APKs</code></pre>
 <p>You get <code>FMHYPlay-TV-vX.Y.Z.apk</code> and <code>FMHYPlay-Android-vX.Y.Z.apk</code>. On the first run <code>build.sh</code> creates a signing key (<code>release.jks</code> and <code>release.pass</code>). Keep it: a release signed with another key cannot update an installed one.</p>
 <p><code>VERSION_NAME</code> and <code>VERSION_CODE</code> can be set in the environment. <code>TEST_EXPORT=1 ./build.sh</code> builds emulator test APKs instead (<a href="#emulator">below</a>).</p>

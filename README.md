@@ -41,7 +41,8 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 - Quality list with frame rate (for example 1080p60), audio and subtitle tracks, speed, and four zoom modes (Fit, Fill, Stretch, 16:9, 4:3)
 - **Servers and Quality buttons that control the site's own player**, including players inside cross-origin iframes
 - Episodes are picked in the site's own player: press Back, choose one there, and the new stream opens by itself once it differs from the one you left
-- **OpenSubtitles** built in (search by title and episode, side-loaded without losing your place)
+- **OpenSubtitles** built in (search by title and episode, side-loaded without losing your place), plus subtitle size, position and timing (0.1 s steps)
+- **Simkl** scrobbling (optional): connect with a code at simkl.com/pin, and titles you finish are marked watched
 - Phone gestures: swipe up and down on the left half for brightness and on the right half for volume, double-tap either side to jump 10 seconds
 - One layout on every screen size; resumes where you left off
 
@@ -56,12 +57,12 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 **Network and privacy**
 - **In-app Cloudflare WARP**: a userspace WireGuard tunnel for the app's traffic only, with no VPN permission and no root; LAN addresses stay direct
 - Domain-based ad, tracker and pop-up blocking, plus redirect blocking
-- No accounts, no analytics, no telemetry
+- No FMHYPlay account, no analytics, no telemetry. Updates come from this repository's releases, installed from inside the app
 
 **IPTV**
 - More than 11,000 public channels from [iptv-org](https://github.com/iptv-org/iptv), grouped by category and country, with logos
 - A background check hides channels that are offline, and a Working list remembers the ones that played for you
-- **Add your own playlist or a single `.m3u8` stream link**; they sit in a My playlists row at the top. Links on your own network work too
+- **Add your own playlist, a single `.m3u8` stream link or an Xtream Codes login**; each playlist gets its own named row at the top. Links on your own network work too
 - Star channels, filter, and search by voice
 - Optional extra source list that you host yourself (see [docs](https://fmhyplay.github.io/android/guide.html#sources))
 
@@ -106,7 +107,7 @@ Requires Android 8.0 (API 26) or newer, arm64 or 32-bit ARM.
 ```sh
 git clone https://github.com/fmhyplay/android
 cd android
-warp/build.sh      # builds the WARP helper (needs Go)
+warp/build.sh      # builds the WARP helper (needs Go and the Android NDK)
 ./build.sh         # needs an Android SDK (platform 34, build-tools) and JDK 17+
 ```
 

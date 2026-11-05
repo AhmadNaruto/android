@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>User guide - FMHYPlay</title>
-<meta name="description" content="How to install and use FMHYPlay: the TV remote, touch controls, the native player, IPTV, WARP, ad blocking and your own playlists.">
-<meta property="og:title" content="User guide - FMHYPlay"><meta property="og:description" content="How to install and use FMHYPlay: the TV remote, touch controls, the native player, IPTV, WARP, ad blocking and your own playlists."><meta property="og:image" content="banner.png">
+<meta name="description" content="How to install and use FMHYPlay: the TV remote, touch controls, the native player, IPTV, WARP, ad blocking, your own playlists and Simkl.">
+<meta property="og:title" content="User guide - FMHYPlay"><meta property="og:description" content="How to install and use FMHYPlay: the TV remote, touch controls, the native player, IPTV, WARP, ad blocking, your own playlists and Simkl."><meta property="og:image" content="banner.png">
 <meta name="theme-color" content="#120e1a"><link rel="icon" href="icon.png"><link rel="stylesheet" href="style.css">
 </head><body>
 <header class="nav"><div class="in">
@@ -11,7 +11,7 @@
 </div></header>
 
 <main><div class="layout">
-<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#subtitles">Subtitles</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
+<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
 <article>
 <h1>User guide</h1>
 <p class="sub">Everything you need to use FMHYPlay on a TV or a phone.</p>
@@ -26,6 +26,7 @@
 <pre><code>adb connect TV_IP_ADDRESS:5555
 adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <p>Updates install over the old version, because every release is signed with the same key. You can check a file against <code>SHA256SUMS.txt</code> on the release page.</p>
+<p><b>Updates from inside the app</b> (2.14.0 and later): when a newer release is out, Home shows one line with an <i>Install</i> button. FMHYPlay downloads it from GitHub and Android asks you to confirm; the first time, allow FMHYPlay to install unknown apps. <i>Settings, Check for updates</i> looks right away, and <i>Check at app start</i> turns the automatic check (at most every 12 hours) off.</p>
 
 <h2 id="browse">Browse and play</h2>
 <p>The tabs along the top (bottom on a phone) are <b>Home</b>, <b>Movies</b>, <b>TV</b>, <b>Sports</b>, <b>Anime</b>, <b>IPTV</b> and <b>Settings</b>.</p>
@@ -82,7 +83,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <table><tr><th>Button</th><th>Shows</th><th>Opens</th></tr>
 <tr><td>Quality</td><td>Height and frame rate, for example <code>1080p60</code></td><td>The qualities the stream offers, or the site's own quality list for sites that serve one playlist per quality. The frame rate comes from the stream when it declares one, otherwise it is measured from the frames being shown.</td></tr>
 <tr><td>Audio</td><td>Language code</td><td>The stream's audio tracks (only when there is more than one)</td></tr>
-<tr><td>Subtitles</td><td><code>Off</code> or a language</td><td>The stream's subtitles and a search in OpenSubtitles</td></tr>
+<tr><td>Subtitles</td><td><code>Off</code> or a language</td><td>The stream's subtitles, a search in OpenSubtitles, and the size, position and timing panel</td></tr>
 <tr><td>Speed</td><td><code>1x</code></td><td>0.5x to 2x</td></tr>
 <tr><td>Zoom</td><td><code>Fit</code></td><td>Cycles Fit, Fill (crops to cover the screen), Stretch, 16:9 and 4:3. Every playback starts on Fit.</td></tr></table>
 <div class="note">For live channels the −10 and +10 buttons and the progress bar are hidden, since there is nothing to seek in.</div>
@@ -93,6 +94,21 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 
 <h2 id="subtitles">Subtitles</h2>
 <p>Open <b>Subtitles</b>, choose <i>Search OpenSubtitles</i>, then a language and a release. The file is added to the stream and playback continues from the same spot. Pick a release that matches your video (for example the same source and resolution) so the timing lines up. Search needs to know which title is playing: it comes from the catalog when you started from there, otherwise from the page's title and address.</p>
+<p>The last entry in <b>Subtitles</b>, <i>Size, position, timing</i>, opens a panel with − and + buttons:</p>
+<ul>
+<li><b>Size</b> and <b>Position</b> (+ moves them up, for TVs that show them too low or too high). Both are remembered, and <i>Settings, Subtitles</i> changes them too.</li>
+<li><b>Timing</b>: + shows subtitles later, − earlier, 0.1 s a press. It applies to the video you are watching.</li>
+<li><i>Reset</i> puts all three back.</li>
+</ul>
+
+<h2 id="simkl">Simkl</h2>
+<p><a href="https://simkl.com">Simkl</a> is a free watch tracker. Connect it once and the movies and episodes you watch are marked watched there.</p>
+<ol>
+<li>Open <i>Settings, Simkl</i> and press <i>Connect</i>. A code appears.</li>
+<li>On your phone or computer open <code>simkl.com/pin</code>, sign in (or make a free account) and enter the code.</li>
+<li>The TV says <i>Connected</i> by itself.</li>
+</ol>
+<p>Only titles opened from Movies, TV or Anime count, since they carry the title's IMDb id. A title is marked watched once you pass 80% in the native player. Press <i>Settings, Simkl</i> again to disconnect.</p>
 
 <h2 id="iptv">IPTV</h2>
 <p>The <b>IPTV</b> tab lists public channels by category and country.</p>
@@ -100,19 +116,20 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <li><b>Continue watching</b> and <b>Working</b> rows: the last channels you watched, and every channel that has played for you. Hold <kbd>OK</kbd> on a card to remove it or star it.</li>
 <li><b>Offline channels are hidden.</b> A background check tests channels a few at a time and remembers the result (working for a week, not working for two days). A channel that fails when you press play is hidden at once. <i>Settings, Hide offline channels</i> turns this off and <i>Check channels now</i> tests everything again.</li>
 <li><b>Search</b> by typing or by voice, and filter inside any list.</li>
-<li><b>My playlists</b> is the first row: everything you added yourself (see below).</li>
+<li><b>Your playlists</b> come first: each one you added has its own row under the name you gave it, and single stream links share a <b>My streams</b> row (see below).</li>
 <li><b>+ Playlist</b> (top right) adds your own playlist or a single stream link.</li>
 </ul>
 
 <h2 id="addstream">Add a stream or playlist</h2>
-<p>Press <b>+ Playlist</b> on the IPTV tab (or <i>Settings, Add a playlist or stream</i>), paste a link and press <i>Add</i>. Two kinds of link work:</p>
+<p>Press <b>+ Playlist</b> on the IPTV tab (or <i>Settings, Add a playlist or stream</i>), paste a link and press <i>Add</i>. Give it a name: that is its row on the IPTV tab. Two kinds of link work:</p>
 <table><tr><th>You paste</th><th>You get</th></tr>
-<tr><td>A <b>playlist</b>: an M3U file that lists channels (<code>#EXTINF</code> lines)</td><td>Every channel in it, with its name, logo and group, in the <b>My playlists</b> row at the top of the IPTV tab</td></tr>
-<tr><td>A single <b>stream</b>: an <code>.m3u8</code> (HLS) link, for example a camera, a live feed or a channel your provider gave you</td><td>One channel in <b>My playlists</b>, named after the address (for example <code>cdn.example.com · news</code>). It plays in the native player like any other.</td></tr></table>
+<tr><td>A <b>playlist</b>: an M3U file that lists channels (<code>#EXTINF</code> lines)</td><td>Every channel in it, with its name, logo and group, in its own row at the top of the IPTV tab</td></tr>
+<tr><td>A single <b>stream</b>: an <code>.m3u8</code> (HLS) link, for example a camera, a live feed or a channel your provider gave you</td><td>One channel in <b>My streams</b>, under the name you gave it or named after the address (for example <code>cdn.example.com · news</code>). It plays in the native player like any other.</td></tr></table>
 <ul>
+<li><b>Xtream Codes</b>: if your provider gave you a server, username and password instead of a link, press <i>Xtream login</i> in the same dialog. The provider's live channels show in their categories. The background channel check never tests them, so the account's connection limit is not used up.</li>
 <li>Links on your own network (a PC, a NAS, a media server) work too; they never go through WARP.</li>
 <li>Playlists are downloaded again every 12 hours and when you press <i>Settings, Refresh IPTV channels</i>. A single stream is kept as it is.</li>
-<li>Hold <kbd>OK</kbd> on a card in My playlists to star it. Remove a whole playlist in <i>Settings</i>: each one has its own row (press it, then <i>Remove</i>).</li>
+<li>Hold <kbd>OK</kbd> on a card in your playlists to star it. Remove a whole playlist in <i>Settings</i>: each one has its own row (press it, then <i>Remove</i>).</li>
 <li>If it says <i>Not a playlist or stream link</i>, open the link in a browser first: it should start with <code>#EXTM3U</code>.</li>
 </ul>
 

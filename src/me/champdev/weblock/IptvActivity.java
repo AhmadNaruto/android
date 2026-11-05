@@ -130,7 +130,7 @@ public class IptvActivity extends Home {
         query = q;
         String f = q.trim().toLowerCase(Locale.ROOT);
         shown.clear();
-        for (Iptv.Channel c : all) if (f.isEmpty() || c.name.toLowerCase(Locale.ROOT).contains(f) || c.source.toLowerCase(Locale.ROOT).contains(f)) shown.add(c);
+        for (Iptv.Channel c : all) if (f.isEmpty() || c.name.toLowerCase(Locale.ROOT).contains(f) || c.source.toLowerCase(Locale.ROOT).contains(f) || c.group.toLowerCase(Locale.ROOT).contains(f)) shown.add(c);
         adapter.notifyDataSetChanged();
         count.setText(shown.size() + (shown.size() == 1 ? " channel" : " channels") + (App.tv ? "  ·  OK plays, hold OK to star" : "  ·  tap plays, long-press stars"));
     }

@@ -118,6 +118,7 @@ public class PlayerActivity extends Activity {
         String url = getIntent().getStringExtra("url");
         if (url == null) { finish(); return; }
         base = Sniffer.path(url);
+        Subs.delayMs = 0;   // timing belongs to one video
         buildUi();
         routeThroughWarp();
         startPlayer(url);
@@ -162,6 +163,26 @@ public class PlayerActivity extends Activity {
         return f;
     }
 
+    void showCues(CueGroup group) {
+        StringBuilder sb = new StringBuilder();
+        for (Cue c : group.cues) if (c.text != null) sb.append(sb.length() > 0 ? "\n" : "").append(c.text);
+        subtitle.setText(sb);
+        subtitle.setVisibility(sb.length() == 0 ? View.GONE : View.VISIBLE);
+    }
+
+    /** Subtitle size and distance from the bottom: 22 sp and 100 dp (clear of the controls), changed by the Subtitle size and position settings. */
+    void placeSubtitle() {
+        subtitle.setTextSize(22f * Subs.size() / 100);
+        ((FrameLayout.LayoutParams) subtitle.getLayoutParams()).bottomMargin = dp(Math.max(0, 100 + Subs.offset()));
+        subtitle.requestLayout();
+    }
+
+    /** The subtitle panel (size, position, timing), with a sample line on screen when nothing is being said right now. */
+    void subtitleStyle() {
+        if (subtitle.getVisibility() != View.VISIBLE) { subtitle.setText("Subtitles show here"); subtitle.setVisibility(View.VISIBLE); }
+        Subs.panel(this, true, this::placeSubtitle, () -> showCues(player.getCurrentCues()));
+    }
+
     void buildUi() {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
@@ -171,15 +192,13 @@ public class PlayerActivity extends Activity {
 
         subtitle = new TextView(this);
         subtitle.setTextColor(Color.WHITE);
-        subtitle.setTextSize(22);
         subtitle.setGravity(Gravity.CENTER);
         subtitle.setShadowLayer(6, 0, 0, Color.BLACK);
         subtitle.setBackgroundColor(0x88000000);
         subtitle.setPadding(dp(10), dp(4), dp(10), dp(4));
         subtitle.setVisibility(View.GONE);
-        FrameLayout.LayoutParams sp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        sp.bottomMargin = dp(100);
-        root.addView(subtitle, sp);
+        root.addView(subtitle, new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+        placeSubtitle();
 
         spinner = new ProgressBar(this);
         spinner.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Home.ACCENT));
@@ -660,7 +679,20 @@ public class PlayerActivity extends Activity {
         }
         item.setSubtitleConfigurations(subs);
 
-        player = new ExoPlayer.Builder(this, new DefaultRenderersFactory(this).setEnableDecoderFallback(true).setMediaCodecSelector(PlayerActivity::decoders))
+        // The subtitle renderer sees the clock moved by the Timing setting: an earlier clock shows subtitles later, a later one earlier
+        DefaultRenderersFactory renderers = new DefaultRenderersFactory(this) {
+            @Override protected void buildTextRenderers(android.content.Context c, androidx.media3.exoplayer.text.TextOutput out, android.os.Looper l, int mode,
+                                                        ArrayList<androidx.media3.exoplayer.Renderer> list) {
+                int from = list.size();
+                super.buildTextRenderers(c, out, l, mode, list);
+                for (int i = from; i < list.size(); i++) list.set(i, new androidx.media3.exoplayer.ForwardingRenderer(list.get(i)) {
+                    @Override public void render(long pos, long elapsed) throws androidx.media3.exoplayer.ExoPlaybackException { super.render(pos - Subs.delayMs * 1000, elapsed); }
+
+                    @Override public void resetPosition(long pos, boolean joining) throws androidx.media3.exoplayer.ExoPlaybackException { super.resetPosition(pos - Subs.delayMs * 1000, joining); }
+                });
+            }
+        };
+        player = new ExoPlayer.Builder(this, renderers.setEnableDecoderFallback(true).setMediaCodecSelector(PlayerActivity::decoders))
             .setMediaSourceFactory(new DefaultMediaSourceFactory(data)).setHandleAudioBecomingNoisy(true).build();
         player.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true);
@@ -673,8 +705,14 @@ public class PlayerActivity extends Activity {
             @Override public void onPlaybackStateChanged(int s) {
                 spinner.setVisibility(s == Player.STATE_BUFFERING ? View.VISIBLE : View.GONE);
                 if (s == Player.STATE_READY && getIntent().hasExtra("mime")) Iptv.played(getIntent().getStringExtra("url"));
-                if (s == Player.STATE_ENDED) { resume.remove(base); finish(); }
+                if (s == Player.STATE_READY && !scrobbled && player.getPlayWhenReady()) { scrobbled = true; scrobble("start"); }
+                if (s == Player.STATE_ENDED) { resume.remove(base); scrobble("stop"); finish(); }
                 update();
+            }
+
+            // Play and pause by the user (not buffering) go to Simkl; leaving the player sends the stop
+            @Override public void onPlayWhenReadyChanged(boolean play, int reason) {
+                if (scrobbled && !isFinishing()) scrobble(play ? "start" : "pause");
             }
 
             @Override public void onIsPlayingChanged(boolean playing) {
@@ -695,12 +733,7 @@ public class PlayerActivity extends Activity {
 
             @Override public void onPlaybackParametersChanged(androidx.media3.common.PlaybackParameters p) { refreshChips(); }
 
-            @Override public void onCues(CueGroup group) {
-                StringBuilder sb = new StringBuilder();
-                for (Cue c : group.cues) if (c.text != null) sb.append(sb.length() > 0 ? "\n" : "").append(c.text);
-                subtitle.setText(sb);
-                subtitle.setVisibility(sb.length() == 0 ? View.GONE : View.VISIBLE);
-            }
+            @Override public void onCues(CueGroup group) { showCues(group); }
 
             @Override public void onPlayerError(PlaybackException e) {
                 Log.w(TAG, "playback error", e);
@@ -983,8 +1016,11 @@ public class PlayerActivity extends Activity {
         if (!search && (labels.isEmpty() || (canOff && labels.size() == 1))) { say("No " + name.toLowerCase() + " in this video"); return; }
         int searchAt = search ? labels.size() : -1;
         if (search) labels.add("\uD83D\uDD0D  Search OpenSubtitles\u2026");
+        int positionAt = type == C.TRACK_TYPE_TEXT ? labels.size() : -1;
+        if (positionAt >= 0) labels.add("Aa  Size, position, timing  (" + Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel() + " \u00B7 " + Subs.delayLabel() + ")");
         new AlertDialog.Builder(this).setTitle(name).setItems(labels.toArray(new String[0]), (d, i) -> {
             if (i == searchAt) { searchSubs(); return; }
+            if (i == positionAt) { subtitleStyle(); return; }
             androidx.media3.common.TrackSelectionParameters.Builder b = player.getTrackSelectionParameters().buildUpon().clearOverridesOfType(type);
             if (picks.get(i) == null) b.setTrackTypeDisabled(type, true); else b.setTrackTypeDisabled(type, false).addOverride(picks.get(i));
             player.setTrackSelectionParameters(b.build());
@@ -1075,7 +1111,25 @@ public class PlayerActivity extends Activity {
         if (dur != C.TIME_UNSET && !player.isCurrentMediaItemLive() && pos < dur - 30000) resume.put(base, pos); else resume.remove(base);
     }
 
+    // ---- Simkl ----
+
+    boolean scrobbled, stopped;   // a start went out for this video; the stop went out
+
+    /** Tells Simkl where the video is, for a movie or an episode from the catalog (live streams and unknown episodes are left out). */
+    void scrobble(String action) {
+        if (player == null || player.isCurrentMediaItemLive() || stopped || !scrobbled) return;
+        long dur = player.getDuration();
+        if (dur == C.TIME_UNSET || dur <= 0) return;
+        boolean series = getIntent().getBooleanExtra("series", false);
+        int[] episode = series ? pageEpisode() : null;
+        if (series && episode == null) return;
+        if (action.equals("stop")) stopped = true;
+        Simkl.scrobble(action, getIntent().getStringExtra("imdb"), episode,
+            player.getPlaybackState() == Player.STATE_ENDED ? 100 : player.getCurrentPosition() * 100.0 / dur);
+    }
+
     @Override protected void onDestroy() {
+        scrobble("stop");
         if (getIntent().hasExtra("mime")) Iptv.saveHealth();
         App.main.removeCallbacks(tick);
         App.main.removeCallbacks(hideNotice);

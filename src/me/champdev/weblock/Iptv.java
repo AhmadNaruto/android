@@ -97,10 +97,11 @@ final class Iptv {
     // Left out of every list, adult or not: the OLERO channels
     static final java.util.regex.Pattern OLERO = java.util.regex.Pattern.compile("(?i)\\bolero\\b");
     static final long REFRESH = 12L * 3600 * 1000;
-    static final String ADULT_NAME = "Mature", MINE = "My playlists";
+    static final String ADULT_NAME = "Mature", MINE = "My playlists", STREAMS = "My streams";
 
     static final class Channel {
         String name = "", logo = "", url = "", ua = "", ref = "", country = "", group = "", source = "";
+        String playlist = "";   // which of your playlists it came from (its address), "" for the rest
         String[] cats = {"Other"};
         boolean adult;
     }
@@ -142,6 +143,7 @@ final class Iptv {
             for (String url : mine()) {
                 for (Channel c : parse(read(mineFile(url)), false)) {
                     c.cats = new String[]{MINE};
+                    c.playlist = url;
                     out.add(c);
                 }
             }
@@ -292,6 +294,9 @@ final class Iptv {
                 Set<String> first = new HashSet<>();
                 for (Channel c : favorites()) first.add(c.url);
                 for (Channel c : history()) first.add(c.url);
+                // Never your own per-account streams (user/pass/id, as Xtream providers serve): an account allows one or two connections
+                // at a time, and 16 checks at once could get it locked
+                raw.removeIf(c -> c.cats[0].equals(MINE) && ACCOUNT.matcher(String.valueOf(Uri.parse(c.url).getPath())).matches());
                 for (Channel c : raw) if (first.contains(c.url) && !known(c.url)) todo.add(c);
                 for (Channel c : raw) if (!first.contains(c.url) && !known(c.url)) todo.add(c);
                 sweepDone = 0;
@@ -361,16 +366,72 @@ final class Iptv {
         return false;
     }
 
+    // ---- Xtream Codes logins: kept in the same list as the playlists, as the provider's player_api.php address ----
+
+    static String xtreamUrl(String server, String user, String pass) {
+        String base = server.trim().replaceFirst("/+(player_api\\.php.*|get\\.php.*)?$", "");
+        if (!base.matches("(?i)https?://.+")) base = "http://" + base;   // most providers serve plain http on a port
+        return base + "/player_api.php?username=" + Uri.encode(user.trim()) + "&password=" + Uri.encode(pass.trim());
+    }
+
+    static boolean isXtream(String url) {
+        return Uri.parse(url).getPath() != null && Uri.parse(url).getPath().endsWith("/player_api.php");
+    }
+
+    /** The name you gave a playlist; without one its address, or "host · Xtream (user)" so a password never shows. */
+    static String playlistName(String url) {
+        String named = names().optString(url, "");
+        if (!named.isEmpty()) return named;
+        Uri u = Uri.parse(url);
+        return isXtream(url) ? u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : "") + " \u00B7 Xtream (" + u.getQueryParameter("username") + ")"
+            : url.replaceFirst("(?i)^https?://", "");
+    }
+
+    static org.json.JSONObject names() {
+        try { return new org.json.JSONObject(App.prefs.getString("iptvnames", "{}")); } catch (org.json.JSONException e) { return new org.json.JSONObject(); }
+    }
+
+    static void name(String url, String name) {
+        org.json.JSONObject n = names();
+        try { if (name == null || name.trim().isEmpty()) n.remove(url); else n.put(url, name.trim()); } catch (org.json.JSONException ignored) { }
+        App.prefs.edit().putString("iptvnames", n.toString()).apply();
+    }
+
+    /** Signs in and turns the account's live channels into an M3U playlist (group = the provider's category); null when the login fails. */
+    static String xtreamPlaylist(String api) throws IOException {
+        try {
+            Uri u = Uri.parse(api);
+            org.json.JSONObject login = new org.json.JSONObject(download(api)).optJSONObject("user_info");
+            if (login == null || login.optInt("auth") != 1) return null;
+            String ext = login.optJSONArray("allowed_output_formats") != null && !login.getJSONArray("allowed_output_formats").toString().contains("m3u8") ? "ts" : "m3u8";
+            Map<String, String> cats = new java.util.HashMap<>();
+            org.json.JSONArray c = new org.json.JSONArray(download(api + "&action=get_live_categories"));
+            for (int i = 0; i < c.length(); i++) cats.put(c.getJSONObject(i).optString("category_id"), c.getJSONObject(i).optString("category_name"));
+            String base = api.substring(0, api.indexOf("/player_api.php")) + "/live/" + Uri.encode(u.getQueryParameter("username")) + "/" + Uri.encode(u.getQueryParameter("password")) + "/";
+            StringBuilder m3u = new StringBuilder("#EXTM3U\n");
+            org.json.JSONArray live = new org.json.JSONArray(download(api + "&action=get_live_streams"));
+            for (int i = 0; i < live.length(); i++) {
+                org.json.JSONObject s = live.getJSONObject(i);
+                String group = cats.getOrDefault(s.optString("category_id"), "Live").replace("\"", "'");
+                m3u.append("#EXTINF:-1 tvg-logo=\"").append(s.optString("stream_icon")).append("\" group-title=\"").append(group).append("\",")
+                    .append(s.optString("name").replace("\n", " ").trim()).append('\n').append(base).append(s.optString("stream_id")).append('.').append(ext).append('\n');
+            }
+            return m3u.toString();
+        } catch (org.json.JSONException e) {
+            return null;
+        }
+    }
+
     /**
      * Downloads one of your playlists. A bare stream link (an HLS playlist, not a list of channels) becomes a playlist of one channel,
      * named after its address, so a single .m3u8 can be added the same way.
      */
     static boolean fetchMine(String url) {
         try {
-            String text = download(url);
-            if (!text.trim().startsWith("#EXTM3U")) return false;
+            String text = isXtream(url) ? xtreamPlaylist(url) : download(url);
+            if (text == null || !text.trim().startsWith("#EXTM3U")) return false;
             if (parse(text, false).isEmpty() && text.contains("#EXT-X-"))
-                text = "#EXTM3U\n#EXTINF:-1 group-title=\"My streams\"," + streamName(url) + "\n" + url + "\n";
+                text = "#EXTM3U\n#EXTINF:-1 group-title=\"" + STREAMS + "\"," + (names().has(url) ? names().optString(url) : streamName(url)) + "\n" + url + "\n";
             try (FileOutputStream out = new FileOutputStream(file(mineFile(url)))) { out.write(text.getBytes(StandardCharsets.UTF_8)); }
             return true;
         } catch (IOException e) {
@@ -392,14 +453,18 @@ final class Iptv {
     }
 
     /** Downloads and adds a playlist or a single stream link; null when it worked, else what went wrong. Call off the main thread. */
-    static String addPlaylist(String raw) {
+    static String addPlaylist(String raw, String name) {
         String url = raw.trim();
         if (!url.matches("(?i)https?://.+")) url = "https://" + url;
         List<String> now = mine();
         if (now.contains(url)) return "Already added";
-        if (!fetchMine(url)) return "Not a playlist or stream link, or it can't be reached";
+        name(url, name);   // before the download: a single stream link takes it as its channel name
+        if (!fetchMine(url)) {
+            name(url, null);
+            return isXtream(url) ? "Can't sign in: check the server, username and password" : "Not a playlist or stream link, or it can't be reached";
+        }
         int n = parse(read(mineFile(url)), false).size();
-        if (n == 0) { file(mineFile(url)).delete(); return "No channels in that playlist"; }
+        if (n == 0) { file(mineFile(url)).delete(); name(url, null); return "No channels in that playlist"; }
         now.add(url);
         saveMine(now);
         return null;
@@ -409,6 +474,7 @@ final class Iptv {
         List<String> now = mine();
         now.remove(url);
         saveMine(now);
+        name(url, null);
         file(mineFile(url)).delete();
     }
 
@@ -641,9 +707,9 @@ final class Iptv {
         switch (type) {
             case "fav": return favorites();
             case "working": return working();
-            case "mine": {
+            case "mine": {   // key = one playlist's address, STREAMS = the single stream links, "" = all of yours
                 List<Channel> own = new ArrayList<>();
-                for (Channel c : all()) if (c.cats[0].equals(MINE)) own.add(c);
+                for (Channel c : all()) if (c.cats[0].equals(MINE) && (key.isEmpty() || c.playlist.equals(key) || key.equals(STREAMS) && c.group.equals(STREAMS))) own.add(c);
                 return own;
             }
             case "adult": return bySource(adult());

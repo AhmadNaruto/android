@@ -106,6 +106,8 @@ public class Home extends Activity {
         }));
         // Test the channels that were not checked lately (a few at a time, in the background)
         Warp.whenSettled(() -> App.io.execute(Iptv::sweep));
+        // A newer release on GitHub shows as a line on Home
+        if (Update.due()) Warp.whenSettled(() -> App.io.execute(() -> { if (Update.check()) runOnUiThread(this::build); }));
     }
 
     @Override protected void onResume() {
@@ -147,6 +149,7 @@ public class Home extends Activity {
 
     void buildHome() {
         col.addView(header());
+        if (!Update.available().isEmpty()) col.addView(updateLine(Update.available()));
 
         List<History.Entry> history = History.list();
         if (!history.isEmpty()) {
@@ -492,10 +495,17 @@ public class Home extends Activity {
         if (!status.isEmpty()) col.addView(note(status));
         else if (App.tv && !Iptv.history().isEmpty()) col.addView(note("Hold OK on a channel to remove it or add it to favorites"));
         int cols = App.tv ? 6 : 3;
-        // What you added yourself (playlists and single stream links) comes first
-        List<Iptv.Channel> own = Iptv.list("mine", "");
-        if (!own.isEmpty()) {
-            col.addView(heading("My playlists  \u00B7  " + own.size()));
+        // What you added yourself comes first: a row per playlist under the name you gave it, single stream links together
+        List<String> keys = new ArrayList<>(), titles = new ArrayList<>();
+        for (String url : Iptv.mine()) { keys.add(url); titles.add(Iptv.playlistName(url)); }
+        keys.add(Iptv.STREAMS);
+        titles.add(Iptv.STREAMS);
+        for (int k = 0; k < keys.size(); k++) {
+            String key = keys.get(k), title = titles.get(k);
+            List<Iptv.Channel> own = Iptv.list("mine", key);
+            if (!key.equals(Iptv.STREAMS)) own.removeIf(c -> c.group.equals(Iptv.STREAMS));
+            if (own.isEmpty()) continue;
+            col.addView(heading(title + "  \u00B7  " + own.size()));
             LinearLayout mr = row();
             for (Iptv.Channel c : own.subList(0, Math.min(14, own.size()))) mr.addView(channelCard(c, cols, "mine"));
             if (own.size() > 14) {
@@ -504,7 +514,7 @@ public class Home extends Activity {
                 more.setLayoutParams(cardParams(squareDp(cols), squareDp(cols)));
                 more.setBackground(rounded(0xFF2A2236, dp(14)));
                 focusable(more, dp(14));
-                more.setOnClickListener(v -> openIptv("mine", "", "My playlists", false));
+                more.setOnClickListener(v -> openIptv("mine", key, title, false));
                 mr.addView(more);
             }
         }
@@ -689,21 +699,47 @@ public class Home extends Activity {
             .show();
     }
 
-    /** Ask for an M3U link, download it, and show its channels under My playlists. */
+    /** Ask for an M3U link and a name, download it, and give its channels their own row on the IPTV tab. */
     void addPlaylistDialog() {
         EditText in = WebActivity.field(this, "https://example.com/playlist.m3u", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        new AlertDialog.Builder(this).setTitle("Add a playlist or stream").setMessage("A playlist (M3U) or a single stream link (.m3u8)").setView(WebActivity.box(this, in))
+        EditText name = WebActivity.field(this, "Name, e.g. Sports (shown as its row)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        new AlertDialog.Builder(this).setTitle("Add a playlist or stream").setMessage("A playlist (M3U) or a single stream link (.m3u8)").setView(WebActivity.box(this, in, name))
             .setPositiveButton("Add", (d, w) -> {
-                String url = in.getText().toString().trim();
+                String url = in.getText().toString().trim(), label = name.getText().toString();
                 if (url.isEmpty()) return;
                 toast("Downloading playlist\u2026");
                 Warp.whenSettled(() -> App.io.execute(() -> {
-                    String err = Iptv.addPlaylist(url);
+                    String err = Iptv.addPlaylist(url, label);
                     runOnUiThread(() -> {
-                        toast(err == null ? "Playlist added, see My playlists" : err);
+                        toast(err == null ? "Added to the IPTV tab" : err);
                         build();
                     });
                     if (err == null) Iptv.sweep();
+                }));
+            })
+            .setNeutralButton("Xtream login", (d, w) -> xtreamDialog())
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    /** An IPTV provider's Xtream Codes login (server, username, password): its live channels get their own row. */
+    void xtreamDialog() {
+        EditText name = WebActivity.field(this, "Name, e.g. My provider (shown as its row)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        EditText server = WebActivity.field(this, "Server, e.g. http://example.com:8080", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        EditText user = WebActivity.field(this, "Username", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        EditText pass = WebActivity.field(this, "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        new AlertDialog.Builder(this).setTitle("Xtream login").setMessage("The server, username and password from your IPTV provider")
+            .setView(WebActivity.box(this, name, server, user, pass))
+            .setPositiveButton("Add", (d, w) -> {
+                if (server.getText().toString().trim().isEmpty() || user.getText().toString().trim().isEmpty()) return;
+                String url = Iptv.xtreamUrl(server.getText().toString(), user.getText().toString(), pass.getText().toString());
+                toast("Signing in\u2026");
+                Warp.whenSettled(() -> App.io.execute(() -> {
+                    String err = Iptv.addPlaylist(url, name.getText().toString());
+                    runOnUiThread(() -> {
+                        toast(err == null ? "Channels added to the IPTV tab" : err);
+                        build();
+                    });
                 }));
             })
             .setNegativeButton("Cancel", null)
@@ -716,6 +752,37 @@ public class Home extends Activity {
 
     void openIptv(String type, String key, String title, boolean typing, boolean voice) {
         startActivity(new Intent(this, IptvActivity.class).putExtra("type", type).putExtra("key", key).putExtra("title", title).putExtra("typing", typing).putExtra("voice", voice));
+    }
+
+    /** One line: a newer version exists, with Install and Later. */
+    View updateLine(String version) {
+        LinearLayout line = new LinearLayout(this);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        line.setPadding(u(18, 14), u(6, 4), u(8, 6), u(6, 4));
+        line.setBackground(rounded(CARD, dp(14)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(8);
+        line.setLayoutParams(lp);
+        line.addView(text("Update " + version + " is available", sp(15, 13), TEXT, true), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView install = chip(null);
+        install.setText("Install");
+        install.setBackground(rounded(ACCENT, dp(22)));
+        install.setOnClickListener(v -> {
+            install.setEnabled(false);
+            Update.install(status -> {
+                boolean failed = status.startsWith("Update failed");
+                install.setText(failed ? "Install" : status);
+                install.setEnabled(failed);
+                if (failed) toast(status);
+            });
+        });
+        TextView later = chip(v -> { Update.skip(version); build(); });
+        later.setText("Later");
+        later.setTextColor(MUTED);
+        line.addView(install);
+        line.addView(later);
+        if (firstCard == null) firstCard = install;
+        return line;
     }
 
     void settingsTab() {
@@ -770,11 +837,12 @@ public class Home extends Activity {
         col.addView(settingRow("Extra source list", "More playlists and title links, from a text file you choose (it starts on the project's own list).", extrasValue, v -> extrasDialog()));
         extrasValue.setText(Iptv.extrasUrl().isEmpty() ? "None" : Iptv.extrasUrl().equals(Iptv.DEFAULT_EXTRAS) ? "Default" : "Custom");
         extrasValue.setTextColor(Iptv.extrasUrl().isEmpty() ? MUTED : GREEN);
-        col.addView(settingRow("Add a playlist or stream", "Paste a playlist or a single stream link (.m3u8). It shows under My playlists.", null, v -> addPlaylistDialog()));
+        col.addView(settingRow("Add a playlist or stream", "Paste a playlist or a single stream link (.m3u8), or sign in with Xtream. Each playlist gets its own row on the IPTV tab.", null, v -> addPlaylistDialog()));
         for (String url : Iptv.mine()) {
             int n = Iptv.parse(Iptv.read(Iptv.mineFile(url)), false).size();
-            col.addView(settingRow(url.replaceFirst("(?i)^https?://", ""), n + (n == 1 ? " channel" : " channels") + ". Press to remove.", null, v ->
-                confirm("Remove this playlist?", url, "Remove", () -> { Iptv.removePlaylist(url); build(); toast("Playlist removed"); })));
+            String name = Iptv.playlistName(url);
+            col.addView(settingRow(name, n + (n == 1 ? " channel" : " channels") + ". Press to remove.", null, v ->
+                confirm("Remove this playlist?", name, "Remove", () -> { Iptv.removePlaylist(url); build(); toast("Playlist removed"); })));
         }
         TextView deadValue = new TextView(this);
         col.addView(settingRow("Hide offline channels", "Channels that failed a check or would not play stay out of the lists.", deadValue, v -> {
@@ -797,6 +865,34 @@ public class Home extends Activity {
             });
         }));
 
+        col.addView(heading("Player"));
+        TextView subValue = new TextView(this);
+        col.addView(settingRow("Subtitles", "Size and position of subtitles in the player. Timing is on the player's Subtitles button.", subValue, v ->
+            Subs.panel(this, false, () -> subValue.setText(Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel()), this::build)));
+        subValue.setText(Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel());
+        subValue.setTextColor(Subs.size() == 100 && Subs.offset() == 0 ? MUTED : GREEN);
+        TextView simklValue = new TextView(this);
+        col.addView(settingRow("Simkl", "Marks movies and episodes you watch in the player as watched on Simkl, a free tracker. Titles opened from Movies, TV or Anime.", simklValue, v -> {
+            if (Simkl.signedIn()) confirm("Disconnect Simkl?", "FMHYPlay stops telling Simkl what you watch. Your Simkl history stays.", "Disconnect", () -> { Simkl.signOut(); build(); });
+            else simklDialog();
+        }));
+        simklValue.setText(Simkl.signedIn() ? "Connected" : "Connect");
+        simklValue.setTextColor(Simkl.signedIn() ? GREEN : ACCENT);
+
+        col.addView(heading("Updates"));
+        String newer = Update.latest();
+        TextView updValue = new TextView(this);
+        col.addView(settingRow("Check for updates", "FMHYPlay " + Update.installed() + ". Asks GitHub for a newer release and installs it on your say.", updValue, v -> checkUpdate(updValue)));
+        updValue.setText(newer.isEmpty() ? "Up to date" : newer + " available");
+        updValue.setTextColor(newer.isEmpty() ? MUTED : GREEN);
+        TextView autoValue = new TextView(this);
+        col.addView(settingRow("Check at app start", "Looks for an update once every 12 hours.", autoValue, v -> {
+            App.prefs.edit().putBoolean("updateCheck", !Update.auto()).apply();
+            build();
+        }));
+        autoValue.setText(Update.auto() ? "On" : "Off");
+        autoValue.setTextColor(Update.auto() ? GREEN : MUTED);
+
         col.addView(heading("Sites"));
         col.addView(settingRow("Refresh FMHY lists", "Checks FMHY for new and removed sites (also every 12 hours).", null, v -> {
             toast("Checking FMHY…");
@@ -813,6 +909,61 @@ public class Home extends Activity {
         about.setPadding(0, u(28, 14), 0, 0);
         col.addView(about);
         updateChips();
+    }
+
+    /** Shows a code to enter at simkl.com/pin (where you can also make the free account) and waits for it. */
+    void simklDialog() {
+        TextView steps = text("Getting a code\u2026", sp(17, 15), TEXT, false), code = text("", sp(40, 32), TEXT, true);
+        code.setLetterSpacing(0.15f);
+        code.setPadding(0, dp(14), 0, dp(6));
+        AlertDialog d = new AlertDialog.Builder(this).setTitle("Connect Simkl").setView(WebActivity.box(this, steps, code)).setNegativeButton("Cancel", null).create();
+        boolean[] open = {true};
+        d.setOnDismissListener(x -> open[0] = false);
+        d.show();
+        App.io.execute(() -> {
+            Simkl.Code c = Simkl.newCode();
+            runOnUiThread(() -> {
+                if (!open[0]) return;
+                if (c == null) { steps.setText("Can't reach Simkl. Check WARP and try again."); return; }
+                steps.setText("1. On your phone or computer, open " + c.page.replaceFirst("^https?://", "") + "\n2. Sign in, or make a free account there\n3. Enter this code:");
+                code.setText(c.user);
+                waitForSimkl(c, c.interval, d, open, steps);
+            });
+        });
+    }
+
+    void waitForSimkl(Simkl.Code c, int every, AlertDialog d, boolean[] open, TextView steps) {
+        App.main.postDelayed(() -> {
+            if (!open[0]) return;
+            App.io.execute(() -> {
+                String r = Simkl.check(c);
+                runOnUiThread(() -> {
+                    if (!open[0]) return;
+                    switch (r) {
+                        case "ok": d.dismiss(); toast("Simkl connected"); build(); break;
+                        case "expired": steps.setText("The code ran out. Close this and press Simkl again for a new one."); break;
+                        case "error": steps.setText("Simkl turned this down. Close this and try again."); break;
+                        default: waitForSimkl(c, r.equals("slow") ? every + 5 : every, d, open, steps);
+                    }
+                });
+            });
+        }, every * 1000L);
+    }
+
+    /** Settings: ask GitHub now, then offer the install. */
+    void checkUpdate(TextView value) {
+        value.setText("Checking\u2026");
+        App.io.execute(() -> {
+            boolean ok = Update.check();
+            runOnUiThread(() -> {
+                String v = Update.latest();
+                if (!ok) { value.setText("Can't reach GitHub"); toast("Can't reach GitHub. Check WARP."); return; }
+                if (v.isEmpty()) { value.setText("Up to date"); toast("FMHYPlay " + Update.installed() + " is the latest"); return; }
+                value.setText(v + " available");
+                confirm("Update " + v + " is available", "Download it and install over this version?", "Install", () ->
+                    Update.install(value::setText));
+            });
+        });
     }
 
     TextView warpValue, adValue;

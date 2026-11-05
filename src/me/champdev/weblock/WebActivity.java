@@ -69,8 +69,7 @@ import java.util.Map;
 
 /** One streaming site, full screen, with downloads, uploads, permissions, ad and pop-up blocking. */
 public class WebActivity extends Activity {
-    static final String FINE = Manifest.permission.ACCESS_FINE_LOCATION, COARSE = Manifest.permission.ACCESS_COARSE_LOCATION;
-    static final int REQ_FILE = 1, REQ_GEO = 2, REQ_MEDIA = 3, REQ_CAMERA = 4, REQ_STORAGE = 5, REQ_PLAY = 6;
+    static final int REQ_FILE = 1, REQ_STORAGE = 5, REQ_PLAY = 6;
     // The chip that takes you back to the native player after Back
     static final String CHIP = "(()=>{if(document.getElementById('fp-native'))return;const b=document.createElement('button');b.id='fp-native';b.textContent='\u25B6 Native player';"
         + "b.style.cssText='position:fixed;top:8px;left:8px;z-index:2147483647;padding:5px 10px;font:600 13px sans-serif;color:#fff;background:#ff3b5c;border:0;border-radius:8px;opacity:.92';"
@@ -106,10 +105,6 @@ public class WebActivity extends Activity {
     volatile long lastClickedAt;
     ValueCallback<Uri[]> fileCb;
     WebChromeClient.FileChooserParams fileParams;
-    Uri cameraUri;
-    GeolocationPermissions.Callback geoCb;
-    String geoOrigin;
-    PermissionRequest mediaReq;
     View fullscreen;
     WebChromeClient.CustomViewCallback fullscreenCb;
     String spatnav;
@@ -152,29 +147,20 @@ public class WebActivity extends Activity {
             if (fileCb != null) fileCb.onReceiveValue(null);
             fileCb = cb;
             fileParams = p;
-            if (Build.VERSION.SDK_INT >= 29 && acceptsImages(p) && !granted(Manifest.permission.CAMERA))
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_CAMERA);
-            else openChooser();
+            openChooser();
             return true;
         }
 
+        // A streaming app has no use for location, camera or microphone: sites asking for them are told no
         @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
-            if (granted(FINE) || granted(COARSE)) { cb.invoke(origin, true, false); return; }
-            geoOrigin = origin;
-            geoCb = cb;
-            requestPermissions(new String[]{FINE, COARSE}, REQ_GEO);
+            cb.invoke(origin, false, false);
         }
 
         @Override public void onPermissionRequest(PermissionRequest r) {
-            List<String> need = new ArrayList<>();
-            for (String res : r.getResources()) {
-                String p = androidPerm(res);
-                if (p != null && !granted(p)) need.add(p);
-            }
-            if (need.isEmpty()) { r.grant(r.getResources()); return; }
-            if (mediaReq != null) mediaReq.deny();
-            mediaReq = r;
-            requestPermissions(need.toArray(new String[0]), REQ_MEDIA);
+            List<String> ok = new ArrayList<>();   // what needs no device permission, such as protected (DRM) video
+            for (String res : r.getResources())
+                if (!res.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE) && !res.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) ok.add(res);
+            if (ok.isEmpty()) r.deny(); else r.grant(ok.toArray(new String[0]));
         }
 
         // JS dialogs: with an application-context WebView the default ones can't show, so draw them here
@@ -603,25 +589,12 @@ public class WebActivity extends Activity {
     }
 
     void openChooser() {
-        Intent chooser = Intent.createChooser(fileParams.createIntent(), null);
-        cameraUri = null;
-        if (Build.VERSION.SDK_INT >= 29 && acceptsImages(fileParams) && granted(Manifest.permission.CAMERA)) {
-            ContentValues cv = new ContentValues();
-            cv.put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_" + System.currentTimeMillis() + ".jpg");
-            cv.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
-            cameraUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
-            Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE).putExtra(MediaStore.EXTRA_OUTPUT, cameraUri)
-                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cam});
-        }
-        try { startActivityForResult(chooser, REQ_FILE); } catch (ActivityNotFoundException e) { finishFile(null); }
+        try { startActivityForResult(Intent.createChooser(fileParams.createIntent(), null), REQ_FILE); } catch (ActivityNotFoundException e) { finishFile(null); }
     }
 
     void finishFile(Uri[] out) {
-        if (cameraUri != null && (out == null || !cameraUri.equals(out[0]))) getContentResolver().delete(cameraUri, null, null);
         fileCb.onReceiveValue(out);
         fileCb = null;
-        cameraUri = null;
     }
 
     @Override protected void onActivityResult(int req, int res, Intent data) {
@@ -642,26 +615,8 @@ public class WebActivity extends Activity {
                 out = new Uri[clip.getItemCount()];
                 for (int i = 0; i < out.length; i++) out[i] = clip.getItemAt(i).getUri();
             } else if (data != null && data.getData() != null) out = new Uri[]{data.getData()};
-            else if (cameraUri != null) out = new Uri[]{cameraUri};
         }
         finishFile(out);
-    }
-
-    @Override public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
-        if (req == REQ_GEO && geoCb != null) {
-            geoCb.invoke(geoOrigin, granted(FINE) || granted(COARSE), false);
-            geoCb = null;
-        } else if (req == REQ_MEDIA && mediaReq != null) {
-            List<String> ok = new ArrayList<>();
-            for (String res : mediaReq.getResources()) {
-                String p = androidPerm(res);
-                if (p == null || granted(p)) ok.add(res);
-            }
-            if (ok.isEmpty()) mediaReq.deny(); else mediaReq.grant(ok.toArray(new String[0]));
-            mediaReq = null;
-        } else if (req == REQ_CAMERA && fileCb != null) {
-            openChooser();
-        }
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
@@ -775,8 +730,6 @@ public class WebActivity extends Activity {
         Warp.route(true);
         App.main.removeCallbacks(capture);
         if (fileCb != null) { fileCb.onReceiveValue(null); fileCb = null; }
-        if (geoCb != null) { geoCb.invoke(geoOrigin, false, false); geoCb = null; }
-        if (mediaReq != null) { mediaReq.deny(); mediaReq = null; }
         if (fullscreen != null) chrome.onHideCustomView();
         if (pointer != null) pointer.release();
         web.stopLoading();
@@ -789,17 +742,6 @@ public class WebActivity extends Activity {
         web.removeAllViews();
         web.destroy();
         super.onDestroy();
-    }
-
-    static String androidPerm(String resource) {
-        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) return Manifest.permission.CAMERA;
-        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) return Manifest.permission.RECORD_AUDIO;
-        return null;
-    }
-
-    static boolean acceptsImages(WebChromeClient.FileChooserParams p) {
-        for (String t : p.getAcceptTypes()) if (t.isEmpty() || t.startsWith("image/") || t.equals("*/*")) return true;
-        return p.getAcceptTypes().length == 0;
     }
 
     boolean granted(String perm) {
