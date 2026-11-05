@@ -245,7 +245,7 @@ final class Iptv {
     static int deadCount() {
         loadHealth();
         int n = 0;
-        for (Channel c : cache == null ? new ArrayList<Channel>() : cache) if (isDead(c.url)) n++;
+        for (Channel c : all(true)) if (isDead(c.url)) n++;   // all(true) reloads the list after a playlist was added or removed
         return n;
     }
 
