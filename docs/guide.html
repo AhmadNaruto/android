@@ -11,7 +11,7 @@
 </div></header>
 
 <main><div class="layout">
-<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#cast">Cast to TV</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
+<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#cast">Cast to TV</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#punchplay">PunchPlay</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
 <article>
 <h1>User guide</h1>
 <p class="sub">Everything you need to use FMHYPlay on a TV or a phone.</p>
@@ -92,7 +92,8 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <p>The row of buttons shows each setting's current value. A pink value means it is not the default.</p>
 <table><tr><th>Button</th><th>Shows</th><th>Opens</th></tr>
 <tr><td>Quality</td><td>Height and frame rate, for example <code>1080p60</code></td><td>The qualities the stream offers, or the site's own quality list for sites that serve one playlist per quality. The frame rate comes from the stream when it declares one, otherwise it is measured from the frames being shown.</td></tr>
-<tr><td>Audio</td><td>Language code</td><td>The stream's audio tracks (only when there is more than one)</td></tr>
+<tr><td>Audio</td><td>Language code</td><td>The stream's audio tracks by language (only when there is more than one). The language you pick here is remembered: the next videos start in it when they have it, otherwise in your device's language.</td></tr>
+<tr><td>Volume boost, Dialog boost</td><td><code>+6</code>, <code>On</code></td><td>Louder sound (up to +12 dB) and clearer voices for this video; the defaults are in <i>Settings, Player</i></td></tr>
 <tr><td>Subtitles</td><td><code>Off</code> or a language</td><td>The stream's subtitles, a search in OpenSubtitles, and the size, position and timing panel</td></tr>
 <tr><td>Speed</td><td><code>1x</code></td><td>0.5x to 2x</td></tr>
 <tr><td>Zoom</td><td><code>Fit</code></td><td>Cycles Fit, Fill (crops to cover the screen), Stretch, 16:9 and 4:3. Every playback starts on Fit.</td></tr></table>
@@ -130,12 +131,23 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 </ol>
 <p>Only titles opened from Movies, TV or Anime count, since they carry the title's IMDb id. A title is marked watched once you pass 80% in the native player. Press <i>Settings, Simkl</i> again to disconnect.</p>
 
+<h2 id="punchplay">PunchPlay</h2>
+<p><a href="https://punchplay.tv">PunchPlay</a> is another free tracker, and works the same way. You can connect both.</p>
+<ol>
+<li>Open <i>Settings, PunchPlay</i> and press <i>Connect</i>. A code appears.</li>
+<li>Open <code>punchplay.tv/link</code>, sign in (or make a free account) and enter the code.</li>
+<li>The app says <i>Connected</i> by itself.</li>
+</ol>
+<p>PunchPlay sees when you start, pause and stop a movie or episode opened from Movies, TV or Anime, and marks it watched past 80%. Press <i>Settings, PunchPlay</i> again to disconnect. What is sent is listed on the <a href="privacy.html">privacy page</a>.</p>
+
 <h2 id="iptv">IPTV</h2>
 <p>The <b>IPTV</b> tab lists public channels by category and country.</p>
 <ul>
 <li><b>Continue watching</b> and <b>Working</b> rows: the last channels you watched, and every channel that has played for you. Hold <kbd>OK</kbd> on a card to remove it or star it.</li>
 <li><b>Offline channels are hidden.</b> A background check tests channels a few at a time and remembers the result (working for a week, not working for two days). A channel that fails when you press play is hidden at once. <i>Settings, Hide offline channels</i> turns this off and <i>Check channels now</i> tests everything again.</li>
-<li><b>Search</b> by typing or by voice, and filter inside any list.</li>
+<li><b>Search</b> by typing or by voice, and filter inside any list by name.</li>
+<li><b>Category and Language chips</b> above every channel list: in <i>India</i>, for example, pick <i>News</i> and <i>Hindi</i>. Categories start with Movies, TV, Kids and News; languages with the one you use for audio, the country's main one and English.</li>
+<li><b>Pins</b>: the pin button next to the microphone keeps a list with its chips (<i>India · News · Hindi</i>) as its own row on the IPTV tab, near the top. Press it again in that list to unpin.</li>
 <li><b>Your playlists</b> come first: each one you added has its own row under the name you gave it, and single stream links share a <b>My streams</b> row (see below).</li>
 <li><b>+ Playlist</b> (top right) adds your own playlist or a single stream link.</li>
 </ul>
@@ -147,6 +159,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <tr><td>A single <b>stream</b>: an <code>.m3u8</code> (HLS) link, for example a camera, a live feed or a channel your provider gave you</td><td>One channel in <b>My streams</b>, under the name you gave it or named after the address (for example <code>cdn.example.com · news</code>). It plays in the native player like any other.</td></tr></table>
 <ul>
 <li><b>Xtream Codes</b>: if your provider gave you a server, username and password instead of a link, press <i>Xtream login</i> in the same dialog. The provider's live channels show in their categories. The background channel check never tests them, so the account's connection limit is not used up.</li>
+<li><b>Stalker portal (MAC)</b>: if your provider gave you a portal address (often ending in <code>/c/</code>) and a MAC address for a MAG box, press <i>Stalker portal (MAC)</i> in the same dialog and enter both. The channels get their own row; each one asks the portal for a fresh link when you play it, and the background check never tests them.</li>
 <li>Links on your own network (a PC, a NAS, a media server) work too; they never go through WARP.</li>
 <li>Playlists are downloaded again every 12 hours and when you press <i>Settings, Refresh IPTV channels</i>. A single stream is kept as it is.</li>
 <li>Hold <kbd>OK</kbd> on a card in your playlists to star it. Remove a whole playlist in <i>Settings</i>: each one has its own row (press it, then <i>Remove</i>).</li>
