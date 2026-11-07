@@ -1231,7 +1231,7 @@ public class PlayerActivity extends Activity {
 
     /** Settings, Dialog boost: whether every video starts with it. */
     static boolean dialogBoost() {
-        return App.prefs.getBoolean("dialogBoost", true);
+        return App.prefs.getBoolean("dialogBoost", false);
     }
 
     /**

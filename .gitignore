@@ -20,3 +20,4 @@ jni/
 
 # private extras never go in the public repo
 private/
+.claude/
