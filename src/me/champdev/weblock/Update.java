@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 
 /** Looks for a newer release on GitHub and installs its APK over this app (same signing key, so Android takes it as an update). */
 final class Update {
-    static final String API = "https://api.github.com/repos/fmhyplay/android/releases/latest";
+    static final String API = "https://api.github.com/repos/fmhyplay/android/releases?per_page=15";   // newest first
     static final long EVERY = 12L * 3600 * 1000;
     private static volatile boolean busy;
     private static BroadcastReceiver waiting;   // listens for the installer's answer; one at a time
@@ -36,11 +36,22 @@ final class Update {
         return auto() && !busy && System.currentTimeMillis() - App.prefs.getLong("updateAt", 0) > EVERY;
     }
 
-    /** Asks GitHub for the latest release and remembers it. Off the main thread. False when GitHub can't be reached. */
+    /** Asks GitHub for the latest release and remembers it, with the notes of every release newer than this one. Off the main thread. False when GitHub can't be reached. */
     static boolean check() {
         busy = true;
         try {
-            JSONObject r = new JSONObject(Sites.readAll(Warp.open(API).getInputStream()));
+            JSONArray all = new JSONArray(Sites.readAll(Warp.open(API).getInputStream()));
+            JSONObject r = null;
+            StringBuilder notes = new StringBuilder();
+            for (int i = 0; i < all.length(); i++) {
+                JSONObject x = all.getJSONObject(i);
+                if (x.optBoolean("draft") || x.optBoolean("prerelease")) continue;
+                if (r == null) r = x;
+                String v = x.getString("tag_name").replaceFirst("^v", "");
+                if (!newer(v, installed())) break;
+                notes.append(notes.length() == 0 ? "" : "\n\n").append(v).append('\n').append(x.optString("body").trim());
+            }
+            if (r == null) return false;
             String want = App.flavor.equals("android") ? "-Android-" : "-TV-", apk = "";
             JSONArray assets = r.getJSONArray("assets");
             for (int i = 0; i < assets.length() && apk.isEmpty(); i++) {
@@ -48,7 +59,7 @@ final class Update {
                 if (a.getString("name").endsWith(".apk") && a.getString("name").contains(want)) apk = a.getString("browser_download_url");
             }
             App.prefs.edit().putString("updateVer", r.getString("tag_name").replaceFirst("^v", "")).putString("updateUrl", apk)
-                .putLong("updateAt", System.currentTimeMillis()).apply();
+                .putString("updateNotes", notes.toString()).putLong("updateAt", System.currentTimeMillis()).apply();
             return true;
         } catch (Exception e) {
             return false;
@@ -67,6 +78,16 @@ final class Update {
     static String available() {
         String v = latest();
         return v.equals(App.prefs.getString("updateSkip", "")) ? "" : v;
+    }
+
+    /** What changed since this version, newest release first, as plain text ("" when unknown). */
+    static String notes() {
+        return plain(App.prefs.getString("updateNotes", ""));
+    }
+
+    /** The changelog's Markdown made readable in a dialog: bullets, no ** or backticks. */
+    static String plain(String md) {
+        return md.replaceAll("(?m)^\\s*[-*] ", "\u2022 ").replace("**", "").replace("`", "").trim();
     }
 
     static void skip(String version) {

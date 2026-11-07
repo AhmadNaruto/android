@@ -30,6 +30,9 @@ final class History {
     static final class Entry {
         String site, siteUrl, title, url, image, episode;
         long time;
+        long pos, dur;          // where the native player left off (ms), and the video's length; 0 = from the start
+        long posAt;             // when pos was saved: the newest one wins across sites
+        String posEpisode = ""; // the episode `pos` belongs to: a new episode starts from the beginning
     }
 
     static boolean isContent(String url) {
@@ -46,11 +49,15 @@ final class History {
                 Entry e = new Entry();
                 e.site = o.getString("site");
                 e.siteUrl = o.getString("siteUrl");
-                e.title = o.getString("title");
+                e.title = o.getString("title").replaceAll("\\s*[(\\[]\\d{4}[)\\]]$", "");   // older versions kept "Verity (2026)"
                 e.url = o.getString("url");
                 e.image = o.optString("image");
                 e.episode = o.optString("episode");
                 e.time = o.getLong("time");
+                e.pos = o.optLong("pos");
+                e.dur = o.optLong("dur");
+                e.posEpisode = o.optString("posEp");
+                e.posAt = o.optLong("posAt");
                 out.add(e);
             }
         } catch (JSONException ignored) { }
@@ -62,30 +69,53 @@ final class History {
         try {
             for (Entry e : list.subList(0, Math.min(MAX, list.size())))
                 a.put(new JSONObject().put("site", e.site).put("siteUrl", e.siteUrl).put("title", e.title).put("url", e.url)
-                    .put("image", e.image).put("episode", e.episode).put("time", e.time));
+                    .put("image", e.image).put("episode", e.episode).put("time", e.time)
+                    .put("pos", e.pos).put("dur", e.dur).put("posEp", e.posEpisode).put("posAt", e.posAt));
         } catch (JSONException ignored) { }
         App.prefs.edit().putString("history", a.toString()).apply();
     }
 
-    /** Records a page if it looks like a movie/episode/stream page; same title on same site updates in place. */
+    /** The name Continue watching shows for a page title: "Watch Verity (2026) S1 E2 | Site" -> "Verity". "" when it isn't one. */
+    static String titleOf(String rawTitle, String site) {
+        String title = cleanTitle(rawTitle, site);
+        title = EP_TEXT.matcher(title).replaceAll("").replaceAll("[\\s:,|–-]+$", "").trim();
+        title = title.replaceAll("\\s*[(\\[]\\d{4}[)\\]]$", "").trim();   // the watch page often adds the year: "Verity (2026)"
+        return title.length() < 2 || title.equalsIgnoreCase(site) || GENERIC.matcher(title).matches() ? "" : title;
+    }
+
+    /** Titles that are the same show: case, accents, punctuation and a year in brackets don't count. */
+    static String same(String title) {
+        String t = java.text.Normalizer.normalize(title, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(java.util.Locale.ROOT);
+        return t.replaceAll("[(\\[]\\d{4}[)\\]]", " ").replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+    }
+
+    /** The entry for a page title on a site, null if there is none. */
+    static Entry find(List<Entry> list, String site, String title) {
+        String key = same(title);
+        for (Entry x : list) if (x.site.equals(site) && same(x.title).equals(key)) return x;
+        return null;
+    }
+
+    /** Records a page if it looks like a movie/episode/stream page; the same title on the same site (another server, a year added) updates in place. */
     static void record(String site, String siteUrl, String url, String rawTitle, String image) {
         if (!isContent(url) || rawTitle == null) return;
-        String title = cleanTitle(rawTitle, site);
+        String title = titleOf(rawTitle, site);
         String episode = episode(url, rawTitle);
-        title = EP_TEXT.matcher(title).replaceAll("").replaceAll("[\\s:,|–-]+$", "").trim();
-        if (title.length() < 2 || title.equalsIgnoreCase(site) || GENERIC.matcher(title).matches()) return;
+        if (title.isEmpty()) return;
 
         List<Entry> list = list();
-        Entry e = null;
-        for (Entry x : list) if (x.site.equals(site) && x.title.equalsIgnoreCase(title)) e = x;
+        Entry e = find(list, site, title);
         if (e == null) {
             e = new Entry();
             e.site = site;
             e.title = title;
             e.image = "";
         } else {
-            list.remove(e);
+            // Older versions kept "Verity" and "Verity (2026)" apart: fold every copy into this one
+            String key = same(title);
+            list.removeIf(x -> x.site.equals(site) && same(x.title).equals(key));
         }
+        e.title = title;   // the clean name, also for an entry an older version saved as "Verity (2026)"
         e.siteUrl = siteUrl;
         e.url = url;
         // TMDB "original" files are huge; w780 is plenty for a card
@@ -96,6 +126,34 @@ final class History {
         e.time = System.currentTimeMillis();
         list.add(0, e);
         save(list);
+    }
+
+    /** Remembers where the player is in this page's title, so another stream of it (a new server, tomorrow) carries on there. */
+    static void savePosition(String site, String rawTitle, String url, long pos, long dur) {
+        if (site == null || rawTitle == null) return;
+        List<Entry> list = list();
+        Entry e = find(list, site, titleOf(rawTitle, site));
+        if (e == null) return;
+        boolean done = dur > 0 && pos > dur - 120000;   // the credits: next time starts over
+        e.pos = done || pos < 10000 ? 0 : pos;
+        e.dur = dur;
+        e.posEpisode = episode(String.valueOf(url), rawTitle);
+        e.posAt = System.currentTimeMillis();
+        save(list);
+    }
+
+    /**
+     * Where to start this page's title, on whatever site it was last watched: the newest spot saved for the same title and episode.
+     * 0 for the beginning (nothing saved, watched to the end, or only another episode saved).
+     */
+    static long position(String site, String rawTitle, String url) {
+        if (site == null || rawTitle == null) return 0;
+        String key = same(titleOf(rawTitle, site)), ep = episode(String.valueOf(url), rawTitle);
+        if (key.isEmpty()) return 0;
+        Entry best = null;
+        for (Entry e : list())
+            if (e.posAt > 0 && e.posEpisode.equals(ep) && same(e.title).equals(key) && (best == null || e.posAt > best.posAt)) best = e;
+        return best == null ? 0 : best.pos;
     }
 
     static boolean isTmdb(String url) {

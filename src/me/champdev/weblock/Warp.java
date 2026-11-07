@@ -25,6 +25,27 @@ final class Warp {
     static volatile int port;
     static Process proc;
     static final List<Runnable> listeners = new ArrayList<>();
+    private static final java.util.ArrayDeque<String> history = new java.util.ArrayDeque<>();   // last lines, for Settings, WARP log
+
+    /** Keeps a line for the WARP log (200 at most) and sends it to logcat. */
+    static void log(String line) {
+        Log.i("warp", line);
+        String stamp = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.ROOT).format(new java.util.Date());
+        synchronized (history) {
+            history.addLast(stamp + "  " + line);
+            while (history.size() > 200) history.removeFirst();
+        }
+    }
+
+    /** The WARP log as text, oldest line first, with the app version and device for a bug report. */
+    static String logText() {
+        StringBuilder b = new StringBuilder("FMHYPlay " + Update.installed() + ", Android " + android.os.Build.VERSION.RELEASE + ", "
+            + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + "\nWARP " + state + (detail.isEmpty() ? "" : ": " + detail) + "\n\n");
+        synchronized (history) {
+            for (String l : history) b.append(l).append('\n');
+        }
+        return b.toString();
+    }
 
     // One helper at a time: every start gets a generation number, and only the current generation may touch shared state.
     // Without it a helper that is being stopped could reset the port of the one that replaced it.
@@ -51,7 +72,7 @@ final class Warp {
                 }
                 BufferedReader out = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 String line;
-                while ((line = out.readLine()) != null && line.startsWith("LOG ")) Log.i("warp", line.substring(4));
+                while ((line = out.readLine()) != null && line.startsWith("LOG ")) log(line.substring(4));
                 if (line == null || !line.startsWith("READY ")) {
                     if (end(mine)) set(State.FAILED, line == null ? "helper exited" : line.replaceFirst("^FAIL ", ""));
                     p.destroy();
@@ -63,7 +84,7 @@ final class Warp {
                 }
                 App.main.post(() -> { if (gen == mine) applyProxy(() -> { if (gen == mine) set(State.ON, ""); }); });
                 // Keep draining output so the helper never blocks on a full pipe
-                while ((line = out.readLine()) != null) Log.i("warp", line);
+                while ((line = out.readLine()) != null) log(line.startsWith("LOG ") ? line.substring(4) : line);
                 if (end(mine)) set(State.FAILED, "helper stopped");
             } catch (IOException | RuntimeException e) {
                 if (p != null) p.destroy();
@@ -150,6 +171,7 @@ final class Warp {
     }
 
     static void set(State s, String d) {
+        log("state " + s + (d.isEmpty() ? "" : ": " + d));
         state = s;
         detail = d;
         App.main.post(() -> { for (Runnable r : new ArrayList<>(listeners)) r.run(); });

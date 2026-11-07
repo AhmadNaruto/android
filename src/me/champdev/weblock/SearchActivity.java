@@ -35,10 +35,12 @@ public class SearchActivity extends Home {
 
     @Override boolean tabs() { return false; }
 
+    @Override boolean kindBadges() { return true; }   // movies, series and anime share one grid here
+
     @Override void build() {
         col.removeAllViews();
         firstCard = null;
-        box = WebActivity.field(this, "Search movies, series, sites or languages", InputType.TYPE_CLASS_TEXT);
+        box = WebActivity.field(this, "Search movies, series, channels, sites or languages", InputType.TYPE_CLASS_TEXT);
         box.setSingleLine(true);
         box.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         box.setTextColor(TEXT);
@@ -119,14 +121,29 @@ public class SearchActivity extends Home {
             results.addView(heading("Movies & series"));
             results.addView(searching());
         } else if (haveTitles) {
-            results.addView(heading("Movies & series  \u00B7  " + titles.size()));
-            Grid grid = new Grid(results, App.tv ? 6 : 3);   // same poster grid as the Movies tab
-            for (Catalog.Title t : titles) grid.add(posterCard(t, grid.cell));
+            // One sideways row each, so channels and sites below stay in view
+            for (boolean series : new boolean[]{false, true}) {
+                List<Catalog.Title> kind = new ArrayList<>();
+                for (Catalog.Title t : titles) if (t.series() == series) kind.add(t);
+                if (kind.isEmpty()) continue;
+                results.addView(heading((series ? "Series" : "Movies") + "  \u00B7  " + kind.size()));
+                LinearLayout row = row(results);
+                for (Catalog.Title t : kind) row.addView(posterCard(t, posterW()));
+            }
         } else if (failed) {
             results.addView(heading("Movies & series"));
             results.addView(note("Can't reach the movie catalog. Check WARP in Settings, then search again."));
         }
-        if (seen.isEmpty() && found.isEmpty() && !haveTitles && !pending && !failed) {
+        // IPTV channels whose name, group or list has every typed word (plain contains: there are thousands)
+        List<Iptv.Channel> chans = new ArrayList<>();
+        for (Iptv.Channel c : Iptv.list("all", "")) {
+            String hay = (c.name + " " + c.group + " " + c.source).toLowerCase(Locale.ROOT);
+            boolean all = true;
+            for (String w : words) if (!w.isEmpty() && !hay.contains(w)) { all = false; break; }
+            if (all) chans.add(c);
+        }
+
+        if (seen.isEmpty() && found.isEmpty() && chans.isEmpty() && !haveTitles && !pending && !failed) {
             TextView none = text("Nothing found for “" + q + "”", sp(16, 14), MUTED, false);
             none.setPadding(dp(4), dp(16), 0, 0);
             results.addView(none);
@@ -136,6 +153,22 @@ public class SearchActivity extends Home {
             results.addView(heading("You watched"));
             LinearLayout row = row(results);
             for (History.Entry e : seen) row.addView(historyCard(e));
+        }
+        if (!chans.isEmpty()) {
+            results.addView(heading("Channels  \u00B7  " + chans.size()));
+            int cols = App.tv ? 6 : 3;
+            LinearLayout row = row(results);
+            for (Iptv.Channel c : chans.subList(0, Math.min(14, chans.size()))) row.addView(channelCard(c, cols, "search"));
+            if (chans.size() > 14) {
+                TextView more = text("All  " + chans.size() + "  \u203A", sp(17, 15), TEXT, true);
+                more.setGravity(Gravity.CENTER);
+                more.setLayoutParams(cardParams(squareDp(cols), squareDp(cols)));
+                more.setBackground(rounded(0xFF2A2236, dp(14)));
+                focusable(more, dp(14));
+                more.setOnClickListener(v -> startActivity(new android.content.Intent(this, IptvActivity.class).putExtra("type", "all").putExtra("key", "")
+                    .putExtra("title", "Channels: " + q).putExtra("q", q)));
+                row.addView(more);
+            }
         }
         if (!found.isEmpty()) {
             boolean cut = found.size() > MAX_SITES;
@@ -150,26 +183,32 @@ public class SearchActivity extends Home {
         final String q = query.trim();
         if (q.length() < 2 || q.equals(titlesFor)) return;
         String extra = "search=" + android.net.Uri.encode(q);
-        Warp.whenSettled(() -> CompletableFuture.supplyAsync(() -> Catalog.list("movie", extra), lane)   // movies and series at the same time
-            .thenCombine(CompletableFuture.supplyAsync(() -> Catalog.list("series", extra), lane), (movies, series) -> {
-                List<Catalog.Title> all = new ArrayList<>();
-                for (int i = 0; i < 20; i++) {   // everything the catalog returns (20 a kind at most)
-                    if (movies != null && i < movies.size()) all.add(movies.get(i));
-                    if (series != null && i < series.size()) all.add(series.get(i));
-                }
-                // Cinemeta also returns loose matches (a series named "...Ankara..." for "kantara"): titles with every typed word come first
-                String[] words = q.toLowerCase(Locale.ROOT).split("\\s+");
-                all.sort((a, b) -> Boolean.compare(!matches(a.name, words), !matches(b.name, words)));
-                boolean failed = movies == null && series == null;
-                runOnUiThread(() -> {
-                    if (!q.equals(query.trim())) return;
-                    titles = all;
-                    titlesFor = q;
-                    titlesFailed = failed;
-                    showResults();
+        // Movies, series and Kitsu's anime list (only for the Anime label) at the same time
+        Warp.whenSettled(() -> {
+            CompletableFuture<java.util.Set<String>> anime = CompletableFuture.supplyAsync(() -> Catalog.animeIds(q), lane);
+            CompletableFuture.supplyAsync(() -> Catalog.list("movie", extra), lane)
+                .thenCombine(CompletableFuture.supplyAsync(() -> Catalog.list("series", extra), lane), (movies, series) -> {
+                    List<Catalog.Title> all = new ArrayList<>();
+                    if (movies != null) all.addAll(movies.subList(0, Math.min(20, movies.size())));   // 20 a kind at most
+                    if (series != null) all.addAll(series.subList(0, Math.min(20, series.size())));
+                    java.util.Set<String> ids = anime.join();
+                    for (Catalog.Title t : all) t.anime = ids.contains(t.id);
+                    // Cinemeta also returns loose matches (a series named "...Ankara..." for "kantara"): titles with every typed word come first,
+                    // then newest to oldest in each group
+                    String[] words = q.toLowerCase(Locale.ROOT).split("\\s+");
+                    all.sort(java.util.Comparator.<Catalog.Title, Boolean>comparing(t -> !matches(t.name, words))
+                        .thenComparing(t -> -Catalog.startYear(t.year)));
+                    boolean failed = movies == null && series == null;
+                    runOnUiThread(() -> {
+                        if (!q.equals(query.trim())) return;
+                        titles = all;
+                        titlesFor = q;
+                        titlesFailed = failed;
+                        showResults();
+                    });
+                    return null;
                 });
-                return null;
-            }));
+        });
     }
 
     /** A spinner and a line while the catalog answers. */

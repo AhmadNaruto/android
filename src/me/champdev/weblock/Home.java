@@ -81,7 +81,7 @@ public class Home extends Activity {
         cardW = App.tv ? 220 : 156;
         cardH = App.tv ? 92 : 62;
         gapDp = App.tv ? 14 : 8;
-        col.setPadding(side, App.tv ? side : dp(6), side, App.tv ? side : dp(12));
+        col.setPadding(side, App.tv ? (tabs() ? dp(8) : side) : dp(6), side, App.tv ? side : dp(12));   // tabs: the top and tab bars sit above
         col.setClipToPadding(false);
         sv.addView(col);
         if (tabs()) {
@@ -91,6 +91,7 @@ public class Home extends Activity {
             root.setOrientation(LinearLayout.VERTICAL);
             root.setBackgroundColor(BG);
             tabBar = tabBar();
+            root.addView(topBar());
             if (App.tv) root.addView(tabBar);
             root.addView(sv, new LinearLayout.LayoutParams(-1, 0, 1));
             if (!App.tv) root.addView(tabBar);
@@ -158,25 +159,34 @@ public class Home extends Activity {
             for (History.Entry e : history) row.addView(historyCard(e));
         }
 
+        List<Sites.Site> favs = Sites.favorites();
+        if (!favs.isEmpty()) {   // only once something is marked (Add a site is also in Settings, Sites)
+            LinearLayout favHead = new LinearLayout(this);
+            favHead.setGravity(Gravity.BOTTOM);
+            favHead.addView(heading("\u2665  Favorites"), new LinearLayout.LayoutParams(0, -2, 1));
+            favHead.addView(iconButton(R.drawable.ic_delete, "Clear all favorites", v -> confirmClearFavorites(favs.size())));
+            col.addView(favHead);
+            LinearLayout favRow = row();
+            for (Sites.Site s : favs) favRow.addView(siteCard(s, false));
+            favRow.addView(addCard());
+        }
+
         List<Catalog.Title> mine = Catalog.mine();
         if (!mine.isEmpty()) {
             col.addView(heading("My list"));
             LinearLayout row = row();
             for (Catalog.Title t : mine) row.addView(posterCard(t, posterW()));
         }
-        titleRow("Popular movies", "movie", 1);
-        titleRow("Popular series", "series", 2);
-
-        List<Sites.Site> favs = Sites.favorites();
-        LinearLayout favHead = new LinearLayout(this);
-        favHead.setGravity(Gravity.BOTTOM);
-        TextView favTitle = heading("★  Favorites");
-        favHead.addView(favTitle, new LinearLayout.LayoutParams(0, -2, 1));
-        if (!favs.isEmpty()) favHead.addView(iconButton(R.drawable.ic_delete, "Clear all favorites", v -> confirmClearFavorites(favs.size())));
-        col.addView(favHead);
-        LinearLayout favRow = row();
-        for (Sites.Site s : favs) favRow.addView(siteCard(s, false));
-        favRow.addView(addCard());
+        // Each kind: what just came out, then what everyone watches (anime: Kitsu's trending)
+        col.addView(section("Movies"));
+        titleRow("New", "movie", "genre=" + Catalog.NEW, 1);
+        titleRow("Popular", "movie", "", 1);
+        col.addView(section("TV"));
+        titleRow("New", "series", "genre=" + Catalog.NEW, 2);
+        titleRow("Popular", "series", "", 2);
+        col.addView(section("Anime"));
+        titleRow("New", "series", Catalog.NEW_ANIME, 4);
+        titleRow("Popular", "series", Catalog.TRENDING_ANIME, 4);
 
         List<Sites.Site> more = Sites.load().get(Cats.MORE);
         if (more != null) {
@@ -249,6 +259,8 @@ public class Home extends Activity {
     // ---- tabs ----
 
     static final String[] TABS = {"Home", "Movies", "TV", "Sports", "Anime", "IPTV", "Settings"};
+    static final int SETTINGS = 6;
+    final List<TextView> tabViews = new ArrayList<>();
     static final int[] TAB_ICONS = {R.drawable.ic_home, R.drawable.ic_movie, R.drawable.ic_tv, R.drawable.ic_trophy, R.drawable.ic_sparkle, R.drawable.ic_live, R.drawable.ic_settings};
     static int tab;
     static final Map<Integer, String> genres = new HashMap<>();
@@ -260,19 +272,26 @@ public class Home extends Activity {
     /** Search, category and title screens are pages on top of the tabs and have no tab bar. */
     boolean tabs() { return true; }
 
+    /** Posters say Movie, TV Series or Anime (Search, where the kinds are mixed). */
+    boolean kindBadges() { return false; }
+
     LinearLayout tabBar() {
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        if (App.tv) bar.setPadding(side - slack, dp(14), side - slack, dp(4));
+        if (App.tv) bar.setPadding(side - slack, dp(6), side - slack, dp(2));
         else bar.setBackgroundColor(CARD);
         for (int i = 0; i < TABS.length; i++) {
             final int n = i;
             TextView t = text(TABS[i], App.tv ? 16 : 11, MUTED, true);
+            t.setContentDescription(TABS[i]);
+            tabViews.add(t);
             t.setGravity(Gravity.CENTER);
             if (App.tv) {
-                t.setPadding(dp(18), dp(9), dp(18), dp(9));
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
-                lp.setMargins(slack, 0, dp(8), 0);
+                t.setPadding(dp(12), dp(9), dp(12), dp(9));
+                t.setSingleLine(true);
+                // Each tab as wide as its label, the spare room shared evenly: spread across the row and "Settings" never wraps
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2, 1);
+                lp.setMargins(slack, 0, slack, 0);
                 t.setLayoutParams(lp);
                 t.setBackground(rounded(CARD, dp(22)));
                 focusable(t, dp(22));
@@ -291,8 +310,8 @@ public class Home extends Activity {
     /** Selected tab = accent colour; the others stay quiet. */
     void styleTabs() {
         if (tabBar == null) return;
-        for (int i = 0; i < TABS.length; i++) {
-            TextView t = (TextView) tabBar.getChildAt(i);
+        for (int i = 0; i < tabViews.size(); i++) {
+            TextView t = tabViews.get(i);
             boolean on = i == tab;
             android.graphics.drawable.Drawable d = getDrawable(TAB_ICONS[i]).mutate();
             int size = dp(App.tv ? 20 : 22);
@@ -339,41 +358,84 @@ public class Home extends Activity {
         h.setGravity(Gravity.CENTER_VERTICAL);
         TextView name = text(title, sp(26, 20), TEXT, true);
         h.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        return h;   // Search and voice are in the top bar
+    }
+
+    /** On every tab: the name, WARP and ad block, then Search filling the rest, and voice. The tabs (with Settings) sit below it on a TV, at the bottom on a phone. */
+    View topBar() {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setBackgroundColor(BG);
+        if (App.tv) bar.setPadding(side, dp(10), side - slack, 0);
+        else bar.setPadding(dp(12), dp(6), dp(6), dp(2));
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.ic_logo);
+        logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        bar.addView(logo, new LinearLayout.LayoutParams(u(40, 28), u(40, 28)));
+        TextView name = text("FMHYPlay", sp(24, 18), TEXT, true);
+        // Written like the project banner: FMHY in white, Play in the accent red
+        android.text.SpannableString brand = new android.text.SpannableString("FMHYPlay");
+        brand.setSpan(new android.text.style.ForegroundColorSpan(ACCENT), 4, 8, 0);
+        name.setText(brand);
+        name.setPadding(dp(4), 0, u(24, 10), 0);
+        bar.addView(name);
+        // WARP and ad block state left of Search on every tab (icons only on a phone, where the row is narrow)
+        warpChip = chip(v -> {
+            boolean on = Warp.state == Warp.State.ON || Warp.state == Warp.State.CONNECTING;
+            App.prefs.edit().putBoolean("warp", !on).apply();
+            if (on) Warp.stop(); else Warp.start();
+        });
+        adChip = chip(v -> {
+            App.prefs.edit().putBoolean("adblock", !AdBlock.enabled()).apply();
+            updateChips();
+        });
+        bar.addView(warpChip);
+        bar.addView(adChip);
+        updateChips();
+        // One search for everything, from every tab: movies, series, IPTV channels and sites
         TextView search = chip(v -> startActivity(new Intent(this, SearchActivity.class)));
-        search.setText("Search");
+        search.setText(App.tv ? "Search movies, series, channels, sites" : "Search");
+        search.setTextColor(MUTED);
+        search.setSingleLine(true);
+        search.setEllipsize(TextUtils.TruncateAt.END);
         iconize(search, R.drawable.ic_search, TEXT);
-        h.addView(search);
-        h.addView(voiceChip(v -> startActivity(new Intent(this, SearchActivity.class).putExtra("voice", true))));
-        return h;
+        LinearLayout.LayoutParams sl = (LinearLayout.LayoutParams) search.getLayoutParams();
+        sl.width = 0;
+        sl.weight = 1;   // fills whatever the screen leaves
+        bar.addView(search);
+        bar.addView(voiceChip(v -> startActivity(new Intent(this, SearchActivity.class).putExtra("voice", true))));
+        return bar;
     }
 
     /** A poster row that draws at once from disk if it can, else fills in when the catalog answers. */
-    void titleRow(String head, String type, int moreTab) {
+    void titleRow(String head, String type, String extra, int moreTab) {
         col.addView(heading(head));
         LinearLayout row = row();
         final int id = built;
-        List<Catalog.Title> hit = Catalog.cached(type, "");
-        if (hit != null) { fillPosters(row, hit, moreTab); return; }
+        List<Catalog.Title> hit = Catalog.cached(type, extra);
+        if (hit != null) { fillPosters(row, hit, extra, moreTab); return; }
         row.addView(note("Loading…"));
         Warp.whenSettled(() -> App.io.execute(() -> {
-            List<Catalog.Title> list = Catalog.list(type, "");
+            List<Catalog.Title> list = Catalog.list(type, extra);
             runOnUiThread(() -> {
                 if (id != built) return;
                 row.removeAllViews();
                 if (list == null || list.isEmpty()) row.addView(note("Can't reach the catalog. Check WARP."));
-                else fillPosters(row, list, moreTab);
+                else fillPosters(row, list, extra, moreTab);
             });
         }));
     }
 
-    void fillPosters(LinearLayout row, List<Catalog.Title> list, int moreTab) {
+    /** `extra` "genre=X": More opens the tab on that genre chip. moreTab -1: no More (the row is on that tab already). */
+    void fillPosters(LinearLayout row, List<Catalog.Title> list, String extra, int moreTab) {
         for (Catalog.Title t : list.subList(0, Math.min(14, list.size()))) row.addView(posterCard(t, posterW()));
+        if (moreTab < 0) return;
         TextView more = text("More  ›", sp(17, 15), TEXT, true);
         more.setGravity(Gravity.CENTER);
         more.setLayoutParams(cardParams(posterW(), posterW() * 3 / 2));
         more.setBackground(rounded(0xFF2A2236, dp(12)));
         focusable(more, dp(12));
-        more.setOnClickListener(v -> selectTab(moreTab));
+        more.setOnClickListener(v -> { if (extra.isEmpty() || extra.startsWith("genre=")) genres.put(moreTab, extra.replaceFirst("^genre=", "")); selectTab(moreTab); });
         row.addView(more);
     }
 
@@ -385,8 +447,10 @@ public class Home extends Activity {
             col.addView(heading("Sites"));
             siteRow(category, sites);
         }
-        String genre = fixedGenre.isEmpty() ? genres.getOrDefault(tab, "") : fixedGenre;
-        col.addView(heading(fixedGenre.isEmpty() ? (genre.isEmpty() ? "Popular" : genre) : "Popular " + fixedGenre.toLowerCase()));
+        if (category.equals(Cats.ANIME)) titleRow("New anime", "series", Catalog.NEW_ANIME, -1);
+        String genre = fixedGenre.isEmpty() ? genres.getOrDefault(tab, Catalog.NEW) : fixedGenre;
+        col.addView(heading(fixedGenre.isEmpty() ? (genre.isEmpty() ? "Popular" : genre.equals(Catalog.NEW) ? "Newly released"
+            : genre) : "Popular " + fixedGenre.toLowerCase()));
         if (fixedGenre.isEmpty()) col.addView(genreChips());
         LinearLayout holder = new LinearLayout(this);
         holder.setOrientation(LinearLayout.VERTICAL);
@@ -397,13 +461,14 @@ public class Home extends Activity {
     View genreChips() {
         LinearLayout chips = new LinearLayout(this);
         chips.setClipChildren(false);
-        String now = genres.getOrDefault(tab, "");
-        String[] all = new String[Catalog.GENRES.length + 1];
-        System.arraycopy(Catalog.GENRES, 0, all, 1, Catalog.GENRES.length);
-        all[0] = "";
+        String now = genres.getOrDefault(tab, Catalog.NEW);
+        String[] all = new String[Catalog.GENRES.length + 2];
+        System.arraycopy(Catalog.GENRES, 0, all, 2, Catalog.GENRES.length);
+        all[0] = Catalog.NEW;
+        all[1] = "";
         for (String g : all) {
             TextView c = chip(v -> { genres.put(tab, g); focusGenre = g; build(); });
-            c.setText(g.isEmpty() ? "All" : g);
+            c.setText(g.isEmpty() ? "Popular" : g);
             c.setTextColor(g.equals(now) ? Color.WHITE : TEXT);
             c.setBackground(rounded(g.equals(now) ? ACCENT : CARD, dp(22)));
             focusable(c, dp(22));
@@ -447,7 +512,7 @@ public class Home extends Activity {
 
     void showPage(String type, String genre, int skip, LinearLayout holder, Grid grid, int id, List<Catalog.Title> list) {
         for (Catalog.Title t : list) grid.add(posterCard(t, grid.cell));
-        if (list.size() < 20) return;
+        if (list.size() < 20 || genre.equals(Catalog.NEW)) return;   // New is one list
         TextView more = text("Load more", sp(16, 14), TEXT, true);
         more.setGravity(Gravity.CENTER);
         more.setPadding(0, dp(14), 0, dp(14));
@@ -472,12 +537,7 @@ public class Home extends Activity {
         LinearLayout h = new LinearLayout(this);
         h.setGravity(Gravity.CENTER_VERTICAL);
         h.addView(text("IPTV", sp(26, 20), TEXT, true), new LinearLayout.LayoutParams(0, -2, 1));
-        TextView search = chip(v -> openIptv("all", "", "Search channels", true));
-        search.setText("Search");
-        iconize(search, R.drawable.ic_search, TEXT);
-        h.addView(search);
-        h.addView(voiceChip(v -> openIptv("all", "", "Search channels", false, true)));
-        TextView add = chip(v -> addPlaylistDialog());
+        TextView add = chip(v -> addPlaylistDialog());   // channels are in the top bar's Search, with movies and sites
         add.setText("+  Playlist");
         h.addView(add);
         col.addView(h);
@@ -531,9 +591,8 @@ public class Home extends Activity {
             col.addView(heading("Working  \u00B7  " + works.size()));
             LinearLayout wr = row();
             int shown = 0;
-            for (Iptv.Channel c : works) {
+            for (Iptv.Channel c : works) {   // the first 14 in a row (ones that played for you lead), the rest behind All
                 if (shown == 14) break;
-                if (!Iptv.good.containsKey(c.url)) break;   // the row is channels that played; the rest are behind More
                 wr.addView(channelCard(c, cols, "working"));
                 shown++;
             }
@@ -587,7 +646,7 @@ public class Home extends Activity {
             List<Runnable> actions = new ArrayList<>();
             if (row.equals("history")) { items.add("Remove from Continue watching"); actions.add(() -> Iptv.removeFromHistory(c.url)); }
             if (row.equals("working")) { items.add("Remove from Working"); actions.add(() -> Iptv.forgetWorking(c.url)); }
-            items.add(Iptv.isFavorite(c) ? "\u2606  Remove from favorites" : "\u2605  Add to favorites");
+            items.add(Iptv.isFavorite(c) ? "\u2661  Remove from favorites" : "\u2665  Add to favorites");
             actions.add(() -> Iptv.toggleFavorite(c));
             new AlertDialog.Builder(this).setTitle(c.name).setItems(items.toArray(new String[0]), (d, i) -> { actions.get(i).run(); build(); }).show();
             return true;
@@ -642,7 +701,7 @@ public class Home extends Activity {
         logo.setImageDrawable(null);
         logo.setTag(null);
         if (c.logo.startsWith("http")) loadImage(logo, c.logo, letter);
-        name.setText((Iptv.isFavorite(c) ? "\u2605 " : "") + c.name);
+        name.setText((Iptv.isFavorite(c) ? "\u2665 " : "") + c.name);
         StringBuilder s = new StringBuilder(TextUtils.join(", ", c.cats));
         if (c.adult && !c.source.isEmpty()) s = new StringBuilder(c.source);   // adult channels: which list they came from
         else if (c.cats[0].equals(Iptv.MINE) && !c.group.isEmpty()) s = new StringBuilder(c.group);   // your own playlists: their own group names
@@ -765,6 +824,8 @@ public class Home extends Activity {
         line.setLayoutParams(lp);
         line.addView(text("Update " + version + " is available", sp(15, 13), TEXT, true), new LinearLayout.LayoutParams(0, -2, 1));
         TextView install = chip(null);
+        TextView news = chip(v -> whatsNew(version, () -> { if (install.isEnabled()) install.performClick(); }));
+        news.setText("What's new");
         install.setText("Install");
         install.setBackground(rounded(ACCENT, dp(22)));
         install.setOnClickListener(v -> {
@@ -779,6 +840,7 @@ public class Home extends Activity {
         TextView later = chip(v -> { Update.skip(version); build(); });
         later.setText("Later");
         later.setTextColor(MUTED);
+        if (!Update.notes().isEmpty()) line.addView(news);
         line.addView(install);
         line.addView(later);
         if (firstCard == null) firstCard = install;
@@ -799,6 +861,13 @@ public class Home extends Activity {
             App.prefs.edit().putBoolean("adblock", !AdBlock.enabled()).apply();
             updateChips();
         }));
+        TextView urlValue = new TextView(this);
+        col.addView(settingRow("Address bar", "Shows the page's address on top of sites. " + (App.tv ? "Click it with the cursor" : "Tap it") + " to type another address or a search.", urlValue, v -> {
+            App.prefs.edit().putBoolean("urlbar", !App.prefs.getBoolean("urlbar", false)).apply();
+            build();
+        }));
+        urlValue.setText(App.prefs.getBoolean("urlbar", false) ? "On" : "Off");
+        urlValue.setTextColor(App.prefs.getBoolean("urlbar", false) ? GREEN : MUTED);
         if (App.tv) {
             TextView cursor = new TextView(this);
             col.addView(settingRow("Cursor on sites", "Arrow keys move a round cursor. Hold OK 5 s on a site to switch.", cursor, v -> {
@@ -808,7 +877,29 @@ public class Home extends Activity {
             boolean on = App.prefs.getBoolean("pointer", true);
             cursor.setText(on ? "On" : "Off");
             cursor.setTextColor(on ? GREEN : MUTED);
+            TextView lookValue = new TextView(this);
+            col.addView(settingRow("Cursor look", "What the cursor on sites looks like. OK clicks at the small dot in its middle.", lookValue, v -> {
+                String[] items = new String[Pointer.LOOKS.length];
+                for (int i = 0; i < items.length; i++)
+                    items[i] = Pointer.lookIcon(i) + "   " + Pointer.LOOK_NAMES[i] + (Pointer.LOOKS[i].equals(Pointer.look()) ? "  \u2713" : "");
+                new AlertDialog.Builder(this).setTitle("Cursor look").setItems(items, (d, i) -> {
+                    App.prefs.edit().putString("cursorLook", Pointer.LOOKS[i]).apply();
+                    build();
+                }).show();
+            }));
+            lookValue.setText(Pointer.lookName());
+            lookValue.setTextColor(TEXT);
+            TextView sizeValue = new TextView(this);
+            col.addView(settingRow("Cursor size", "Press to make the cursor on sites bigger, then smaller again. It hides by itself while a video plays.", sizeValue, v -> {
+                int next = Pointer.SIZES[0];
+                for (int i = 0; i < Pointer.SIZES.length - 1; i++) if (Pointer.SIZES[i] == Pointer.size()) next = Pointer.SIZES[i + 1];
+                App.prefs.edit().putInt("cursorSize", next).apply();
+                sizeValue.setText(next + "%");
+            }));
+            sizeValue.setText(Pointer.size() + "%");
+            sizeValue.setTextColor(TEXT);
         }
+        col.addView(settingRow("WARP log", "What WARP tried and why it failed. Share it with a bug report.", null, v -> warpLog()));
 
         col.addView(heading("Your data"));
         List<Sites.Site> favs = Sites.favorites();
@@ -867,10 +958,34 @@ public class Home extends Activity {
 
         col.addView(heading("Player"));
         TextView subValue = new TextView(this);
-        col.addView(settingRow("Subtitles", "Size and position of subtitles in the player. Timing is on the player's Subtitles button.", subValue, v ->
+        col.addView(settingRow("Subtitles", "Size, position, color and background of subtitles in the player. Timing is on the player's Subtitles button.", subValue, v ->
             Subs.panel(this, false, () -> subValue.setText(Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel()), this::build)));
         subValue.setText(Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel());
-        subValue.setTextColor(Subs.size() == 100 && Subs.offset() == 0 ? MUTED : GREEN);
+        subValue.setTextColor(Subs.size() == 100 && Subs.offset() == 0 && Subs.background() == 50 && Subs.colorIndex() == 0 ? MUTED : GREEN);
+        TextView boostValue = new TextView(this);
+        col.addView(settingRow("Volume boost", "Louder than the device's maximum, for quiet streams. Every video starts with it; the player's Volume boost button changes it for one video.", boostValue, v -> {
+            int next = PlayerActivity.BOOSTS[0];
+            for (int i = 0; i < PlayerActivity.BOOSTS.length - 1; i++) if (PlayerActivity.BOOSTS[i] == PlayerActivity.boostDb()) next = PlayerActivity.BOOSTS[i + 1];
+            App.prefs.edit().putInt("boost", next).apply();
+            build();
+        }));
+        boostValue.setText(PlayerActivity.boostDb() == 0 ? "Off" : "+" + PlayerActivity.boostDb() + " dB");
+        boostValue.setTextColor(PlayerActivity.boostDb() == 0 ? MUTED : GREEN);
+        TextView voiceValue = new TextView(this);
+        col.addView(settingRow("Dialog boost", "Louder voices, less rumble. Every video starts with it; the player's Dialog boost button changes it for one video.", voiceValue, v -> {
+            App.prefs.edit().putBoolean("dialogBoost", !PlayerActivity.dialogBoost()).apply();
+            build();
+        }));
+        voiceValue.setText(PlayerActivity.dialogBoost() ? "On" : "Off");
+        voiceValue.setTextColor(PlayerActivity.dialogBoost() ? GREEN : MUTED);
+        TextView autoSub = new TextView(this);
+        col.addView(settingRow("Auto subtitles", "Movies and episodes start with " + Subs.language(Subs.preferred())
+            + " subtitles (the last language you picked): the stream's own, else OpenSubtitles. A file you picked for a video always comes back.", autoSub, v -> {
+            App.prefs.edit().putBoolean("subAuto", !Subs.auto()).apply();
+            build();
+        }));
+        autoSub.setText(Subs.auto() ? "On" : "Off");
+        autoSub.setTextColor(Subs.auto() ? GREEN : MUTED);
         TextView simklValue = new TextView(this);
         col.addView(settingRow("Simkl", "Marks movies and episodes you watch in the player as watched on Simkl, a free tracker. Titles opened from Movies, TV or Anime.", simklValue, v -> {
             if (Simkl.signedIn()) confirm("Disconnect Simkl?", "FMHYPlay stops telling Simkl what you watch. Your Simkl history stays.", "Disconnect", () -> { Simkl.signOut(); build(); });
@@ -894,6 +1009,7 @@ public class Home extends Activity {
         autoValue.setTextColor(Update.auto() ? GREEN : MUTED);
 
         col.addView(heading("Sites"));
+        col.addView(settingRow("Add a site", "Any streaming site by its address. It goes to Favorites on Home.", null, v -> addSiteDialog()));
         col.addView(settingRow("Refresh FMHY lists", "Checks FMHY for new and removed sites (also every 12 hours).", null, v -> {
             toast("Checking FMHY…");
             App.io.execute(() -> {
@@ -950,6 +1066,38 @@ public class Home extends Activity {
         }, every * 1000L);
     }
 
+    /** Update `version`: what's new since this one, then Install runs `install`. */
+    void whatsNew(String version, Runnable install) {
+        String notes = Update.notes();
+        new AlertDialog.Builder(this).setTitle("Update " + version)
+            .setMessage((notes.isEmpty() ? "" : "What's new\n\n" + notes + "\n\n") + "Download it and install over FMHYPlay " + Update.installed() + "?")
+            .setPositiveButton("Install", (d, w) -> install.run())
+            .setNegativeButton("Later", null).show();
+    }
+
+    /** The WARP log in a scrolling box, with Share and Copy. */
+    void warpLog() {
+        String log = Warp.logText();
+        TextView body = text(log, sp(13, 12), TEXT, false);
+        body.setTypeface(android.graphics.Typeface.MONOSPACE);
+        body.setPadding(dp(20), dp(8), dp(20), dp(8));
+        android.widget.ScrollView sc = new android.widget.ScrollView(this);
+        sc.addView(body);
+        new AlertDialog.Builder(this).setTitle("WARP log").setView(sc)
+            .setPositiveButton("Share", (d, w) -> {
+                try {
+                    startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, log), "Share WARP log"));
+                } catch (android.content.ActivityNotFoundException e) {
+                    toast("No app to share with here. Take a photo of the log instead.");
+                }
+            })
+            .setNeutralButton("Copy", (d, w) -> {
+                ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("WARP log", log));
+                toast("Copied");
+            })
+            .setNegativeButton("Close", null).show();
+    }
+
     /** Settings: ask GitHub now, then offer the install. */
     void checkUpdate(TextView value) {
         value.setText("Checking\u2026");
@@ -960,8 +1108,7 @@ public class Home extends Activity {
                 if (!ok) { value.setText("Can't reach GitHub"); toast("Can't reach GitHub. Check WARP."); return; }
                 if (v.isEmpty()) { value.setText("Up to date"); toast("FMHYPlay " + Update.installed() + " is the latest"); return; }
                 value.setText(v + " available");
-                confirm("Update " + v + " is available", "Download it and install over this version?", "Install", () ->
-                    Update.install(value::setText));
+                whatsNew(v, () -> Update.install(value::setText));
             });
         });
     }
@@ -1020,6 +1167,14 @@ public class Home extends Activity {
         String meta = (t.year.isEmpty() ? "" : t.year) + (t.rating.isEmpty() ? "" : (t.year.isEmpty() ? "" : "  ·  ") + "★ " + t.rating);
         if (!meta.isEmpty()) info.addView(text(meta, sp(12, 10), 0xFFD8D0E2, false));
         card.addView(info, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        if (kindBadges()) {
+            TextView kind = text(t.kind(), sp(11, 10), Color.WHITE, true);
+            kind.setPadding(u(8, 6), u(3, 2), u(8, 6), u(3, 2));
+            kind.setBackground(rounded(t.anime ? ACCENT : t.series() ? 0xE62E8B60 : 0xE63B5BCC, dp(8)));
+            FrameLayout.LayoutParams kp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.START);
+            kp.setMargins(u(7, 5), u(7, 5), 0, 0);
+            card.addView(kind, kp);
+        }
 
         card.setBackground(rounded(colorFor(t.name), dp(12)));
         card.setClipToOutline(true);
@@ -1035,59 +1190,12 @@ public class Home extends Activity {
         return card;
     }
 
+    /** Home's first line on a TV: the hold-OK hint (WARP and ad block are in the top bar). */
     View header() {
-        LinearLayout h = new LinearLayout(this);
-        h.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout top = new LinearLayout(this);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.ic_logo);
-        logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        top.addView(logo, new LinearLayout.LayoutParams(u(44, 30), u(44, 30)));
-        TextView name = text("FMHYPlay", sp(26, 20), TEXT, true);
-        // Written like the project banner: FMHY in white, Play in the accent red
-        android.text.SpannableString brand = new android.text.SpannableString("FMHYPlay");
-        brand.setSpan(new android.text.style.ForegroundColorSpan(ACCENT), 4, 8, 0);
-        name.setText(brand);
-        name.setPadding(dp(4), 0, 0, 0);
-        top.addView(name);
-        h.addView(top);
-
-        LinearLayout chips = new LinearLayout(this);
-        chips.setPadding(0, u(10, 4), 0, u(4, 0));
-        TextView search = chip(v -> startActivity(new Intent(this, SearchActivity.class)));
-        search.setText("Search");
-        iconize(search, R.drawable.ic_search, TEXT);
-        warpChip = chip(v -> {
-            boolean on = Warp.state == Warp.State.ON || Warp.state == Warp.State.CONNECTING;
-            App.prefs.edit().putBoolean("warp", !on).apply();
-            if (on) Warp.stop(); else Warp.start();
-        });
-        adChip = chip(v -> {
-            App.prefs.edit().putBoolean("adblock", !AdBlock.enabled()).apply();
-            updateChips();
-        });
-        chips.addView(search);
-        chips.addView(voiceChip(v -> startActivity(new Intent(this, SearchActivity.class).putExtra("voice", true))));
-        chips.addView(warpChip);
-        chips.addView(adChip);
-        HorizontalScrollView scroller = new HorizontalScrollView(this);
-        scroller.setHorizontalScrollBarEnabled(false);
-        scroller.setClipToPadding(false);
-        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(-1, -2);
-        slp.setMargins(-slack, 0, -slack, 0);
-        scroller.setLayoutParams(slp);
-        scroller.setPadding(slack, 0, slack, 0);
-        chips.setClipChildren(false);
-        scroller.addView(chips);
-        h.addView(scroller);
-        if (App.tv) {
-            TextView hint = text("Hold OK on a site for favorites and mirrors", 13, MUTED, false);
-            hint.setPadding(dp(6), dp(2), 0, 0);
-            h.addView(hint);
-        }
-        updateChips();
-        return h;
+        if (!App.tv) return new View(this);
+        TextView hint = text("Hold OK on a site for favorites and mirrors", 13, MUTED, false);
+        hint.setPadding(dp(6), dp(2), 0, 0);
+        return hint;
     }
 
     /** Refreshes the WARP and ad block state shown on the Home chips and in Settings (whichever is on screen). */
@@ -1102,8 +1210,20 @@ public class Home extends Activity {
             default: word = "off"; color = MUTED;
         }
         boolean ads = AdBlock.enabled();
-        if (warpChip != null) { warpChip.setText("WARP " + word); iconize(warpChip, icon, color); }
-        if (adChip != null) { adChip.setText(ads ? "Ad block on" : "Ad block off"); iconize(adChip, R.drawable.ic_block, ads ? GREEN : MUTED); }
+        if (warpChip != null) {
+            warpChip.setText(App.tv ? "WARP " + word : "");
+            warpChip.setTooltipText("WARP " + word);
+            warpChip.setContentDescription("WARP " + word);
+            iconize(warpChip, icon, color);
+            if (!App.tv) warpChip.setCompoundDrawablePadding(0);
+        }
+        if (adChip != null) {
+            adChip.setText(App.tv ? (ads ? "Ad block on" : "Ad block off") : "");
+            adChip.setTooltipText(ads ? "Ad block on" : "Ad block off");
+            adChip.setContentDescription(ads ? "Ad block on" : "Ad block off");
+            iconize(adChip, R.drawable.ic_block, ads ? GREEN : MUTED);
+            if (!App.tv) adChip.setCompoundDrawablePadding(0);
+        }
         if (warpValue != null) { warpValue.setText(word.substring(0, 1).toUpperCase() + word.substring(1)); warpValue.setTextColor(color); }
         if (adValue != null) { adValue.setText(ads ? "On" : "Off"); adValue.setTextColor(ads ? GREEN : MUTED); }
     }
@@ -1146,9 +1266,16 @@ public class Home extends Activity {
         return t;
     }
 
+    /** A kind's block on Home (Movies, TV, Anime): bigger than a row's heading. */
+    TextView section(String s) {
+        TextView t = text(s, sp(26, 20), TEXT, true);
+        t.setPadding(0, u(34, 18), 0, 0);
+        return t;
+    }
+
     TextView heading(String s) {
         TextView t = text(s, sp(20, 16), TEXT, true);
-        t.setPadding(0, u(22, 10), 0, u(6, 0));
+        t.setPadding(0, u(22, 10), 0, u(6, 6));   // a gap before the cards, also on a phone (tile grids have none of their own)
         return t;
     }
 
@@ -1241,10 +1368,21 @@ public class Home extends Activity {
         String ago = DateUtils.getRelativeTimeSpanString(e.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
         info.addView(text((e.episode.isEmpty() ? "" : e.episode + "  ·  ") + e.site + "  ·  " + ago, 12, 0xFFD8D0E2, false));
         card.addView(info, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        if (e.pos > 0 && e.dur > 0) {   // how much is watched: the player carries on from there
+            info.setPadding(u(12, 9), 0, u(12, 9), u(15, 11));
+            float done = (float) Math.min(1.0, (double) e.pos / e.dur);
+            LinearLayout track = new LinearLayout(this);   // the card's full width, along its bottom edge
+            track.setBackgroundColor(0x55FFFFFF);
+            View fill = new View(this);
+            fill.setBackgroundColor(ACCENT);
+            track.addView(fill, new LinearLayout.LayoutParams(0, -1, done));
+            track.addView(new View(this), new LinearLayout.LayoutParams(0, -1, 1 - done));
+            card.addView(track, new FrameLayout.LayoutParams(-1, dp(5), Gravity.BOTTOM));
+        }
 
-        card.setBackground(rounded(colorFor(e.site), dp(14)));
+        card.setBackground(rounded(colorFor(e.site), 0));   // square, so the watched line runs straight edge to edge
         card.setClipToOutline(true);
-        focusable(card, dp(14));
+        focusable(card, 0);
         card.setOnClickListener(v -> startActivity(WebActivity.open(this, e.site, e.siteUrl, e.url)));
         card.setOnLongClickListener(v -> {
             new AlertDialog.Builder(this).setTitle(e.title)
@@ -1279,7 +1417,7 @@ public class Home extends Activity {
         top.addView(tile, new LinearLayout.LayoutParams(u(26, 22), u(26, 22)));
         TextView name = text(s.name, sp(17, 15), TEXT, true);
         if (markFavorite && Sites.isFavorite(s.url)) {
-            android.text.SpannableString star = new android.text.SpannableString("★  " + s.name);
+            android.text.SpannableString star = new android.text.SpannableString("\u2665  " + s.name);
             star.setSpan(new android.text.style.ForegroundColorSpan(ACCENT), 0, 1, 0);
             name.setText(star);
         }
@@ -1301,7 +1439,7 @@ public class Home extends Activity {
         card.setOnLongClickListener(v -> {
             List<String> items = new ArrayList<>();
             List<Runnable> actions = new ArrayList<>();
-            items.add(Sites.isFavorite(s.url) ? "☆  Remove from favorites" : "★  Add to favorites");
+            items.add(Sites.isFavorite(s.url) ? "\u2661  Remove from favorites" : "\u2665  Add to favorites");
             actions.add(() -> { Sites.toggleFavorite(s); build(); });
             for (String m : s.mirrors) {
                 items.add("Open mirror: " + Uri.parse(m).getHost());
@@ -1355,18 +1493,20 @@ public class Home extends Activity {
         card.setLayoutParams(cardParams(cardW, cardH));
         card.setBackground(rounded(0xFF2A2236, dp(14)));
         focusable(card, dp(14));
-        card.setOnClickListener(v -> {
-            EditText in = WebActivity.field(this, "https://example.com", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-            new AlertDialog.Builder(this).setTitle("Add a site").setView(WebActivity.box(this, in))
-                .setPositiveButton("Add", (d, w) -> {
-                    if (in.getText().toString().trim().isEmpty()) return;
-                    Sites.addCustom(in.getText().toString());
-                    build();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-        });
+        card.setOnClickListener(v -> addSiteDialog());
         return card;
+    }
+
+    void addSiteDialog() {
+        EditText in = WebActivity.field(this, "https://example.com", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        new AlertDialog.Builder(this).setTitle("Add a site").setView(WebActivity.box(this, in))
+            .setPositiveButton("Add", (d, w) -> {
+                if (in.getText().toString().trim().isEmpty()) return;
+                Sites.addCustom(in.getText().toString());
+                build();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
     }
 
     LinearLayout.LayoutParams cardParams(int w, int h) {

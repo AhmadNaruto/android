@@ -401,6 +401,7 @@
 
     timer = setInterval(() => {
       const v = playing();
+      if (v) try { window.FMHY && FMHY.videoPlaying && FMHY.videoPlaying(); } catch (e) { }   // the app hides its cursor while one plays
       if (!on() || !v) { if (hidden.length) reveal(); return; }
       if (!hidden.length && Date.now() - last > 4000 && !popups().size) hide(v);
     }, 1000);

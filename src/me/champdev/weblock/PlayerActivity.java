@@ -67,6 +67,7 @@ public class PlayerActivity extends Activity {
     // A server/quality switch happens on the page and starts a new stream: keep the position across it
     static long carryMs, carryAt;
     static final float[] SPEEDS = {0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f};
+    static final int GESTURE_BAR_DP = 140;
 
     ExoPlayer player;
     SurfaceView surface;
@@ -83,17 +84,23 @@ public class PlayerActivity extends Activity {
     long hideAt;
     LinearLayout chipRow;
     final List<LinearLayout> chips = new ArrayList<>();
-    LinearLayout chipServers, chipQuality, chipAudio, chipSubs, chipSpeed, chipZoom;
+    LinearLayout chipRotate, chipRestart, chipServers, chipQuality, chipAudio, chipBoost, chipVoice, chipSubs, chipSpeed, chipZoom;
     String chipLayoutKey = "";
     LinearLayout topBar, bottomBar;      // padded for notches; the centre buttons stay centred
     View rew, fwd;                       // the -10 / +10 buttons beside play
     TextView epLine;                     // "Season 1 · Episode 3" under the title
     LinearLayout gesture;                // brightness / volume swipe indicator
     ImageView gestureIcon;
-    ProgressBar gestureBar;
+    View gestureFill;                    // the filled part of the indicator's vertical bar
     TextView gestureText;
     int zoom = 0;   // Fit at the start of every playback (the choice is not remembered)
     static final String[] ZOOMS = {"Fit", "Fill", "Stretch", "16:9", "4:3"};
+    android.media.audiofx.LoudnessEnhancer booster;   // Volume boost, on the player's audio session
+    android.media.audiofx.Equalizer voices;           // Dialog boost, same session
+    // Every video starts with the Settings defaults; the Audio button changes them for this video only
+    int boost = boostDb();
+    boolean voice = dialogBoost();
+    boolean subsTried;   // the remembered or automatic subtitles were looked at for this video
     MediaItem.Builder mediaItem;   // kept so an OpenSubtitles pick can be added to the playing stream
     List<MediaItem.SubtitleConfiguration> subList;
 
@@ -119,6 +126,8 @@ public class PlayerActivity extends Activity {
         if (url == null) { finish(); return; }
         base = Sniffer.path(url);
         Subs.delayMs = 0;   // timing belongs to one video
+        // The manifest says fullUser: a phone opens the player the way it is held (no landscape flash), a TV is landscape anyway.
+        // The Full screen button turns a phone by hand.
         buildUi();
         routeThroughWarp();
         startPlayer(url);
@@ -165,14 +174,24 @@ public class PlayerActivity extends Activity {
 
     void showCues(CueGroup group) {
         StringBuilder sb = new StringBuilder();
-        for (Cue c : group.cues) if (c.text != null) sb.append(sb.length() > 0 ? "\n" : "").append(c.text);
+        for (Cue c : group.cues) {
+            if (c.text == null) continue;
+            if (sb.length() > 0) sb.append('\n');
+            int at = sb.length();
+            sb.append(c.text);
+            // The file's own line breaks (made for narrow screens) become spaces and the width cap wraps instead; "- " lines are two speakers, kept apart
+            for (int i = at; i < sb.length() - 1; i++)
+                if (sb.charAt(i) == '\n' && sb.charAt(i + 1) != '-' && sb.charAt(i + 1) != '\u2013') sb.setCharAt(i, ' ');
+        }
         subtitle.setText(sb);
         subtitle.setVisibility(sb.length() == 0 ? View.GONE : View.VISIBLE);
     }
 
-    /** Subtitle size and distance from the bottom: 22 sp and 100 dp (clear of the controls), changed by the Subtitle size and position settings. */
+    /** Subtitle size, background and distance from the bottom: 22 sp and 100 dp (clear of the controls), changed by the Subtitles panel. */
     void placeSubtitle() {
         subtitle.setTextSize(22f * Subs.size() / 100);
+        subtitle.setBackgroundColor((Subs.background() * 255 / 100) << 24);
+        subtitle.setTextColor(Subs.color());
         ((FrameLayout.LayoutParams) subtitle.getLayoutParams()).bottomMargin = dp(Math.max(0, 100 + Subs.offset()));
         subtitle.requestLayout();
     }
@@ -188,13 +207,14 @@ public class PlayerActivity extends Activity {
         root.setBackgroundColor(Color.BLACK);
         surface = new SurfaceView(this);
         root.addView(surface, new FrameLayout.LayoutParams(-1, -1));
-        root.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> fit());
+        root.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            fit();
+            if (r - l != or - ol) subtitle.setMaxWidth((r - l) * 3 / 4);   // long lines wrap in two instead of running edge to edge
+        });
 
         subtitle = new TextView(this);
-        subtitle.setTextColor(Color.WHITE);
         subtitle.setGravity(Gravity.CENTER);
         subtitle.setShadowLayer(6, 0, 0, Color.BLACK);
-        subtitle.setBackgroundColor(0x88000000);
         subtitle.setPadding(dp(10), dp(4), dp(10), dp(4));
         subtitle.setVisibility(View.GONE);
         root.addView(subtitle, new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
@@ -226,17 +246,22 @@ public class PlayerActivity extends Activity {
         gestureIcon = new ImageView(this);
         gestureIcon.setColorFilter(Color.WHITE);
         gesture.addView(gestureIcon, new LinearLayout.LayoutParams(dp(28), dp(28)));
-        gestureBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        gestureBar.setMax(100);
-        gestureBar.setProgressTintList(android.content.res.ColorStateList.valueOf(Home.ACCENT));
-        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(dp(110), dp(6));
+        // A vertical bar that fills from the bottom, like the finger's up and down
+        FrameLayout track = new FrameLayout(this);
+        track.setBackground(Home.rounded(0x40FFFFFF, dp(4)));
+        gestureFill = new View(this);
+        gestureFill.setBackground(Home.rounded(Home.ACCENT, dp(4)));
+        track.addView(gestureFill, new FrameLayout.LayoutParams(-1, 0, Gravity.BOTTOM));
+        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(dp(8), dp(GESTURE_BAR_DP));
         gp.topMargin = dp(10);
-        gesture.addView(gestureBar, gp);
+        gesture.addView(track, gp);
         gestureText = new TextView(this);
         gestureText.setTextColor(Color.WHITE);
         gestureText.setTextSize(13);
         gestureText.setPadding(0, dp(6), 0, 0);
-        gesture.addView(gestureText);
+        gestureText.setSingleLine(true);
+        gestureText.setGravity(Gravity.CENTER);
+        gesture.addView(gestureText, new LinearLayout.LayoutParams(dp(48), -2));   // fixed: "100%" fits and the "%" never wraps away
         gesture.setVisibility(View.GONE);
         root.addView(gesture, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
 
@@ -328,12 +353,26 @@ public class PlayerActivity extends Activity {
         chipRow.setOrientation(LinearLayout.VERTICAL);
         chipRow.setGravity(Gravity.CENTER_HORIZONTAL);
         chipRow.setPadding(0, dp(6), 0, 0);
+        chipRestart = chip(R.drawable.ic_refresh, () -> {
+            player.seekTo(0);
+            player.play();
+            say("From the start");
+        });
         chipServers = chip(R.drawable.ic_p_servers, () -> pickServer());
         chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
         chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, "Audio", false));
+        chipBoost = chip(R.drawable.ic_p_volume, this::pickBoost);
+        chipVoice = chip(R.drawable.ic_p_voice, () -> {
+            voice = !voice;
+            applyBoost();
+            refreshChips();
+            say((voice ? "Dialog boost on" : "Dialog boost off") + " for this video  \u00B7  default in Settings");
+        });
         chipSubs = chip(R.drawable.ic_p_subs, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_TEXT, "Subtitles", true));
         chipSpeed = chip(R.drawable.ic_p_speed, this::pickSpeed);
         chipZoom = chip(R.drawable.ic_p_zoom, this::cycleZoom);
+        chipRotate = chip(R.drawable.ic_p_fullscreen, () -> setRequestedOrientation(landscape()
+            ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE));
         int screenW = getResources().getDisplayMetrics().widthPixels;
         bar.addView(chipRow, new LinearLayout.LayoutParams(screenW - 2 * pad, -2));
         ((LinearLayout.LayoutParams) chipRow.getLayoutParams()).gravity = Gravity.CENTER_HORIZONTAL;
@@ -428,7 +467,8 @@ public class PlayerActivity extends Activity {
                     am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(level * am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)), 0);
                 }
                 gestureIcon.setImageResource(swipeKind == 1 ? R.drawable.ic_p_sun : R.drawable.ic_p_volume);
-                gestureBar.setProgress(Math.round(level * 100));
+                gestureFill.getLayoutParams().height = Math.round(level * dp(GESTURE_BAR_DP));
+                gestureFill.requestLayout();
                 gestureText.setText(Math.round(level * 100) + "%");
                 FrameLayout.LayoutParams gl = (FrameLayout.LayoutParams) gesture.getLayoutParams();
                 gl.gravity = (swipeKind == 1 ? Gravity.START : Gravity.END) | Gravity.CENTER_VERTICAL;
@@ -490,6 +530,7 @@ public class PlayerActivity extends Activity {
     void show(LinearLayout t, boolean visible, String label, boolean changed, String value) {
         t.setVisibility(visible ? View.VISIBLE : View.GONE);
         t.setContentDescription(label);
+        t.setTooltipText(label);   // long press (phone) says what an icon-only button does
         int color = changed ? 0xFFFF6B86 : Color.WHITE;
         ImageView img = (ImageView) t.getChildAt(0);
         TextView val = (TextView) t.getChildAt(1);
@@ -579,11 +620,16 @@ public class PlayerActivity extends Activity {
             show(chipQuality, true, "Quality \u00B7 " + (pq.isEmpty() ? (h.isEmpty() ? "Auto" : h) : pq), !pq.isEmpty(), shown);
         } else show(chipQuality, video > 1, "Quality \u00B7 " + (manual ? h : "Auto" + (h.isEmpty() ? "" : " " + h)), manual, h.isEmpty() ? "Auto" : h);
         show(chipAudio, audio > 1, "Audio \u00B7 " + audioNow, false, audioCode);
+        show(chipBoost, audio > 0, "Volume boost \u00B7 " + (boost == 0 ? "Off" : "+" + boost + " dB"), boost > 0, boost > 0 ? "+" + boost : "");
+        show(chipVoice, audio > 0, "Dialog boost \u00B7 " + (voice ? "On" : "Off"), voice, voice ? "On" : "");
         boolean subsOn = !textNow.equals("Off");
         show(chipSubs, text > 0 || canSearchSubs(), "Subtitles \u00B7 " + textNow, subsOn, subsOn ? (textCode.isEmpty() ? "CC" : textCode) : "Off");
         float sp = player.getPlaybackParameters().speed;
         show(chipSpeed, true, "Speed \u00B7 " + speedLabel(sp), sp != 1f, speedLabel(sp));
         show(chipZoom, true, "Zoom \u00B7 " + ZOOMS[zoom], zoom != 0, ZOOMS[zoom]);
+        show(chipRestart, !player.isCurrentMediaItemLive(), "Restart from the beginning", false, "");
+        ((ImageView) chipRotate.getChildAt(0)).setImageResource(landscape() ? R.drawable.ic_p_fullscreen_exit : R.drawable.ic_p_fullscreen);
+        show(chipRotate, !App.tv, landscape() ? "Portrait" : "Full screen", false, "");
         fitChips();
     }
 
@@ -699,6 +745,7 @@ public class PlayerActivity extends Activity {
         player.setVideoSurfaceView(surface);
         player.setSeekParameters(androidx.media3.exoplayer.SeekParameters.CLOSEST_SYNC);
         player.setVideoFrameMetadataListener(fpsMeter);
+        applyBoost();
         // Side-loaded subtitles stay off until picked on the Subtitles button
         player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build());
         player.addListener(new Player.Listener() {
@@ -706,6 +753,7 @@ public class PlayerActivity extends Activity {
                 spinner.setVisibility(s == Player.STATE_BUFFERING ? View.VISIBLE : View.GONE);
                 if (s == Player.STATE_READY && getIntent().hasExtra("mime")) Iptv.played(getIntent().getStringExtra("url"));
                 if (s == Player.STATE_READY && !scrobbled && player.getPlayWhenReady()) { scrobbled = true; scrobble("start"); }
+                if (s == Player.STATE_READY && !subsTried) { subsTried = true; autoSubs(); }
                 if (s == Player.STATE_ENDED) { resume.remove(base); scrobble("stop"); finish(); }
                 update();
             }
@@ -744,9 +792,17 @@ public class PlayerActivity extends Activity {
                 finish();
             }
         });
-        Long at = resume.get(base);
+        // Where to start: a server switch from the Servers button, else where this title was last left on any site or server
+        // (Continue watching), else where this very stream was left
+        Long at = null;
+        if (!getIntent().hasExtra("mime")) {
+            long saved = History.position(getIntent().getStringExtra("site"), getIntent().getStringExtra("pageTitle"), getIntent().getStringExtra("pageUrl"));
+            if (saved > 0) at = saved;
+        }
+        if (at == null) at = resume.get(base);
         if (carryMs > 0 && SystemClock.elapsedRealtime() - carryAt < 45000) at = carryMs;
         carryMs = 0;
+        if (at != null && at > 10000) say("Resumed at " + clock(at));
         if (at != null && at > 10000) player.setMediaItem(item.build(), at); else player.setMediaItem(item.build());
         player.prepare();
         player.play();
@@ -769,6 +825,20 @@ public class PlayerActivity extends Activity {
                 : i);
         }
         return out;
+    }
+
+    boolean landscape() {
+        return getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+    }
+
+    // Phone turned (or the Full screen button): the button row gets the new width, the picture refits through the layout listener
+    @Override public void onConfigurationChanged(android.content.res.Configuration c) {
+        super.onConfigurationChanged(c);
+        if (chipRow == null) return;
+        int pad = dp(24);
+        chipRow.getLayoutParams().width = getResources().getDisplayMetrics().widthPixels - 2 * pad;
+        chipLayoutKey = "";
+        refreshChips();
     }
 
     // The surface is sized to the picture: Fit letterboxes (nothing stretched), Fill crops to cover the screen, Stretch fills it,
@@ -1017,10 +1087,12 @@ public class PlayerActivity extends Activity {
         int searchAt = search ? labels.size() : -1;
         if (search) labels.add("\uD83D\uDD0D  Search OpenSubtitles\u2026");
         int positionAt = type == C.TRACK_TYPE_TEXT ? labels.size() : -1;
-        if (positionAt >= 0) labels.add("Aa  Size, position, timing  (" + Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel() + " \u00B7 " + Subs.delayLabel() + ")");
+        if (positionAt >= 0) labels.add("Aa  Size, position, color, background, timing  (" + Subs.sizeLabel() + " \u00B7 " + Subs.offsetLabel()
+            + " \u00B7 " + Subs.COLOR_NAMES[Subs.colorIndex()] + " \u00B7 " + Subs.backgroundLabel() + " \u00B7 " + Subs.delayLabel() + ")");
         new AlertDialog.Builder(this).setTitle(name).setItems(labels.toArray(new String[0]), (d, i) -> {
             if (i == searchAt) { searchSubs(); return; }
             if (i == positionAt) { subtitleStyle(); return; }
+            if (type == C.TRACK_TYPE_TEXT && picks.get(i) == null && subKey() != null) Subs.remember(subKey(), null);   // Off: don't bring the file back next time
             androidx.media3.common.TrackSelectionParameters.Builder b = player.getTrackSelectionParameters().buildUpon().clearOverridesOfType(type);
             if (picks.get(i) == null) b.setTrackTypeDisabled(type, true); else b.setTrackTypeDisabled(type, false).addOverride(picks.get(i));
             player.setTrackSelectionParameters(b.build());
@@ -1056,6 +1128,12 @@ public class PlayerActivity extends Activity {
     }
 
     void searchSubs() {
+        say("Searching OpenSubtitles\u2026");
+        findSubs(found -> pickSubLanguage(Subs.byLanguage(found)), true);
+    }
+
+    /** OpenSubtitles' files for what is playing go to `then` (main thread) when there are any; `loud` says why when there are none. */
+    void findSubs(java.util.function.Consumer<List<Subs.Sub>> then, boolean loud) {
         Intent in = getIntent();
         String imdb = in.getStringExtra("imdb"), title = History.cleanTitle(String.valueOf(in.getStringExtra("pageTitle")), String.valueOf(in.getStringExtra("site")));
         // The page's own URL/title say which episode is playing (the site may have moved on from the one picked in the catalog)
@@ -1063,15 +1141,14 @@ public class PlayerActivity extends Activity {
         int season = pe == null ? 0 : pe[0], episode = pe == null ? 0 : pe[1];
         final int s = season, e = episode;
         final boolean needsEpisode = in.getBooleanExtra("series", false) && s == 0;
-        say("Searching OpenSubtitles\u2026");
         App.io.execute(() -> {
             String id = needsEpisode ? "" : imdb == null || imdb.isEmpty() ? Subs.imdbFor(title, s > 0) : imdb;
             List<Subs.Sub> found = id.isEmpty() ? null : Subs.find(id, s, e);
             runOnUiThread(() -> {
-                if (isFinishing()) return;
-                if (found == null) say(needsEpisode ? "Open the episode on the site first" : "Can't find this title on OpenSubtitles");
-                else if (found.isEmpty()) say("No subtitles for this title");
-                else pickSubLanguage(Subs.byLanguage(found));
+                if (isFinishing() || player == null) return;
+                if (found == null) { if (loud) say(needsEpisode ? "Open the episode on the site first" : "Can't find this title on OpenSubtitles"); }
+                else if (found.isEmpty()) { if (loud) say("No subtitles for this title"); }
+                else then.accept(found);
             });
         });
     }
@@ -1084,7 +1161,101 @@ public class PlayerActivity extends Activity {
             List<String> names = new ArrayList<>();
             for (Subs.Sub f : files) names.add(f.release);
             new AlertDialog.Builder(this).setTitle(Subs.language(codes.get(i)) + ": pick a release that matches your video")
-                .setItems(names.toArray(new String[0]), (d2, j) -> addSubtitle(files.get(j))).show();
+                .setItems(names.toArray(new String[0]), (d2, j) -> {
+                    if (subKey() != null) Subs.remember(subKey(), files.get(j));
+                    addSubtitle(files.get(j));
+                }).show();
+        }).show();
+    }
+
+    /** Which movie or episode is playing, to remember its subtitle file: IMDb id (else the page's title), plus season and episode. Null for an episode we can't tell. */
+    String subKey() {
+        Intent in = getIntent();
+        String imdb = in.getStringExtra("imdb");
+        String id = imdb != null && !imdb.isEmpty() ? imdb
+            : History.cleanTitle(String.valueOf(in.getStringExtra("pageTitle")), String.valueOf(in.getStringExtra("site"))).toLowerCase(Locale.ROOT);
+        int[] pe = pageEpisode();
+        if (pe == null && in.getBooleanExtra("series", false)) return null;
+        return pe == null ? id : id + ":" + pe[0] + ":" + pe[1];
+    }
+
+    /** At the start: the file picked for this video before; else, with Auto subtitles on, the stream's own track or OpenSubtitles' first file in your language. */
+    void autoSubs() {
+        if (!canSearchSubs()) return;
+        String key = subKey();
+        Subs.Sub kept = key == null ? null : Subs.remembered(key);
+        if (kept != null) { addSubtitle(kept); return; }
+        if (!Subs.auto()) return;
+        String lang = Subs.preferred(), want = androidx.media3.common.util.Util.normalizeLanguageCode(lang);
+        for (Tracks.Group g : player.getCurrentTracks().getGroups()) {
+            if (g.getType() != C.TRACK_TYPE_TEXT) continue;
+            for (int t = 0; t < g.length; t++) {
+                String l = g.getTrackFormat(t).language;
+                if (!g.isTrackSupported(t) || l == null || !androidx.media3.common.util.Util.normalizeLanguageCode(l).equals(want)) continue;
+                player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    .addOverride(new TrackSelectionOverride(g.getMediaTrackGroup(), t)).build());
+                say("Subtitles: " + Subs.language(lang));
+                return;
+            }
+        }
+        findSubs(found -> {
+            for (Subs.Sub f : found) if (f.lang.equals(lang)) { addSubtitle(f); return; }
+        }, false);
+    }
+
+    // ---- Volume boost ----
+
+    static final int[] BOOSTS = {0, 3, 6, 9, 12};
+
+    /** Settings, Volume boost: the dB every video starts with. */
+    static int boostDb() {
+        return App.prefs.getInt("boost", 0);
+    }
+
+    /** Settings, Dialog boost: whether every video starts with it. */
+    static boolean dialogBoost() {
+        return App.prefs.getBoolean("dialogBoost", false);
+    }
+
+    /**
+     * Volume boost: louder than the system's maximum (LoudnessEnhancer). Dialog boost: an equalizer that lifts the speech range
+     * (about 0.8 to 4.5 kHz) by 6 dB and lowers the deep bass a little. Both on the player's sound, kept across videos.
+     */
+    void applyBoost() {
+        if (booster != null) { booster.release(); booster = null; }
+        if (voices != null) { voices.release(); voices = null; }
+        if (player == null) return;
+        try {
+            if (boost > 0) {
+                booster = new android.media.audiofx.LoudnessEnhancer(player.getAudioSessionId());
+                booster.setTargetGain(boost * 100);   // millibels
+                booster.setEnabled(true);
+            }
+            if (voice) {
+                voices = new android.media.audiofx.Equalizer(0, player.getAudioSessionId());
+                short[] range = voices.getBandLevelRange();
+                for (short b = 0; b < voices.getNumberOfBands(); b++) {
+                    int hz = voices.getCenterFreq(b) / 1000;   // reported in milliHertz
+                    int level = hz >= 800 && hz <= 4500 ? 600 : hz < 250 ? -300 : 0;
+                    voices.setBandLevel(b, (short) Math.max(range[0], Math.min(range[1], level)));
+                }
+                voices.setEnabled(true);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "audio boost", e);
+            say("Sound boost doesn't work on this device");
+        }
+    }
+
+    void pickBoost() {
+        int[] dbs = BOOSTS;
+        String[] labels = new String[dbs.length];
+        for (int i = 0; i < dbs.length; i++) labels[i] = (dbs[i] == 0 ? "Off" : "+" + dbs[i] + " dB") + (dbs[i] == boost ? "  \u2713" : "");
+        new AlertDialog.Builder(this).setTitle("Volume boost for this video").setItems(labels, (d, i) -> {
+            boost = dbs[i];
+            applyBoost();
+            refreshChips();
+            say((boost == 0 ? "Volume boost off" : "Volume boost +" + boost + " dB") + " for this video  \u00B7  default in Settings");
         }).show();
     }
 
@@ -1109,6 +1280,8 @@ public class PlayerActivity extends Activity {
         player.pause();
         long dur = player.getDuration(), pos = player.getCurrentPosition();
         if (dur != C.TIME_UNSET && !player.isCurrentMediaItemLive() && pos < dur - 30000) resume.put(base, pos); else resume.remove(base);
+        if (dur != C.TIME_UNSET && dur > 0 && !player.isCurrentMediaItemLive() && !getIntent().hasExtra("mime"))
+            History.savePosition(getIntent().getStringExtra("site"), getIntent().getStringExtra("pageTitle"), getIntent().getStringExtra("pageUrl"), pos, dur);
     }
 
     // ---- Simkl ----
@@ -1133,6 +1306,8 @@ public class PlayerActivity extends Activity {
         if (getIntent().hasExtra("mime")) Iptv.saveHealth();
         App.main.removeCallbacks(tick);
         App.main.removeCallbacks(hideNotice);
+        if (booster != null) { booster.release(); booster = null; }
+        if (voices != null) { voices.release(); voices = null; }
         if (player != null) { player.release(); player = null; }
         if (previousProxy != null) ProxySelector.setDefault(previousProxy);
         super.onDestroy();

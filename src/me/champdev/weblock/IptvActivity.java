@@ -103,7 +103,8 @@ public class IptvActivity extends Home {
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(root);
 
-        filter("");
+        String q = getIntent().getStringExtra("q");   // from Search's Channels row: the same words, every match
+        if (q != null) filter.setText(q); else filter("");
         if (getIntent().getBooleanExtra("voice", false)) {
             list.requestFocus();
             list.post(() -> listen(filter::setText));

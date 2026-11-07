@@ -236,10 +236,29 @@ public class WebActivity extends Activity {
         // was created from alive forever, and an activity context would leak the whole screen on every site visit.
         // Dialogs the page triggers are shown by our own client below, on this activity.
         web = new WebView(new android.view.ContextThemeWrapper(getApplicationContext(), R.style.AppTheme));
-        root.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        FrameLayout.LayoutParams wl = new FrameLayout.LayoutParams(-1, -1);
+        // Settings, Address bar: the page's address on top; tap it (or click it with the cursor) to type another one
+        if (App.prefs.getBoolean("urlbar", false)) {
+            urlBar = new TextView(this);
+            urlBar.setSingleLine(true);
+            urlBar.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+            urlBar.setTextColor(Home.TEXT);
+            urlBar.setTextSize(App.tv ? 13 : 12);
+            urlBar.setGravity(Gravity.CENTER_VERTICAL);
+            int h = Home.dp(this, App.tv ? 30 : 28), pad = Home.dp(this, 10);   // slim: the page keeps the room
+            urlBar.setPadding(pad, 0, pad, 0);
+            urlBar.setBackgroundColor(Home.CARD);
+            urlBar.setOnClickListener(v -> editAddress());
+            urlBar.setText(getIntent().getStringExtra("url"));   // until the page reports where it really is
+            root.addView(urlBar, new FrameLayout.LayoutParams(-1, h, Gravity.TOP));
+            wl.topMargin = h;
+        }
+        root.addView(web, wl);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setProgressTintList(ColorStateList.valueOf(Home.ACCENT));
-        root.addView(progress, new FrameLayout.LayoutParams(-1, Home.dp(this, 4), Gravity.TOP));
+        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(-1, Home.dp(this, 4), Gravity.TOP);
+        pl.topMargin = wl.topMargin;   // under the address bar when there is one
+        root.addView(progress, pl);
         status = new TextView(this);
         status.setTextColor(Color.WHITE);
         status.setTextSize(18);
@@ -254,6 +273,14 @@ public class WebActivity extends Activity {
             @Override public View target() { return fullscreen != null ? fullscreen : web; }
             @Override public WebView web() { return web; }
             @Override public boolean deliver(KeyEvent e) { return WebActivity.super.dispatchKeyEvent(e); }
+            @Override public boolean tapAt(float x, float y) {
+                if (urlBar == null || fullscreen != null) return false;
+                int[] at = new int[2];
+                urlBar.getLocationInWindow(at);
+                if (x < at[0] || y < at[1] || x > at[0] + urlBar.getWidth() || y > at[1] + urlBar.getHeight()) return false;
+                editAddress();
+                return true;
+            }
         });
         if (pointer != null && pointer.on && !App.prefs.getBoolean("pointerHint", false)) {
             App.prefs.edit().putBoolean("pointerHint", true).apply();
@@ -303,6 +330,7 @@ public class WebActivity extends Activity {
             }
 
             @Override public void doUpdateVisitedHistory(WebView v, String url, boolean reload) {
+                if (urlBar != null) urlBar.setText(url);
                 sniffer.page(url);
                 scheduleCapture();
             }
@@ -562,6 +590,11 @@ public class WebActivity extends Activity {
         }
 
         // Clean video mode: hide page layers over a playing video (a big stutter fix for 4K on weak TV chips)
+        /** Called every second while a big video plays on the page (any frame). */
+        @JavascriptInterface public void videoPlaying() {
+            Pointer.videoAt = SystemClock.uptimeMillis();
+        }
+
         @JavascriptInterface public boolean cleanVideo() {
             return App.prefs.getBoolean("cleanvideo", true);
         }
@@ -750,6 +783,24 @@ public class WebActivity extends Activity {
 
     FrameLayout decor() {
         return (FrameLayout) getWindow().getDecorView();
+    }
+
+    TextView urlBar;   // null unless Settings, Address bar is on
+
+    /** Type an address (or words to search for) and go there. */
+    void editAddress() {
+        EditText in = field(this, "Address", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        in.setText(web.getUrl());
+        in.selectAll();
+        new AlertDialog.Builder(this).setTitle("Go to").setView(box(this, in))
+            .setPositiveButton("Go", (d, w) -> {
+                String s = in.getText().toString().trim();
+                if (s.isEmpty()) return;
+                if (!s.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) s = s.contains(".") && !s.contains(" ") ? "https://" + s : "https://duckduckgo.com/?q=" + Uri.encode(s);
+                web.loadUrl(s);
+            })
+            .setNegativeButton("Cancel", null).show();
+        in.requestFocus();
     }
 
     static EditText field(Context c, String hint, int type) {

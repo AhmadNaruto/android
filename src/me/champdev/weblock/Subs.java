@@ -36,6 +36,66 @@ final class Subs {
         return size() == 100 ? "Default" : size() + "%";
     }
 
+    static final int[] COLORS = {0xFFFFFFFF, 0xFFFFE14D, 0xFF7FE7FF, 0xFF8CFF8C, 0xFFFFB3D1, 0xFFFFA64D};
+    static final String[] COLOR_NAMES = {"White", "Yellow", "Cyan", "Green", "Pink", "Orange"};
+
+    /** Subtitle text color, an index into COLORS. */
+    static int colorIndex() {
+        return Math.floorMod(App.prefs.getInt("subColor", 0), COLORS.length);
+    }
+
+    static int color() {
+        return COLORS[colorIndex()];
+    }
+
+    /** The box behind subtitles, percent opacity: 0 = none (the text keeps its shadow). */
+    static int background() {
+        return App.prefs.getInt("subBg", 50);
+    }
+
+    static String backgroundLabel() {
+        return background() == 0 ? "Off" : background() + "%";
+    }
+
+    /** Movies and episodes start with subtitles in your language (stream's own, else OpenSubtitles). Off by default. */
+    static boolean auto() {
+        return App.prefs.getBoolean("subAuto", false);
+    }
+
+    /** ISO 639-2 code of the last OpenSubtitles language picked, else the device's language. */
+    static String preferred() {
+        return App.prefs.getString("subLang", Locale.getDefault().getISO3Language());
+    }
+
+    /** The file picked for a movie or episode (`key` from the player), null if none: it comes back by itself next time. */
+    static Sub remembered(String key) {
+        try {
+            JSONObject o = new JSONObject(App.prefs.getString("subPicks", "{}")).optJSONObject(key);
+            if (o == null) return null;
+            Sub s = new Sub();
+            s.url = o.getString("url");
+            s.lang = o.optString("lang", "und");
+            s.release = o.optString("release");
+            return s;
+        } catch (org.json.JSONException e) {
+            return null;
+        }
+    }
+
+    /** Keeps the pick for `key` (null forgets it) and makes its language the preferred one. The newest 300 are kept. */
+    static void remember(String key, Sub s) {
+        try {
+            JSONObject all = new JSONObject(App.prefs.getString("subPicks", "{}"));
+            all.remove(key);
+            if (s != null) all.put(key, new JSONObject().put("url", s.url).put("lang", s.lang).put("release", s.release));
+            // Android's JSONObject keeps insertion order: the first keys are the oldest
+            while (all.length() > 300) all.remove(all.keys().next());
+            android.content.SharedPreferences.Editor e = App.prefs.edit().putString("subPicks", all.toString());
+            if (s != null) e.putString("subLang", s.lang);
+            e.apply();
+        } catch (org.json.JSONException ignored) { }
+    }
+
     /** Subtitle timing for the video playing now, in ms (not saved): positive shows them later, negative earlier. Read on the player's thread. */
     static volatile long delayMs;
 
@@ -70,9 +130,12 @@ final class Subs {
         Runnable after = () -> { for (Runnable r : refresh) r.run(); changed.run(); };
         row(a, box, refresh, "Size", Subs::sizeLabel, by -> bump("subSize", 100, 10 * by, 50, 250), after);
         row(a, box, refresh, "Position", Subs::offsetLabel, by -> bump("subOffset", 0, 10 * by, -100, 200), after);
+        row(a, box, refresh, "Color", () -> COLOR_NAMES[colorIndex()], by -> App.prefs.edit().putInt("subColor", Math.floorMod(colorIndex() + by, COLORS.length)).apply(), after);
+        row(a, box, refresh, "Background", Subs::backgroundLabel, by -> bump("subBg", 50, 25 * by, 0, 100), after);
         if (timing) row(a, box, refresh, "Timing", Subs::delayLabel, by -> delayMs = Math.max(-30000, Math.min(30000, delayMs + 100L * by)), after);
         android.widget.TextView help = new android.widget.TextView(a);
-        help.setText(timing ? "Position: + moves them up.  Timing: + shows them later, \u2212 earlier." : "Position: + moves them up. Timing is on the player's Subtitles button.");
+        help.setText(timing ? "Position: + moves them up.  Background: \u2212 down to Off.  Timing: + shows them later, \u2212 earlier."
+            : "Position: + moves them up.  Background: \u2212 down to Off.  Timing is on the player's Subtitles button.");
         help.setTextColor(Home.MUTED);
         help.setTextSize(13);
         help.setPadding(0, Home.dp(a, 6), 0, Home.dp(a, 4));
@@ -80,7 +143,7 @@ final class Subs {
         android.widget.LinearLayout foot = new android.widget.LinearLayout(a);
         foot.setGravity(android.view.Gravity.END);
         foot.addView(button(a, "Reset", 0, v -> {
-            App.prefs.edit().remove("subSize").remove("subOffset").apply();
+            App.prefs.edit().remove("subSize").remove("subOffset").remove("subBg").remove("subColor").apply();
             if (timing) delayMs = 0;
             after.run();
         }));
@@ -177,20 +240,20 @@ final class Subs {
         return hit == null || hit.isEmpty() ? "" : hit.get(0).id;
     }
 
-    /** Languages with their files, your own language and English first, then the biggest. Keys are ISO 639-2 codes. */
+    /** Languages with their files: the one you last picked, your device's, English, then the biggest. Keys are ISO 639-2 codes. */
     static Map<String, List<Sub>> byLanguage(List<Sub> all) {
         Map<String, List<Sub>> m = new LinkedHashMap<>();
         for (Sub s : all) m.computeIfAbsent(s.lang, k -> new ArrayList<>()).add(s);
         List<Map.Entry<String, List<Sub>>> es = new ArrayList<>(m.entrySet());
-        String mine = Locale.getDefault().getISO3Language();
-        es.sort((a, b) -> rank(b, mine) - rank(a, mine));
+        String mine = Locale.getDefault().getISO3Language(), last = preferred();
+        es.sort((a, b) -> rank(b, mine, last) - rank(a, mine, last));
         Map<String, List<Sub>> out = new LinkedHashMap<>();
         for (Map.Entry<String, List<Sub>> e : es) out.put(e.getKey(), e.getValue());
         return out;
     }
 
-    private static int rank(Map.Entry<String, List<Sub>> e, String mine) {
-        return (e.getKey().equals(mine) ? 2000 : e.getKey().equals("eng") ? 1000 : 0) + e.getValue().size();
+    private static int rank(Map.Entry<String, List<Sub>> e, String mine, String last) {
+        return (e.getKey().equals(last) ? 3000 : e.getKey().equals(mine) ? 2000 : e.getKey().equals("eng") ? 1000 : 0) + e.getValue().size();
     }
 
     // OpenSubtitles' own codes that are not ISO languages

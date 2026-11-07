@@ -29,6 +29,34 @@ public class CatalogTest {
         check("episode fields", !s.episodes.isEmpty() && s.episodes.get(0).number >= 1 && !s.episodes.get(0).title.isEmpty());
         check("overview present", !s.overview.isEmpty());
         check("garbage gives empty list", Catalog.parseList("<html>nope</html>", "movie").isEmpty());
+
+        check("start year of a range", Catalog.startYear("2002-2007") == 2002 && Catalog.startYear("2020–") == 2020 && Catalog.startYear("") == 0);
+        long today = java.time.LocalDate.parse("2026-11-07").toEpochDay();
+        Catalog.Title m = new Catalog.Title();
+        m.released = "2026-10-02T00:00:00.000Z";
+        check("movie out 36 days is new", Catalog.isNew(m, today));
+        m.released = "2026-11-06T00:00:00.000Z";
+        check("movie out yesterday is new (CAM)", Catalog.isNew(m, today));
+        m.released = "2026-11-20T00:00:00.000Z";
+        check("movie not out yet is not", !Catalog.isNew(m, today));
+        m.released = "2026-01-02T00:00:00.000Z";
+        check("movie out 309 days is old", !Catalog.isNew(m, today));
+        m.released = "";
+        check("no date is not new", !Catalog.isNew(m, today));
+        Catalog.Title sr = new Catalog.Title();
+        sr.type = "series";
+        sr.released = "2026-11-01T00:00:00.000Z";
+        check("series that started this week is new", Catalog.isNew(sr, today));
+        sr.released = "2026-12-01T00:00:00.000Z";
+        check("series not started is not", !Catalog.isNew(sr, today));
+        check("released parsed", Catalog.parseList("{\"metas\":[{\"id\":\"tt1\",\"name\":\"A\",\"released\":\"2026-10-02T00:00:00.000Z\"}]}", "movie").get(0).released.startsWith("2026-10-02"));
+        check("popular path", Catalog.path("movie", "genre=Comedy").equals("/catalog/movie/top/genre=Comedy.json") && Catalog.path("movie", "").equals("/catalog/movie/top.json"));
+        Catalog.Title k = new Catalog.Title();
+        check("kind movie", k.kind().equals("Movie"));
+        k.type = "series";
+        check("kind series", k.kind().equals("TV Series"));
+        k.anime = true;
+        check("kind anime", k.kind().equals("Anime"));
         System.out.println(fails == 0 ? "catalog tests passed" : fails + " failed");
         System.exit(fails == 0 ? 0 : 1);
     }

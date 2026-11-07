@@ -18,6 +18,11 @@ final class Catalog {
     static final long TTL = 6L * 3600 * 1000;
     static final String[] GENRES = {"Action", "Adventure", "Animation", "Biography", "Comedy", "Crime", "Documentary", "Drama", "Family",
         "Fantasy", "History", "Horror", "Mystery", "Romance", "Sci-Fi", "Sport", "Thriller", "War", "Western"};
+    /** Genre chips that are really other lists: popular titles out lately (see fresh), and Cinemeta's catalog of this year's releases. */
+    static final String NEW = "New";
+    /** A row's `extra` for New anime (see newAnime). */
+    static final String NEW_ANIME = "anime=new", TRENDING_ANIME = "anime=trending";
+    static final String KITSU = "https://anime-kitsu.strem.fun";
 
     static final class Episode {
         int season, number;
@@ -27,20 +32,136 @@ final class Catalog {
     static final class Title {
         String tmdb = "";   // TheMovieDB id (Cinemeta meta only): many sites key their pages by it
         String id = "", type = "movie", name = "", year = "", rating = "", poster = "", background = "", overview = "", runtime = "", genres = "";
+        String released = "";   // "2026-10-02T00:00:00.000Z": cinema release for a movie, first episode for a series
+        boolean anime;   // set by search, from Kitsu's anime list
         final List<Episode> episodes = new ArrayList<>();
 
         boolean series() { return type.equals("series"); }
+
+        String kind() { return anime ? "Anime" : series() ? "TV Series" : "Movie"; }
     }
 
     /** One catalog page. type = movie|series; extra = "" | "genre=Comedy" | "skip=50" | "search=text". Null when offline with nothing cached. */
     static List<Title> list(String type, String extra) {
-        String text = get("/catalog/" + type + "/top" + (extra.isEmpty() ? "" : "/" + extra) + ".json", !extra.startsWith("search="));
+        if (extra.equals(NEW_ANIME)) return newAnime(false);
+        if (extra.equals(TRENDING_ANIME)) return kitsu("kitsu-anime-trending", new int[]{0}, 0, false);
+        if (extra.startsWith("genre=" + NEW)) return extra.contains("skip=") ? new ArrayList<>() : fresh(type, false);   // one page only
+        String text = get(path(type, extra), !extra.startsWith("search="));
         return text == null ? null : parseList(text, type);
+    }
+
+    static String path(String type, String extra) {
+        return "/catalog/" + type + "/top" + (extra.isEmpty() ? "" : "/" + extra) + ".json";
+    }
+
+    /**
+     * New: the newest releases, newest first. The first 100 of this year's catalog (and last year's while the 200-day window reaches
+     * back into it), keeping what is already out: a movie from its cinema release (sites have a CAM copy within days), a series from its
+     * first episode. Upcoming titles are left out. `diskOnly`: null unless every page is already cached. Null when offline with nothing cached.
+     */
+    static List<Title> fresh(String type, boolean diskOnly) {
+        java.time.LocalDate now = java.time.LocalDate.now();
+        long today = now.toEpochDay();
+        java.util.Map<String, Title> found = new java.util.LinkedHashMap<>();
+        boolean any = false;
+        for (int year = now.getYear(); year >= now.minusDays(200).getYear(); year--) {
+            for (int skip = 0; skip < 100; skip += 50) {
+                String path = "/catalog/" + type + "/year/genre=" + year + (skip == 0 ? "" : "&skip=" + skip) + ".json";
+                String text = diskOnly ? disk(path) : get(path, true);
+                if (text == null) { if (diskOnly) return null; continue; }
+                any = true;
+                for (Title t : parseList(text, type)) if (isNew(t, today)) found.putIfAbsent(t.id, t);
+            }
+        }
+        if (!any) return null;
+        List<Title> out = new ArrayList<>(found.values());
+        out.sort((a, b) -> b.released.compareTo(a.released));   // ISO dates sort as text
+        return out;
+    }
+
+    /**
+     * New anime: Kitsu's top airing shows (five pages) that started this year (or last year, early in the year), most popular first.
+     * Only ones with an IMDb id, so the title page and the sites' search work as for any series. `diskOnly`/null as in fresh().
+     */
+    static List<Title> newAnime(boolean diskOnly) {
+        // Kitsu's skip=20 repeats page one; 40 onwards are the next pages
+        return kitsu("kitsu-anime-airing", new int[]{0, 40, 60, 80, 100}, java.time.LocalDate.now().minusDays(120).getYear(), diskOnly);
+    }
+
+    /** A Kitsu catalog's shows with an IMDb id, those that started in `from` or later (0 = all), each once, in Kitsu's order. */
+    static List<Title> kitsu(String catalog, int[] skips, int from, boolean diskOnly) {
+        java.util.Map<String, Title> out = new java.util.LinkedHashMap<>();
+        boolean any = false;
+        for (int skip : skips) {
+            String path = KITSU + "/catalog/anime/" + catalog + (skip == 0 ? "" : "/skip=" + skip) + ".json";
+            String text = diskOnly ? disk(path) : get(path, true);
+            if (text == null) { if (diskOnly) return null; continue; }
+            any = true;
+            try {
+                JSONArray metas = new JSONObject(text).getJSONArray("metas");
+                for (int i = 0; i < metas.length(); i++) {
+                    JSONObject o = metas.getJSONObject(i);
+                    String imdb = o.optString("imdb_id");
+                    if (!imdb.startsWith("tt") || startYear(o.optString("releaseInfo")) < from) continue;
+                    Title t = parse(o, o.optString("type").equals("movie") ? "movie" : "series");
+                    t.id = imdb;
+                    t.anime = true;
+                    out.putIfAbsent(t.id, t);
+                }
+            } catch (JSONException ignored) { }
+        }
+        return any ? new ArrayList<>(out.values()) : null;
+    }
+
+    /** A fresh cached copy of a catalog path, else null (no network). */
+    static String disk(String path) {
+        File f = file(path);
+        if (!f.exists() || System.currentTimeMillis() - f.lastModified() > TTL) return null;
+        try {
+            return Sites.readAll(new java.io.FileInputStream(f));
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    static boolean isNew(Title t, long today) {
+        if (t.released.length() < 10) return false;
+        try {
+            long age = today - java.time.LocalDate.parse(t.released.substring(0, 10)).toEpochDay();
+            return age >= 0 && age <= 200;
+        } catch (java.time.format.DateTimeParseException e) {
+            return false;
+        }
+    }
+
+    /** The first year in "2019", "2002-2007" or "2020–", 0 when there is none: for newest-first sorting. */
+    static int startYear(String releaseInfo) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d{4}").matcher(releaseInfo);
+        return m.find() ? Integer.parseInt(m.group()) : 0;
+    }
+
+    /** IMDb ids of the anime Kitsu finds for a search, empty when it can't be reached. Call off the main thread. */
+    static java.util.Set<String> animeIds(String query) {
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        try {
+            java.net.HttpURLConnection c = Warp.open("https://anime-kitsu.strem.fun/catalog/anime/kitsu-anime-list/search=" + android.net.Uri.encode(query) + ".json");
+            c.setConnectTimeout(5000);
+            c.setReadTimeout(5000);   // only labels depend on it: never hold the results up for long
+            JSONArray metas = new JSONObject(Sites.readAll(c.getInputStream())).getJSONArray("metas");
+            for (int i = 0; i < metas.length(); i++) {
+                String id = metas.getJSONObject(i).optString("imdb_id");
+                if (id.startsWith("tt")) ids.add(id);
+            }
+        } catch (IOException | JSONException ignored) { }
+        return ids;
     }
 
     /** The list if a fresh copy is already on disk (no network), else null: lets a row draw without waiting. */
     static List<Title> cached(String type, String extra) {
-        File f = file("/catalog/" + type + "/top" + (extra.isEmpty() ? "" : "/" + extra) + ".json");
+        if (extra.equals(NEW_ANIME)) return newAnime(true);
+        if (extra.equals(TRENDING_ANIME)) return kitsu("kitsu-anime-trending", new int[]{0}, 0, true);
+        if (extra.startsWith("genre=" + NEW)) return extra.contains("skip=") ? new ArrayList<>() : fresh(type, true);
+        File f = file(path(type, extra));
         if (!f.exists() || System.currentTimeMillis() - f.lastModified() > TTL) return null;
         try {
             return parseList(Sites.readAll(new java.io.FileInputStream(f)), type);
@@ -86,6 +207,7 @@ final class Catalog {
         t.tmdb = o.optInt("moviedb_id") > 0 ? String.valueOf(o.optInt("moviedb_id")) : "";
         t.name = o.optString("name");
         t.year = o.optString("releaseInfo", o.optString("year"));
+        t.released = o.optString("released");
         t.rating = o.optString("imdbRating");
         // "small" posters are blurry on a TV card
         t.poster = o.optString("poster").replace("/poster/small/", "/poster/medium/");
@@ -138,7 +260,7 @@ final class Catalog {
         File f = file(path);
         try {
             if (f.exists() && System.currentTimeMillis() - f.lastModified() < TTL) return Sites.readAll(new java.io.FileInputStream(f));
-            String text = Sites.readAll(Warp.open(BASE + path).getInputStream());
+            String text = Sites.readAll(Warp.open(path.startsWith("http") ? path : BASE + path).getInputStream());   // Kitsu passes a full URL
             if (keep) try (FileOutputStream out = new FileOutputStream(f)) { out.write(text.getBytes(StandardCharsets.UTF_8)); }
             return text;
         } catch (IOException e) {
