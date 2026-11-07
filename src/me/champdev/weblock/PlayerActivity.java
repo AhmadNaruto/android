@@ -559,8 +559,13 @@ public class PlayerActivity extends Activity {
         t.setText(text);
     }
 
+    /** "German", "English 5.1", "English · Commentary": the language first; a stream's own name only when it says more ("stream_4" doesn't). */
     static String labelOf(androidx.media3.common.Format f, int numbered, int n) {
-        return f.label != null ? f.label : f.language != null && !f.language.equals("und") ? new Locale(f.language).getDisplayLanguage() : App.t(numbered, n);
+        String lang = f.language != null && !f.language.equals("und") ? new Locale(f.language).getDisplayLanguage() : null;
+        String label = f.label == null || f.label.matches("(?i)(stream|audio|track|subtitles?|text)[ _-]?\\d*") ? null : f.label;
+        String name = lang == null ? (label != null ? label : App.t(numbered, n))
+            : label == null || label.toLowerCase(Locale.ROOT).contains(lang.toLowerCase(Locale.ROOT)) ? (label != null ? label : lang) : lang + " \u00B7 " + label;
+        return f.channelCount > 2 ? name + " " + (f.channelCount == 6 ? "5.1" : f.channelCount == 8 ? "7.1" : f.channelCount + "ch") : name;
     }
 
     /** "1080p" for 1080, "4K" for 2160 and up, "" when unknown. */
@@ -762,8 +767,11 @@ public class PlayerActivity extends Activity {
         // Its own audio session from the start, so the boosts attach to this video only (session 0 would be all of the phone's sound)
         player.setAudioSessionId(((AudioManager) getSystemService(AUDIO_SERVICE)).generateAudioSessionId());
         applyBoost(false);
-        // Side-loaded subtitles stay off until picked on the Subtitles button
-        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build());
+        // Side-loaded subtitles stay off until picked on the Subtitles button. Audio: the language last picked on the Audio
+        // button (a dub the stream offers), else the device's, else whatever the stream marks as default (often English)
+        String audio = App.prefs.getString("audioLang", "");
+        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            .setPreferredAudioLanguages(audio.isEmpty() ? new String[]{Locale.getDefault().getLanguage()} : new String[]{audio, Locale.getDefault().getLanguage()}).build());
         player.addListener(new Player.Listener() {
             @Override public void onPlaybackStateChanged(int s) {
                 spinner.setVisibility(s == Player.STATE_BUFFERING ? View.VISIBLE : View.GONE);
@@ -1094,8 +1102,7 @@ public class PlayerActivity extends Activity {
             for (int t = 0; t < g.length; t++) {
                 if (!g.isTrackSupported(t)) continue;
                 androidx.media3.common.Format f = g.getTrackFormat(t);
-                String label = f.label != null ? f.label : f.language != null ? new Locale(f.language).getDisplayLanguage()
-                    : App.t(type == C.TRACK_TYPE_TEXT ? R.string.player_subs_n : R.string.player_audio_n, ++n);
+                String label = labelOf(f, type == C.TRACK_TYPE_TEXT ? R.string.player_subs_n : R.string.player_audio_n, ++n);
                 labels.add(label + (g.isTrackSelected(t) ? "  ✓" : ""));
                 picks.add(new TrackSelectionOverride(tg, t));
             }
@@ -1113,6 +1120,11 @@ public class PlayerActivity extends Activity {
             androidx.media3.common.TrackSelectionParameters.Builder b = player.getTrackSelectionParameters().buildUpon().clearOverridesOfType(type);
             if (picks.get(i) == null) b.setTrackTypeDisabled(type, true); else b.setTrackTypeDisabled(type, false).addOverride(picks.get(i));
             player.setTrackSelectionParameters(b.build());
+            // A language picked for the audio becomes the one every next video starts in, when it has it
+            if (type == C.TRACK_TYPE_AUDIO && picks.get(i) != null) {
+                String lang = picks.get(i).mediaTrackGroup.getFormat(picks.get(i).trackIndices.get(0)).language;
+                if (lang != null && !lang.isEmpty() && !lang.equals("und")) App.prefs.edit().putString("audioLang", lang).apply();
+            }
         }).show();
     }
 
