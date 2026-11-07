@@ -21,6 +21,9 @@ public class App extends Application {
     static boolean tv;
     static String flavor = "";   // "tv" or "android": which APK this is (updates fetch the same one)
 
+    /** UI text in the phone's or TV's language (res/values-xx/strings_*.xml, English otherwise), with format arguments. */
+    static String t(int id, Object... args) { return args.length == 0 ? app.getString(id) : app.getString(id, args); }
+
     @Override public void onCreate() {
         super.onCreate();
         app = this;
@@ -44,6 +47,11 @@ public class App extends Application {
 
         if (prefs.getBoolean("warp", true)) Warp.start();
         io.execute(AdBlock::load);
+        // The TV listens for casts from phones (not in the WebView's sandboxed processes, which also start an App)
+        if (android.os.Build.VERSION.SDK_INT < 28 || getPackageName().equals(getProcessName())) {
+            if (tv) Cast.start(this);
+            else Cast.discover(this, () -> main.post(() -> { if (PlayerActivity.current != null) PlayerActivity.current.refreshChips(); }));   // TVs to cast to, ready before the player opens
+        }
 
         // No screen of ours visible for 2 minutes: stop WARP (no keepalive traffic in the background), restart on return
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {

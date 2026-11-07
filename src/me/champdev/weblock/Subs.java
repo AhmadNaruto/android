@@ -24,7 +24,7 @@ final class Subs {
 
     static String offsetLabel() {
         int o = offset();
-        return o == 0 ? "Default" : (o > 0 ? "Up " : "Down ") + Math.abs(o);
+        return o == 0 ? App.t(R.string.subs_default) : App.t(o > 0 ? R.string.subs_up : R.string.subs_down, Math.abs(o));
     }
 
     /** Subtitle text size in percent of the default (22 sp). */
@@ -33,15 +33,19 @@ final class Subs {
     }
 
     static String sizeLabel() {
-        return size() == 100 ? "Default" : size() + "%";
+        return size() == 100 ? App.t(R.string.subs_default) : size() + "%";
     }
 
     static final int[] COLORS = {0xFFFFFFFF, 0xFFFFE14D, 0xFF7FE7FF, 0xFF8CFF8C, 0xFFFFB3D1, 0xFFFFA64D};
-    static final String[] COLOR_NAMES = {"White", "Yellow", "Cyan", "Green", "Pink", "Orange"};
+    static final int[] COLOR_NAMES = {R.string.subs_white, R.string.subs_yellow, R.string.subs_cyan, R.string.subs_green, R.string.subs_pink, R.string.subs_orange};
 
     /** Subtitle text color, an index into COLORS. */
     static int colorIndex() {
         return Math.floorMod(App.prefs.getInt("subColor", 0), COLORS.length);
+    }
+
+    static String colorName() {
+        return App.t(COLOR_NAMES[colorIndex()]);
     }
 
     static int color() {
@@ -54,7 +58,7 @@ final class Subs {
     }
 
     static String backgroundLabel() {
-        return background() == 0 ? "Off" : background() + "%";
+        return background() == 0 ? App.t(R.string.player_off) : background() + "%";
     }
 
     /** Movies and episodes start with subtitles in your language (stream's own, else OpenSubtitles). Off by default. */
@@ -100,7 +104,7 @@ final class Subs {
     static volatile long delayMs;
 
     static String delayLabel() {
-        return delayMs == 0 ? "In sync" : String.format(Locale.ROOT, "%+.1f s", delayMs / 1000f);
+        return delayMs == 0 ? App.t(R.string.subs_in_sync) : String.format(Locale.ROOT, "%+.1f s", delayMs / 1000f);
     }
 
     private static void bump(String key, int def, int by, int min, int max) {
@@ -120,7 +124,7 @@ final class Subs {
         box.setPadding(pad, pad, pad, Home.dp(a, 12));
         box.setBackground(Home.rounded(0xF0181320, Home.dp(a, 18)));
         android.widget.TextView title = new android.widget.TextView(a);
-        title.setText("Subtitles");
+        title.setText(App.t(R.string.player_subtitles));
         title.setTextColor(Home.TEXT);
         title.setTextSize(20);
         title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
@@ -128,26 +132,25 @@ final class Subs {
         box.addView(title);
         List<Runnable> refresh = new ArrayList<>();
         Runnable after = () -> { for (Runnable r : refresh) r.run(); changed.run(); };
-        row(a, box, refresh, "Size", Subs::sizeLabel, by -> bump("subSize", 100, 10 * by, 50, 250), after);
-        row(a, box, refresh, "Position", Subs::offsetLabel, by -> bump("subOffset", 0, 10 * by, -100, 200), after);
-        row(a, box, refresh, "Color", () -> COLOR_NAMES[colorIndex()], by -> App.prefs.edit().putInt("subColor", Math.floorMod(colorIndex() + by, COLORS.length)).apply(), after);
-        row(a, box, refresh, "Background", Subs::backgroundLabel, by -> bump("subBg", 50, 25 * by, 0, 100), after);
-        if (timing) row(a, box, refresh, "Timing", Subs::delayLabel, by -> delayMs = Math.max(-30000, Math.min(30000, delayMs + 100L * by)), after);
+        row(a, box, refresh, App.t(R.string.subs_size), Subs::sizeLabel, by -> bump("subSize", 100, 10 * by, 50, 250), after);
+        row(a, box, refresh, App.t(R.string.subs_position), Subs::offsetLabel, by -> bump("subOffset", 0, 10 * by, -100, 200), after);
+        row(a, box, refresh, App.t(R.string.subs_color), Subs::colorName, by -> App.prefs.edit().putInt("subColor", Math.floorMod(colorIndex() + by, COLORS.length)).apply(), after);
+        row(a, box, refresh, App.t(R.string.subs_background), Subs::backgroundLabel, by -> bump("subBg", 50, 25 * by, 0, 100), after);
+        if (timing) row(a, box, refresh, App.t(R.string.subs_timing), Subs::delayLabel, by -> delayMs = Math.max(-30000, Math.min(30000, delayMs + 100L * by)), after);
         android.widget.TextView help = new android.widget.TextView(a);
-        help.setText(timing ? "Position: + moves them up.  Background: \u2212 down to Off.  Timing: + shows them later, \u2212 earlier."
-            : "Position: + moves them up.  Background: \u2212 down to Off.  Timing is on the player's Subtitles button.");
+        help.setText(App.t(timing ? R.string.subs_help_player : R.string.subs_help_settings));
         help.setTextColor(Home.MUTED);
         help.setTextSize(13);
         help.setPadding(0, Home.dp(a, 6), 0, Home.dp(a, 4));
         box.addView(help);
         android.widget.LinearLayout foot = new android.widget.LinearLayout(a);
         foot.setGravity(android.view.Gravity.END);
-        foot.addView(button(a, "Reset", 0, v -> {
+        foot.addView(button(a, App.t(R.string.subs_reset), 0, v -> {
             App.prefs.edit().remove("subSize").remove("subOffset").remove("subBg").remove("subColor").apply();
             if (timing) delayMs = 0;
             after.run();
         }));
-        foot.addView(button(a, "Done", 0, v -> d.dismiss()));
+        foot.addView(button(a, App.t(R.string.subs_done), 0, v -> d.dismiss()));
         box.addView(foot);
         d.setContentView(box);
         android.view.Window w = d.getWindow();
@@ -225,7 +228,7 @@ final class Subs {
                 s.url = o.getString("url");
                 s.lang = o.optString("lang", "und");
                 // The file name tells releases apart (the movie name is the same on every row)
-                s.release = o.optString("subtitleFileName", "").isEmpty() ? o.optString("movieReleaseName", "Subtitle " + (i + 1)) : o.optString("subtitleFileName");
+                s.release = o.optString("subtitleFileName", "").isEmpty() ? o.optString("movieReleaseName", App.t(R.string.subs_file_n, i + 1)) : o.optString("subtitleFileName");
                 out.add(s);
             }
             return out;
@@ -266,7 +269,7 @@ final class Subs {
 
     static String language(String iso3) {
         if (ODD.containsKey(iso3)) return ODD.get(iso3);
-        String n = new Locale(iso3).getDisplayLanguage(Locale.ENGLISH);
+        String n = new Locale(iso3).getDisplayLanguage();
         return n.isEmpty() || n.equals(iso3) ? iso3.toUpperCase(Locale.ROOT) : n;
     }
 }

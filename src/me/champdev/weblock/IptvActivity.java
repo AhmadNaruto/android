@@ -51,7 +51,7 @@ public class IptvActivity extends Home {
         root.addView(count);
 
         EditText filter = new EditText(this);
-        filter.setHint("Filter by name");
+        filter.setHint(App.t(R.string.iptv_filter));
         filter.setHintTextColor(MUTED);
         filter.setTextColor(TEXT);
         filter.setTextSize(sp(16, 15));
@@ -69,7 +69,7 @@ public class IptvActivity extends Home {
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.addView(filter, new LinearLayout.LayoutParams(0, -2, 1));
-        android.widget.ImageView mic = iconButton(R.drawable.ic_mic, "Voice search", v -> listen(filter::setText));
+        android.widget.ImageView mic = iconButton(R.drawable.ic_mic, App.t(R.string.search_voice), v -> listen(filter::setText));
         ((LinearLayout.LayoutParams) mic.getLayoutParams()).setMargins(dp(10), 0, 0, 0);
         mic.setColorFilter(TEXT);
         bar.addView(mic);
@@ -133,12 +133,13 @@ public class IptvActivity extends Home {
         shown.clear();
         for (Iptv.Channel c : all) if (f.isEmpty() || c.name.toLowerCase(Locale.ROOT).contains(f) || c.source.toLowerCase(Locale.ROOT).contains(f) || c.group.toLowerCase(Locale.ROOT).contains(f)) shown.add(c);
         adapter.notifyDataSetChanged();
-        count.setText(shown.size() + (shown.size() == 1 ? " channel" : " channels") + (App.tv ? "  ·  OK plays, hold OK to star" : "  ·  tap plays, long-press stars"));
+        count.setText((shown.size() == 1 ? App.t(R.string.iptv_one_channel) : App.t(R.string.iptv_channels, shown.size()))
+            + "  ·  " + App.t(App.tv ? R.string.iptv_hint_tv : R.string.iptv_hint_touch));
     }
 
     void star(Iptv.Channel c) {
         Iptv.toggleFavorite(c);
-        toast(Iptv.isFavorite(c) ? "Starred " + c.name : "Unstarred " + c.name);
+        toast(App.t(Iptv.isFavorite(c) ? R.string.iptv_starred : R.string.iptv_unstarred, c.name));
         if (type.equals("fav")) { all.remove(c); filter(""); } else adapter.notifyDataSetChanged();
     }
 }

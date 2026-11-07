@@ -18,7 +18,7 @@ public class CategoryActivity extends Home {
         TextView title = text(name + (sites == null ? "" : "  ·  " + sites.size()), sp(26, 22), TEXT, true);
         title.setPadding(0, 0, 0, dp(8));
         col.addView(title);
-        TextView hint = text(App.tv ? "Hold OK on a site for favorites and mirrors" : "Long-press a site for favorites and mirrors", 13, MUTED, false);
+        TextView hint = text(App.t(App.tv ? R.string.category_hint_tv : R.string.category_hint_touch), 13, MUTED, false);
         hint.setPadding(0, 0, 0, dp(14));
         col.addView(hint);
         if (sites == null) return;
@@ -27,7 +27,7 @@ public class CategoryActivity extends Home {
         String group = null;
         for (Sites.Site s : sites) {
             // Picks first, then one block per FMHY section (P-Stream forks, multi-server sites... each with its own heading)
-            String now = s.pick ? "FMHY picks" : s.index ? "More lists of sites" : language != null ? "More sites" : s.group;
+            String now = s.pick ? App.t(R.string.category_picks) : s.index ? App.t(R.string.category_more_lists) : language != null ? App.t(R.string.category_more_sites) : s.group;
             if (!now.equals(group)) {
                 group = now;
                 col.addView(heading(now));

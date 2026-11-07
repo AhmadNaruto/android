@@ -11,7 +11,7 @@
 </div></header>
 
 <main><div class="layout">
-<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
+<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#cast">Cast to TV</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
 <article>
 <h1>User guide</h1>
 <p class="sub">Everything you need to use FMHYPlay on a TV or a phone.</p>
@@ -91,6 +91,15 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <h2 id="episodes">Episodes and servers</h2>
 <p>To switch episode, press <b>Back</b> to return to the site's own player and choose the episode there. FMHYPlay ignores the stream you just left and waits for a different one, then opens it in the native player by itself.</p>
 <p>The <b>Servers</b> button lists the site's own servers (the buttons named Server, Source or Mirror, including ones behind a menu). Choose one: the player closes, FMHYPlay presses it on the site, and the new stream opens by itself.</p>
+
+<h2 id="cast">Cast to TV</h2>
+<p>Play something on the phone, tap the screen, then tap <b>Cast</b> (the first button in the player) and pick a TV. The TV carries on from the same spot, and the phone becomes the remote: play and pause, the seek bar, −10 s and +10 s, and the TV's volume (the phone's volume keys work too). <b>Stop casting</b> brings the video back to the phone where the TV was. <b>Re-scan</b>, at the end of the list, looks for TVs again.</p>
+<img class="shot" src="cast.svg" alt="Cast from the phone to a TV on the same Wi-Fi">
+<table><tr><th>In the list</th><th>What happens</th></tr>
+<tr><td>Bedroom - FMHYPlay (Recommended)</td><td>FMHYPlay on the TV plays the stream itself, with the site's headers and cookie, WARP, ad blocking and subtitles.</td></tr>
+<tr><td>Bedroom - Chromecast</td><td>Any Chromecast, Google TV or TV with Cast built in, without FMHYPlay on it. The phone relays the stream, so keep it on and on the same Wi-Fi.</td></tr></table>
+<p><b>Setting up the TV for FMHYPlay casts:</b> install the TV app and open it once. Then on the TV, open <b>Settings, Cast to this TV</b> and allow <i>Display over other apps</i>: after that a cast opens the player even when FMHYPlay is closed.</p>
+<div class="note">TCL and some other TVs do not let apps start by themselves after the TV restarts. On those, open FMHYPlay once after a restart and the TV shows up on the phone again.</div>
 
 <h2 id="subtitles">Subtitles</h2>
 <p>Open <b>Subtitles</b>, choose <i>Search OpenSubtitles</i>, then a language and a release. The file is added to the stream and playback continues from the same spot. Pick a release that matches your video (for example the same source and resolution) so the timing lines up. Search needs to know which title is playing: it comes from the catalog when you started from there, otherwise from the page's title and address.</p>

@@ -251,9 +251,9 @@ final class Iptv {
 
     /** One line for the top of the IPTV tab, "" when there is nothing to say. */
     static String statusLine() {
-        if (sweeping) return "Checking channels\u2026 " + sweepDone + " of " + sweepTotal + " tested, offline ones are hidden";
+        if (sweeping) return App.t(R.string.iptv_checking, sweepDone, sweepTotal);
         int dead = deadCount();
-        return dead > 0 && hideDead() ? dead + " offline channels hidden" : "";
+        return dead > 0 && hideDead() ? App.t(R.string.iptv_offline_hidden, dead) : "";
     }
 
     /** Is the stream reachable: the playlist or first bytes come back and are not a web page. */
@@ -457,14 +457,14 @@ final class Iptv {
         String url = raw.trim();
         if (!url.matches("(?i)https?://.+")) url = "https://" + url;
         List<String> now = mine();
-        if (now.contains(url)) return "Already added";
+        if (now.contains(url)) return App.t(R.string.iptv_already_added);
         name(url, name);   // before the download: a single stream link takes it as its channel name
         if (!fetchMine(url)) {
             name(url, null);
-            return isXtream(url) ? "Can't sign in: check the server, username and password" : "Not a playlist or stream link, or it can't be reached";
+            return App.t(isXtream(url) ? R.string.iptv_cant_sign_in : R.string.iptv_not_playlist);
         }
         int n = parse(read(mineFile(url)), false).size();
-        if (n == 0) { file(mineFile(url)).delete(); name(url, null); return "No channels in that playlist"; }
+        if (n == 0) { file(mineFile(url)).delete(); name(url, null); return App.t(R.string.iptv_no_channels); }
         now.add(url);
         saveMine(now);
         return null;

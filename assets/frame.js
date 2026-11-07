@@ -240,3 +240,41 @@
     }
   });
 })();
+
+// Taps, like Brave's pop-up and overlay layers (top frame only, so ad frames can't report themselves):
+//   - the link that was tapped goes to the app, which then knows a pop-up to anywhere else is an ad, and opens this link instead
+//   - an invisible layer stretched over most of the page (a click-jack for pop-unders) is made click-through before the tap lands
+(() => {
+  if (window !== top || window.__fpTaps) return;
+  window.__fpTaps = 1;
+  const invisible = el => {
+    const s = getComputedStyle(el);
+    if (+s.opacity < 0.1 || s.visibility === 'hidden') return true;
+    const clear = c => /rgba\(.*,\s*0\)$|transparent/.test(c);
+    return clear(s.backgroundColor) && s.backgroundImage === 'none' && !el.innerText.trim() && !el.querySelector('img,svg,picture,canvas,video,iframe');
+  };
+  const layer = el => {
+    for (let n = el, i = 0; n && n !== document.body && i < 4; n = n.parentElement, i++) {
+      const s = getComputedStyle(n);
+      if (s.position !== 'fixed' && s.position !== 'absolute') continue;
+      const r = n.getBoundingClientRect();
+      if (r.width * r.height < innerWidth * innerHeight * 0.6 || !invisible(n)) continue;
+      // A player's own click-catcher sits next to its video: leave those alone
+      if (n.parentElement && n.parentElement.querySelector('video,iframe')) return null;
+      return n;
+    }
+    return null;
+  };
+  const down = e => {
+    const l = e.target instanceof Element && layer(e.target);
+    if (!l) return;
+    l.style.setProperty('pointer-events', 'none', 'important');
+    e.stopImmediatePropagation();
+  };
+  addEventListener('pointerdown', down, true);
+  addEventListener('touchstart', down, true);
+  addEventListener('click', e => {
+    const a = e.target instanceof Element && e.target.closest('a[href]');
+    if (a && window.FMHY && /^https?:/.test(a.href)) FMHY.clicked(a.href);
+  }, true);
+})();

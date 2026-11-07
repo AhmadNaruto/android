@@ -40,7 +40,7 @@ public class SearchActivity extends Home {
     @Override void build() {
         col.removeAllViews();
         firstCard = null;
-        box = WebActivity.field(this, "Search movies, series, channels, sites or languages", InputType.TYPE_CLASS_TEXT);
+        box = WebActivity.field(this, App.t(R.string.search_hint), InputType.TYPE_CLASS_TEXT);
         box.setSingleLine(true);
         box.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         box.setTextColor(TEXT);
@@ -73,7 +73,7 @@ public class SearchActivity extends Home {
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.addView(box, new LinearLayout.LayoutParams(0, -2, 1));
-        android.widget.ImageView mic = iconButton(R.drawable.ic_mic, "Voice search", v -> listen(box::setText));
+        android.widget.ImageView mic = iconButton(R.drawable.ic_mic, App.t(R.string.search_voice), v -> listen(box::setText));
         ((LinearLayout.LayoutParams) mic.getLayoutParams()).setMargins(dp(10), 0, 0, 0);
         mic.setColorFilter(TEXT);
         bar.addView(mic);
@@ -97,7 +97,7 @@ public class SearchActivity extends Home {
         firstCard = null;
         String[] words = query.trim().toLowerCase(Locale.ROOT).split("\\s+");
         if (query.trim().isEmpty()) {
-            TextView tip = text("Try: anime, sports, 4k, spanish, korean, p-stream, live tv…", sp(14, 13), MUTED, false);
+            TextView tip = text(App.t(R.string.search_try), sp(14, 13), MUTED, false);
             tip.setPadding(dp(4), dp(16), 0, 0);
             results.addView(tip);
             return;
@@ -118,7 +118,7 @@ public class SearchActivity extends Home {
         boolean pending = q.length() >= 2 && !titlesFor.equals(q);
         boolean haveTitles = titlesFor.equals(q) && !titles.isEmpty(), failed = titlesFor.equals(q) && titlesFailed;
         if (pending) {
-            results.addView(heading("Movies & series"));
+            results.addView(heading(App.t(R.string.search_movies_series)));
             results.addView(searching());
         } else if (haveTitles) {
             // One sideways row each, so channels and sites below stay in view
@@ -126,13 +126,13 @@ public class SearchActivity extends Home {
                 List<Catalog.Title> kind = new ArrayList<>();
                 for (Catalog.Title t : titles) if (t.series() == series) kind.add(t);
                 if (kind.isEmpty()) continue;
-                results.addView(heading((series ? "Series" : "Movies") + "  \u00B7  " + kind.size()));
+                results.addView(heading(App.t(series ? R.string.search_series_n : R.string.search_movies_n, kind.size())));
                 LinearLayout row = row(results);
                 for (Catalog.Title t : kind) row.addView(posterCard(t, posterW()));
             }
         } else if (failed) {
-            results.addView(heading("Movies & series"));
-            results.addView(note("Can't reach the movie catalog. Check WARP in Settings, then search again."));
+            results.addView(heading(App.t(R.string.search_movies_series)));
+            results.addView(note(App.t(R.string.search_catalog_failed)));
         }
         // IPTV channels whose name, group or list has every typed word (plain contains: there are thousands)
         List<Iptv.Channel> chans = new ArrayList<>();
@@ -144,35 +144,35 @@ public class SearchActivity extends Home {
         }
 
         if (seen.isEmpty() && found.isEmpty() && chans.isEmpty() && !haveTitles && !pending && !failed) {
-            TextView none = text("Nothing found for “" + q + "”", sp(16, 14), MUTED, false);
+            TextView none = text(App.t(R.string.search_nothing, q), sp(16, 14), MUTED, false);
             none.setPadding(dp(4), dp(16), 0, 0);
             results.addView(none);
             return;
         }
         if (!seen.isEmpty()) {
-            results.addView(heading("You watched"));
+            results.addView(heading(App.t(R.string.search_you_watched)));
             LinearLayout row = row(results);
             for (History.Entry e : seen) row.addView(historyCard(e));
         }
         if (!chans.isEmpty()) {
-            results.addView(heading("Channels  \u00B7  " + chans.size()));
+            results.addView(heading(App.t(R.string.search_channels_n, chans.size())));
             int cols = App.tv ? 6 : 3;
             LinearLayout row = row(results);
             for (Iptv.Channel c : chans.subList(0, Math.min(14, chans.size()))) row.addView(channelCard(c, cols, "search"));
             if (chans.size() > 14) {
-                TextView more = text("All  " + chans.size() + "  \u203A", sp(17, 15), TEXT, true);
+                TextView more = text(App.t(R.string.search_all_n, chans.size()), sp(17, 15), TEXT, true);
                 more.setGravity(Gravity.CENTER);
                 more.setLayoutParams(cardParams(squareDp(cols), squareDp(cols)));
                 more.setBackground(rounded(0xFF2A2236, dp(14)));
                 focusable(more, dp(14));
                 more.setOnClickListener(v -> startActivity(new android.content.Intent(this, IptvActivity.class).putExtra("type", "all").putExtra("key", "")
-                    .putExtra("title", "Channels: " + q).putExtra("q", q)));
+                    .putExtra("title", App.t(R.string.search_channels_for, q)).putExtra("q", q)));
                 row.addView(more);
             }
         }
         if (!found.isEmpty()) {
             boolean cut = found.size() > MAX_SITES;
-            results.addView(heading("Sites  ·  " + found.size() + (cut ? " (showing " + MAX_SITES + ")" : "")));
+            results.addView(heading(cut ? App.t(R.string.search_sites_cut, found.size(), MAX_SITES) : App.t(R.string.search_sites_n, found.size())));
             Grid grid = new Grid(results);
             for (Sites.Site s : cut ? found.subList(0, MAX_SITES) : found) grid.add(s);
         }
@@ -219,7 +219,7 @@ public class SearchActivity extends Home {
         android.widget.ProgressBar spin = new android.widget.ProgressBar(this);
         spin.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(ACCENT));
         line.addView(spin, new LinearLayout.LayoutParams(dp(28), dp(28)));
-        TextView t = text("Searching movies and series\u2026", sp(15, 13), MUTED, false);
+        TextView t = text(App.t(R.string.search_searching), sp(15, 13), MUTED, false);
         t.setPadding(dp(12), 0, 0, 0);
         line.addView(t);
         return line;

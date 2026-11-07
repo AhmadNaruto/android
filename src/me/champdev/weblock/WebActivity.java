@@ -129,6 +129,10 @@ public class WebActivity extends Activity {
             JSONObject o = new JSONObject(new JSONArray("[" + json + "]").getString(0));
             String image = o.optString("image");
             if (!History.isTmdb(image) && lastPoster != null && SystemClock.uptimeMillis() - lastPosterAt < 180000) image = lastPoster;
+            // Opened from the catalog: its poster, while the page is that title (sites like Movy have none of their own)
+            String name = getIntent().getStringExtra("name"), poster = getIntent().getStringExtra("poster");
+            if (!History.isTmdb(image) && name != null && poster != null && poster.startsWith("http")
+                && History.same(History.titleOf(o.optString("title"), site)).equals(History.same(name))) image = poster;
             History.record(site, siteUrl, web.getUrl(), o.optString("title"), image);
         } catch (Exception ignored) { }
     });
@@ -166,13 +170,13 @@ public class WebActivity extends Activity {
         // JS dialogs: with an application-context WebView the default ones can't show, so draw them here
         @Override public boolean onJsAlert(WebView v, String url, String message, JsResult r) {
             new AlertDialog.Builder(WebActivity.this).setMessage(message)
-                .setPositiveButton("OK", (d, w) -> r.confirm()).setOnCancelListener(d -> r.cancel()).show();
+                .setPositiveButton(android.R.string.ok, (d, w) -> r.confirm()).setOnCancelListener(d -> r.cancel()).show();
             return true;
         }
 
         @Override public boolean onJsConfirm(WebView v, String url, String message, JsResult r) {
             new AlertDialog.Builder(WebActivity.this).setMessage(message)
-                .setPositiveButton("OK", (d, w) -> r.confirm()).setNegativeButton("Cancel", (d, w) -> r.cancel())
+                .setPositiveButton(android.R.string.ok, (d, w) -> r.confirm()).setNegativeButton(android.R.string.cancel, (d, w) -> r.cancel())
                 .setOnCancelListener(d -> r.cancel()).show();
             return true;
         }
@@ -181,7 +185,7 @@ public class WebActivity extends Activity {
             EditText in = field(WebActivity.this, "", InputType.TYPE_CLASS_TEXT);
             in.setText(def);
             new AlertDialog.Builder(WebActivity.this).setMessage(message).setView(box(WebActivity.this, in))
-                .setPositiveButton("OK", (d, w) -> r.confirm(in.getText().toString())).setNegativeButton("Cancel", (d, w) -> r.cancel())
+                .setPositiveButton(android.R.string.ok, (d, w) -> r.confirm(in.getText().toString())).setNegativeButton(android.R.string.cancel, (d, w) -> r.cancel())
                 .setOnCancelListener(d -> r.cancel()).show();
             return true;
         }
@@ -191,12 +195,46 @@ public class WebActivity extends Activity {
             return true;
         }
 
-        // Pop-up ads: only a clicked same-site target=_blank link opens (in this view); script pop-ups are dropped
+        // Pop-ups (sports sites open their channels this way): the new window's address is caught in a throwaway WebView,
+        // then dropped when it looks like an ad (see popupIsAd) and otherwise opened in this view, so Back comes back here
         @Override public boolean onCreateWindow(WebView v, boolean dialog, boolean gesture, Message msg) {
             String link = clickedLink();
-            if (gesture && link != null && sameSite(link, v.getUrl())) v.loadUrl(link);
-            else toast("Pop-up blocked");
-            return false;
+            if (gesture && link != null && sameSite(link, v.getUrl())) { openHere(v, link); return false; }
+            if (!gesture) { toast(App.t(R.string.web_popup_blocked)); return false; }
+            long asked = SystemClock.uptimeMillis();
+            WebView probe = new WebView(WebActivity.this);
+            boolean[] state = {false, false};   // decided, destroyed
+            Runnable dispose = () -> { if (!state[1]) { state[1] = true; probe.destroy(); } };
+            probe.setWebViewClient(new WebViewClient() {
+                void decide(String url) {
+                    if (state[0] || url == null || url.startsWith("about:")) return;   // window.open() then a later address
+                    state[0] = true;
+                    App.main.post(dispose);
+                    // Wait a moment: if the same click also moves this page, the pop-up was the ad
+                    App.main.postDelayed(() -> {
+                        if (isFinishing()) return;
+                        boolean ad = popupIsAd(url, asked, link);
+                        android.util.Log.i("web", "pop-up " + (ad ? "dropped " : "opened here ") + url);
+                        if (!ad) { openHere(v, url); return; }
+                        toast(App.t(R.string.web_popup_blocked));
+                        // A pop-under also swallows the tap: open the link that was tapped (unless the page already went somewhere)
+                        if (link != null && link.matches("(?i)https?://.+") && mainNavAt <= asked - 800 && !link.equals(v.getUrl())
+                            && !(AdBlock.enabled() && AdBlock.blocked(String.valueOf(Uri.parse(link).getHost())))) {
+                            android.util.Log.i("web", "tapped link opened instead " + link);
+                            openHere(v, link);
+                        }
+                    }, Math.max(0, 700 - (SystemClock.uptimeMillis() - asked)));
+                }
+
+                @Override public boolean shouldOverrideUrlLoading(WebView w, WebResourceRequest r) { decide(r.getUrl().toString()); return true; }
+
+                @Override public void onPageStarted(WebView w, String url, Bitmap f) { decide(url); w.stopLoading(); }
+            });
+            // A window that never gets a real address (about:blank only) is dropped
+            App.main.postDelayed(() -> { if (!state[0]) { state[0] = true; toast(App.t(R.string.web_popup_blocked)); } dispose.run(); }, 4000);
+            ((WebView.WebViewTransport) msg.obj).setWebView(probe);
+            msg.sendToTarget();
+            return true;
         }
 
         // WebView draws a gray play-icon poster on <video> by default; Chrome shows nothing
@@ -284,7 +322,7 @@ public class WebActivity extends Activity {
         });
         if (pointer != null && pointer.on && !App.prefs.getBoolean("pointerHint", false)) {
             App.prefs.edit().putBoolean("pointerHint", true).apply();
-            Toast.makeText(this, "Cursor mode: arrows move it, OK taps. Hold OK 5 s to switch to focus mode.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, App.t(R.string.web_cursor_hint), Toast.LENGTH_LONG).show();
         }
 
         WebSettings s = web.getSettings();
@@ -313,11 +351,11 @@ public class WebActivity extends Activity {
                 if (scheme.matches("about|data|blob|javascript")) return false;
                 if (scheme.matches("https?")) {
                     if (!r.isForMainFrame() || r.isRedirect() || sameSite(url, v.getUrl()) || sameSite(url, link)) return false;
-                    toast("Blocked " + r.getUrl().getHost());
+                    toast(App.t(R.string.web_blocked, r.getUrl().getHost()));
                 } else if (url.equals(link)) {
                     openExternal(url);
                 } else {
-                    toast("Blocked " + scheme + ": link");
+                    toast(App.t(R.string.web_blocked_link, scheme));
                 }
                 return true;
             }
@@ -329,7 +367,10 @@ public class WebActivity extends Activity {
                 return new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(new byte[0]));
             }
 
+            @Override public void onPageStarted(WebView v, String url, Bitmap f) { mainNavAt = SystemClock.uptimeMillis(); }
+
             @Override public void doUpdateVisitedHistory(WebView v, String url, boolean reload) {
+                mainNavAt = SystemClock.uptimeMillis();
                 if (urlBar != null) urlBar.setText(url);
                 sniffer.page(url);
                 scheduleCapture();
@@ -370,10 +411,10 @@ public class WebActivity extends Activity {
 
         // Don't let the first request leak out before the WARP tunnel is in place
         String url = getIntent().getStringExtra("url");
-        if (Warp.state == Warp.State.CONNECTING) status.setText("Connecting WARP…");
+        if (Warp.state == Warp.State.CONNECTING) status.setText(App.t(R.string.web_connecting_warp));
         Warp.whenSettled(() -> {
             status.setVisibility(View.GONE);
-            if (Warp.state == Warp.State.FAILED) toast("WARP failed, loading directly");
+            if (Warp.state == Warp.State.FAILED) toast(App.t(R.string.web_warp_failed));
             Warp.route(!Warp.bypassed(siteOf(String.valueOf(Uri.parse(siteUrl).getHost()))));
             web.loadUrl(url);
             web.requestFocus();
@@ -408,7 +449,7 @@ public class WebActivity extends Activity {
 
     void playNative() {
         Sniffer.Hit h = sniffer.best();
-        if (h == null) { toast("No video found on this page yet"); return; }
+        if (h == null) { toast(App.t(R.string.web_no_video)); return; }
         sniffer.handedOff(h);
         if (fullscreen != null) chrome.onHideCustomView();
         // The CDN trusts the page that embedded the player, so replay what the WebView sent for the stream (Referer, Origin)
@@ -443,6 +484,30 @@ public class WebActivity extends Activity {
         return u.getScheme() + "://" + u.getAuthority();
     }
 
+    long mainNavAt;   // when this view last started or changed page
+    String lastOpened;
+    long lastOpenedAt;
+
+    /** Loads a pop-up's address or a tapped link here, once (the link's own new window may ask for it too). */
+    void openHere(WebView v, String url) {
+        if (url.equals(lastOpened) && SystemClock.uptimeMillis() - lastOpenedAt < 3000) return;
+        lastOpened = url;
+        lastOpenedAt = SystemClock.uptimeMillis();
+        v.loadUrl(url);
+    }
+
+    /**
+     * A pop-up is an ad when it is not a web page, goes somewhere other than the link that was tapped (pop-under scripts open
+     * their ad on any tap), its host is on the ad blocklist, or this page moved on after the same tap.
+     */
+    boolean popupIsAd(String url, long asked, String link) {
+        Uri u = Uri.parse(url);
+        if (!String.valueOf(u.getScheme()).matches("https?") || u.getHost() == null) return true;
+        if (link != null && !sameSite(url, link)) return true;
+        if (mainNavAt > asked - 800) return true;
+        return AdBlock.enabled() && AdBlock.blocked(u.getHost());
+    }
+
     String clickedLink() {
         if (lastClicked != null && SystemClock.uptimeMillis() - lastClickedAt < 3000) return lastClicked;
         WebView.HitTestResult h = web.getHitTestResult();
@@ -474,7 +539,7 @@ public class WebActivity extends Activity {
         } catch (ActivityNotFoundException e) {
             String fallback = i.getStringExtra("browser_fallback_url");
             if (fallback != null && fallback.matches("(?i)https?://.*")) web.loadUrl(fallback);
-            else toast("No app can open " + url);
+            else toast(App.t(R.string.web_no_app, url));
         }
     }
 
@@ -482,15 +547,15 @@ public class WebActivity extends Activity {
         WebViewDatabase db = WebViewDatabase.getInstance(this);
         String[] saved = db.getHttpAuthUsernamePassword(host, realm);
         if (saved != null && h.useHttpAuthUsernamePassword()) { h.proceed(saved[0], saved[1]); return; }
-        EditText user = field(this, "Username", InputType.TYPE_CLASS_TEXT);
-        EditText pass = field(this, "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        new AlertDialog.Builder(this).setTitle("Sign in to " + host).setView(box(this, user, pass))
-            .setPositiveButton("Sign in", (d, w) -> {
+        EditText user = field(this, App.t(R.string.web_username), InputType.TYPE_CLASS_TEXT);
+        EditText pass = field(this, App.t(R.string.web_password), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.web_sign_in_to, host)).setView(box(this, user, pass))
+            .setPositiveButton(App.t(R.string.web_sign_in), (d, w) -> {
                 String u = user.getText().toString(), p = pass.getText().toString();
                 db.setHttpAuthUsernamePassword(host, realm, u, p);
                 h.proceed(u, p);
             })
-            .setNegativeButton("Cancel", (d, w) -> h.cancel())
+            .setNegativeButton(android.R.string.cancel, (d, w) -> h.cancel())
             .setOnCancelListener(d -> h.cancel())
             .show();
     }
@@ -498,7 +563,7 @@ public class WebActivity extends Activity {
     void download(String url, String ua, String disposition, String mime, long length) {
         if (Build.VERSION.SDK_INT < 29 && !granted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_STORAGE);
-            toast("Allow storage, then tap download again");
+            toast(App.t(R.string.web_allow_storage));
             return;
         }
         String name = URLUtil.guessFileName(url, disposition, mime);
@@ -516,9 +581,9 @@ public class WebActivity extends Activity {
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
             ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(r);
-            toast("Downloading " + name);
+            toast(App.t(R.string.web_downloading, name));
         } catch (Exception e) {
-            toast("Download failed: " + e.getMessage());
+            toast(App.t(R.string.web_download_failed, e.getMessage()));
         }
     }
 
@@ -578,9 +643,9 @@ public class WebActivity extends Activity {
                 try (OutputStream out = openDownload(safe, mime.isEmpty() ? "application/octet-stream" : mime)) {
                     out.write(bytes);
                 }
-                runOnUiThread(() -> toast("Saved " + safe + " to Downloads"));
+                runOnUiThread(() -> toast(App.t(R.string.web_saved, safe)));
             } catch (Exception e) {
-                runOnUiThread(() -> toast("Download failed: " + e.getMessage()));
+                runOnUiThread(() -> toast(App.t(R.string.web_download_failed, e.getMessage())));
             }
         }
 
@@ -668,22 +733,22 @@ public class WebActivity extends Activity {
         boolean off = Warp.bypassed(key);
         List<String> items = new ArrayList<>();
         List<Runnable> acts = new ArrayList<>();
-        items.add("Reload");
+        items.add(App.t(R.string.web_reload));
         acts.add(web::reload);
-        if (sniffer.has()) { items.add("Play in native player"); acts.add(this::playNative); }
+        if (sniffer.has()) { items.add(App.t(R.string.web_play_native)); acts.add(this::playNative); }
         boolean nat = App.prefs.getBoolean("native", true);
-        items.add(nat ? "Native player: auto (switches when a video starts)" : "Native player: off");
-        acts.add(() -> { App.prefs.edit().putBoolean("native", !nat).apply(); toast(nat ? "Native player off" : "Native player on"); });
-        items.add(off ? "Use WARP for " + key : "Don't use WARP for " + key);
-        acts.add(() -> { Warp.setBypassed(key, !off); Warp.route(off, web::reload); toast(off ? "WARP on for this site" : "Loading this site direct"); });
+        items.add(App.t(nat ? R.string.web_native_auto : R.string.web_native_off));
+        acts.add(() -> { App.prefs.edit().putBoolean("native", !nat).apply(); toast(App.t(nat ? R.string.web_native_off_toast : R.string.web_native_on_toast)); });
+        items.add(App.t(off ? R.string.web_use_warp : R.string.web_no_warp, key));
+        acts.add(() -> { Warp.setBypassed(key, !off); Warp.route(off, web::reload); toast(App.t(off ? R.string.web_warp_on_site : R.string.web_site_direct)); });
         if (pointer != null) {
-            items.add(pointer.on ? "Switch to focus mode" : "Switch to pointer mode");
+            items.add(App.t(pointer.on ? R.string.web_to_focus : R.string.web_to_pointer));
             acts.add(() -> { pointer.okSwitched = false; pointer.switchMode(); });
         }
         boolean clean = App.prefs.getBoolean("cleanvideo", true);
-        items.add(clean ? "Smooth video: on (hides page layers over the video)" : "Smooth video: off");
-        acts.add(() -> { App.prefs.edit().putBoolean("cleanvideo", !clean).apply(); toast(clean ? "Smooth video off" : "Smooth video on"); });
-        items.add("Back to home");
+        items.add(App.t(clean ? R.string.web_smooth_on : R.string.web_smooth_off));
+        acts.add(() -> { App.prefs.edit().putBoolean("cleanvideo", !clean).apply(); toast(App.t(clean ? R.string.web_smooth_off_toast : R.string.web_smooth_on_toast)); });
+        items.add(App.t(R.string.web_back_home));
         acts.add(this::finish);
         new AlertDialog.Builder(this).setTitle(site)
             .setItems(items.toArray(new String[0]), (d, i) -> acts.get(i).run()).show();
@@ -700,10 +765,10 @@ public class WebActivity extends Activity {
         String key = siteKey();
         if (title.startsWith("Attention Required") && !Warp.bypassed(key) && Warp.state == Warp.State.ON) {
             Warp.setBypassed(key, true);
-            toast("Cloudflare blocked WARP, loading " + key + " direct");
+            toast(App.t(R.string.web_cf_blocked, key));
             Warp.route(false, v::reload);
         } else if (title.startsWith("Just a moment")) {
-            toast(App.tv ? "Cloudflare check: hold OK 5 s for pointer mode, then tick the box" : "Cloudflare check: tick the box");
+            toast(App.t(App.tv ? R.string.web_cf_check_tv : R.string.web_cf_check));
         }
     }
 
@@ -789,17 +854,17 @@ public class WebActivity extends Activity {
 
     /** Type an address (or words to search for) and go there. */
     void editAddress() {
-        EditText in = field(this, "Address", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        EditText in = field(this, App.t(R.string.web_address), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         in.setText(web.getUrl());
         in.selectAll();
-        new AlertDialog.Builder(this).setTitle("Go to").setView(box(this, in))
-            .setPositiveButton("Go", (d, w) -> {
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.web_go_to)).setView(box(this, in))
+            .setPositiveButton(App.t(R.string.web_go), (d, w) -> {
                 String s = in.getText().toString().trim();
                 if (s.isEmpty()) return;
                 if (!s.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) s = s.contains(".") && !s.contains(" ") ? "https://" + s : "https://duckduckgo.com/?q=" + Uri.encode(s);
                 web.loadUrl(s);
             })
-            .setNegativeButton("Cancel", null).show();
+            .setNegativeButton(android.R.string.cancel, null).show();
         in.requestFocus();
     }
 
