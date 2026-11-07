@@ -108,4 +108,6 @@
     <string name="update_installing">Wird installiert</string>
     <string name="update_failed">Update fehlgeschlagen: %1$s</string>
     <string name="simkl_marked">Auf Simkl als gesehen markiert</string>
+    <string name="iptv_all_categories">Alle Kategorien</string>
+    <string name="iptv_all_languages">Alle Sprachen</string>
 </resources>

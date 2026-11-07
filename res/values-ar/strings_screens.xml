@@ -108,4 +108,6 @@
     <string name="update_installing">جارٍ التثبيت</string>
     <string name="update_failed">فشل التحديث: %1$s</string>
     <string name="simkl_marked">تم وضع علامة «تمت المشاهدة» على Simkl</string>
+    <string name="iptv_all_categories">كل الفئات</string>
+    <string name="iptv_all_languages">كل اللغات</string>
 </resources>

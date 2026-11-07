@@ -108,4 +108,6 @@
     <string name="update_installing">Instalando</string>
     <string name="update_failed">Error al actualizar: %1$s</string>
     <string name="simkl_marked">Marcado como visto en Simkl</string>
+    <string name="iptv_all_categories">Todas las categorías</string>
+    <string name="iptv_all_languages">Todos los idiomas</string>
 </resources>

@@ -108,4 +108,6 @@
     <string name="update_installing">Memasang</string>
     <string name="update_failed">Pembaruan gagal: %1$s</string>
     <string name="simkl_marked">Ditandai sudah ditonton di Simkl</string>
+    <string name="iptv_all_categories">Semua kategori</string>
+    <string name="iptv_all_languages">Semua bahasa</string>
 </resources>

@@ -16,6 +16,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.AbsListView;
 import android.widget.GridView;
+import android.graphics.Color;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -29,6 +30,8 @@ public class IptvActivity extends Home {
     GridView list;
     int cell;   // tile edge in px
     String query = "";
+    String category = "", language = "";   // "" = all
+    LinearLayout filters;
     TextView count;
     BaseAdapter adapter;
 
@@ -74,6 +77,10 @@ public class IptvActivity extends Home {
         mic.setColorFilter(TEXT);
         bar.addView(mic);
         root.addView(bar, new LinearLayout.LayoutParams(-1, -2));
+        // Category and language chips (each row only when the list has more than one to choose from)
+        filters = new LinearLayout(this);
+        filters.setOrientation(LinearLayout.VERTICAL);
+        root.addView(filters, new LinearLayout.LayoutParams(-1, -2));
 
         // Square tiles, 6 across on a TV and 3 on a phone
         int cols = App.tv ? 6 : 3, gap = dp(gapDp);
@@ -103,6 +110,7 @@ public class IptvActivity extends Home {
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(root);
 
+        chips();
         String q = getIntent().getStringExtra("q");   // from Search's Channels row: the same words, every match
         if (q != null) filter.setText(q); else filter("");
         if (getIntent().getBooleanExtra("voice", false)) {
@@ -121,6 +129,49 @@ public class IptvActivity extends Home {
         filter(query);
     }
 
+    /** The chip rows: the categories and languages in this list, the most common first. */
+    void chips() {
+        filters.removeAllViews();
+        chipRow(App.t(R.string.iptv_all_categories), counts(true), category, v -> { category = v; chips(); filter(query); });
+        chipRow(App.t(R.string.iptv_all_languages), counts(false), language, v -> { language = v; chips(); filter(query); });
+    }
+
+    java.util.List<String> counts(boolean cats) {
+        java.util.Map<String, Integer> n = new java.util.HashMap<>();
+        for (Iptv.Channel c : all) for (String v : cats ? c.cats : c.langs) n.merge(cats ? groupName(v) : v, 1, Integer::sum);
+        java.util.List<String> out = new ArrayList<>(n.keySet());
+        out.sort((a, b) -> n.get(b) - n.get(a) != 0 ? n.get(b) - n.get(a) : a.compareToIgnoreCase(b));
+        return out;
+    }
+
+    void chipRow(String allLabel, java.util.List<String> values, String now, java.util.function.Consumer<String> pick) {
+        if (values.size() < 2) return;
+        LinearLayout row = row(filters);
+        values.add(0, "");
+        for (String v : values) {
+            TextView c = chip(x -> pick.accept(v));
+            c.setText(v.isEmpty() ? allLabel : v);
+            boolean on = v.equals(now);
+            c.setTextColor(on ? Color.WHITE : TEXT);
+            c.setBackground(rounded(on ? ACCENT : CARD, dp(22)));
+            row.addView(c);
+        }
+    }
+
+    boolean matches(Iptv.Channel c) {
+        if (!category.isEmpty()) {
+            boolean in = false;
+            for (String v : c.cats) if (groupName(v).equals(category)) in = true;
+            if (!in) return false;
+        }
+        if (!language.isEmpty()) {
+            boolean in = false;
+            for (String v : c.langs) if (v.equals(language)) in = true;
+            if (!in) return false;
+        }
+        return true;
+    }
+
     @Override public boolean onKeyUp(int k, KeyEvent e) {
         int i = list == null ? -1 : list.getSelectedItemPosition();
         if (k == KeyEvent.KEYCODE_MENU && list.hasFocus() && i >= 0 && i < shown.size()) { star(shown.get(i)); return true; }
@@ -131,7 +182,7 @@ public class IptvActivity extends Home {
         query = q;
         String f = q.trim().toLowerCase(Locale.ROOT);
         shown.clear();
-        for (Iptv.Channel c : all) if (f.isEmpty() || c.name.toLowerCase(Locale.ROOT).contains(f) || c.source.toLowerCase(Locale.ROOT).contains(f) || c.group.toLowerCase(Locale.ROOT).contains(f)) shown.add(c);
+        for (Iptv.Channel c : all) if (matches(c) && (f.isEmpty() || c.name.toLowerCase(Locale.ROOT).contains(f) || c.source.toLowerCase(Locale.ROOT).contains(f) || c.group.toLowerCase(Locale.ROOT).contains(f))) shown.add(c);
         adapter.notifyDataSetChanged();
         count.setText((shown.size() == 1 ? App.t(R.string.iptv_one_channel) : App.t(R.string.iptv_channels, shown.size()))
             + "  ·  " + App.t(App.tv ? R.string.iptv_hint_tv : R.string.iptv_hint_touch));

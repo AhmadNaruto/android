@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.Set;
  */
 final class Iptv {
     static final String MAIN = "https://iptv-org.github.io/iptv/index.m3u";
+    static final String LANGUAGES = "https://iptv-org.github.io/iptv/index.language.m3u";   // the same streams grouped by language
     /** Where the source list comes from until you change it in Settings. */
     static final String DEFAULT_EXTRAS = "https://raw.githubusercontent.com/fmhyplay/sources/main/sources.txt";
     private static List<String[]> adultSources;
@@ -103,6 +105,7 @@ final class Iptv {
         String name = "", logo = "", url = "", ua = "", ref = "", country = "", group = "", source = "";
         String playlist = "";   // which of your playlists it came from (its address), "" for the rest
         String[] cats = {"Other"};
+        String[] langs = {};    // languages it broadcasts in (iptv-org channels only), e.g. "Hindi", "English"
         boolean adult;
     }
 
@@ -116,7 +119,7 @@ final class Iptv {
     static boolean stale() {
         // Also when a newly added extra source has never been downloaded
         int n = adultSources().size();
-        return System.currentTimeMillis() - file("iptv.m3u").lastModified() > REFRESH || (n > 0 && !file("iptv-adult" + (n - 1) + ".m3u").exists()) || (!extrasUrl().isEmpty() && !file("iptv-extras.txt").exists()) || missingMine();
+        return System.currentTimeMillis() - file("iptv.m3u").lastModified() > REFRESH || !file("iptv-lang.m3u").exists() || (n > 0 && !file("iptv-adult" + (n - 1) + ".m3u").exists()) || (!extrasUrl().isEmpty() && !file("iptv-extras.txt").exists()) || missingMine();
     }
 
     private static Boolean adultThere;
@@ -139,6 +142,8 @@ final class Iptv {
     static synchronized List<Channel> all() {
         if (cache == null) {
             List<Channel> out = new ArrayList<>(parse(read("iptv.m3u"), false));
+            Map<String, List<String>> langs = languages(read("iptv-lang.m3u"));
+            for (Channel c : out) { List<String> l = langs.get(c.url); if (l != null) c.langs = l.toArray(new String[0]); }
             // The playlists you added: one category ("My playlists"), every entry kept as it is
             for (String url : mine()) {
                 for (Channel c : parse(read(mineFile(url)), false)) {
@@ -164,6 +169,23 @@ final class Iptv {
         List<Channel> out = new ArrayList<>();
         boolean hide = hideDead();
         for (Channel c : cache) if ((adultOn() || !c.adult) && !(hide && isDead(c.url))) out.add(c);
+        return out;
+    }
+
+    /** Stream address to its languages, from iptv-org's by-language playlist (a stream is listed once per language). */
+    static Map<String, List<String>> languages(String m3u) {
+        Map<String, List<String>> out = new HashMap<>();
+        String group = null;
+        for (String line : m3u.split("\n")) {
+            line = line.trim();
+            if (line.startsWith("#EXTINF")) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("group-title=\"([^\"]*)\"").matcher(line);
+                group = m.find() ? m.group(1) : null;
+            } else if (!line.isEmpty() && !line.startsWith("#") && group != null) {
+                for (String g : group.split(";")) if (!g.isEmpty() && !g.equals("Undefined")) out.computeIfAbsent(line, k -> new ArrayList<>(2)).add(g);
+                group = null;
+            }
+        }
         return out;
     }
 
@@ -328,6 +350,7 @@ final class Iptv {
         loading = true;
         try {
             boolean ok = save(MAIN, "iptv.m3u");
+            save(LANGUAGES, "iptv-lang.m3u");
             if (!extrasUrl().isEmpty()) saveText(extrasUrl(), "iptv-extras.txt");
             reloadExtras();
             String links = special("deeplinks");
