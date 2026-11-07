@@ -1247,16 +1247,12 @@ public class PlayerActivity extends Activity {
     }
 
     /**
-     * Volume boost: louder than the system's maximum (LoudnessEnhancer). Dialog boost: an equalizer that lifts the speech range
-     * (about 0.8 to 4.5 kHz) by 6 dB and lowers the deep bass a little. Both on the player's sound, kept across videos.
-     */
-    /** told = the user just changed a boost (only then is "doesn't work on this device" worth saying) */
-    /**
      * Volume boost: LoudnessEnhancer (raises the level, limits the peaks). Dialog boost: an Equalizer that only CUTS (rumble and
      * bass down, voices untouched) plus 4 dB of LoudnessEnhancer make-up, so voices come out louder. Positive Equalizer gains are
      * avoided on purpose: Android's bundled Equalizer turns the whole output down by its largest boost to avoid clipping, which
      * made "dialog boost" quieter. Effects also move the track to another output path on many devices, so when the last one is
-     * switched off the audio output is rebuilt (a new audio session) to go back to the normal path.
+     * switched off the audio output is rebuilt (a new audio session) to go back to the normal path. With both off nothing is
+     * attached. told = the user just changed a boost (only then is "doesn't work on this device" worth saying).
      */
     void applyBoost(boolean told) {
         boolean had = booster != null || voices != null;
