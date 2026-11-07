@@ -1251,22 +1251,34 @@ public class PlayerActivity extends Activity {
      * (about 0.8 to 4.5 kHz) by 6 dB and lowers the deep bass a little. Both on the player's sound, kept across videos.
      */
     /** told = the user just changed a boost (only then is "doesn't work on this device" worth saying) */
+    /**
+     * Volume boost: LoudnessEnhancer (raises the level, limits the peaks). Dialog boost: an Equalizer that only CUTS (rumble and
+     * bass down, voices untouched) plus 4 dB of LoudnessEnhancer make-up, so voices come out louder. Positive Equalizer gains are
+     * avoided on purpose: Android's bundled Equalizer turns the whole output down by its largest boost to avoid clipping, which
+     * made "dialog boost" quieter. Effects also move the track to another output path on many devices, so when the last one is
+     * switched off the audio output is rebuilt (a new audio session) to go back to the normal path.
+     */
     void applyBoost(boolean told) {
+        boolean had = booster != null || voices != null;
         if (booster != null) { booster.release(); booster = null; }
         if (voices != null) { voices.release(); voices = null; }
-        if (player == null || player.getAudioSessionId() == 0) return;
+        if (player == null) return;
+        int gain = boost * 100 + (voice ? 400 : 0);   // millibels
+        if (gain == 0) {
+            if (had) player.setAudioSessionId(((AudioManager) getSystemService(AUDIO_SERVICE)).generateAudioSessionId());
+            return;
+        }
+        if (player.getAudioSessionId() == 0) return;
         try {
-            if (boost > 0) {
-                booster = new android.media.audiofx.LoudnessEnhancer(player.getAudioSessionId());
-                booster.setTargetGain(boost * 100);   // millibels
-                booster.setEnabled(true);
-            }
+            booster = new android.media.audiofx.LoudnessEnhancer(player.getAudioSessionId());
+            booster.setTargetGain(gain);
+            booster.setEnabled(true);
             if (voice) {
                 voices = new android.media.audiofx.Equalizer(0, player.getAudioSessionId());
                 short[] range = voices.getBandLevelRange();
                 for (short b = 0; b < voices.getNumberOfBands(); b++) {
                     int hz = voices.getCenterFreq(b) / 1000;   // reported in milliHertz
-                    int level = hz >= 800 && hz <= 4500 ? 600 : hz < 250 ? -300 : 0;
+                    int level = hz < 150 ? -900 : hz < 400 ? -500 : hz < 800 ? -150 : hz <= 5000 ? 0 : -200;
                     voices.setBandLevel(b, (short) Math.max(range[0], Math.min(range[1], level)));
                 }
                 voices.setEnabled(true);

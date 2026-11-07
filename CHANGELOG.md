@@ -2,6 +2,11 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## Unreleased
+
+### 🐞 Fixed
+- **Dialog boost** made everything quieter: it now lowers rumble and bass and lifts the level, so voices come out louder. Turning a boost off brings the sound fully back at once.
+
 ## 2.17.0
 
 ### ✨ New
