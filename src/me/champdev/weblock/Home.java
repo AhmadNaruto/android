@@ -331,7 +331,14 @@ public class Home extends Activity {
             if (App.tv) {
                 t.setCompoundDrawablesRelative(d, null, null, null);
                 t.setCompoundDrawablePadding(dp(8));
-                ((GradientDrawable) t.getBackground()).setColor(on ? ACCENT : CARD);
+                // Focus shows as a ring in the background itself (the shared foreground ring did not draw on these tabs):
+                // red on a quiet tab, white on the selected red one
+                GradientDrawable idle = rounded(on ? ACCENT : CARD, dp(22)), focused = rounded(on ? ACCENT : 0xFF2A2236, dp(22));
+                focused.setStroke(dp(3), on ? Color.WHITE : ACCENT);
+                StateListDrawable bg = new StateListDrawable();
+                bg.addState(new int[]{android.R.attr.state_focused}, focused);
+                bg.addState(new int[0], idle);
+                t.setBackground(bg);
             } else {
                 t.setCompoundDrawablesRelative(null, d, null, null);
                 t.setCompoundDrawablePadding(dp(3));
