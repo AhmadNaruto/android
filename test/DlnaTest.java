@@ -38,8 +38,11 @@ public class DlnaTest {
             check("seek to 2:05 (" + pos + ")", pos >= 125000 && pos <= 128000);
             r.send("toggle", 0);
             check("paused", r.state().equals("PAUSED_PLAYBACK"));
+            String vol = "<InstanceID>0</InstanceID><Channel>Master</Channel>";
+            int before = Integer.parseInt(Dlna.text(Dlna.soap(r.rc, Dlna.RC, "GetVolume", vol), "CurrentVolume"));
             r.send("vol+", 0);
-            check("volume up from 30", Dlna.text(Dlna.soap(r.rc, Dlna.RC, "GetVolume", "<InstanceID>0</InstanceID><Channel>Master</Channel>"), "CurrentVolume").equals("35"));
+            int after = Integer.parseInt(Dlna.text(Dlna.soap(r.rc, Dlna.RC, "GetVolume", vol), "CurrentVolume"));
+            check("volume up by 5 (" + before + " -> " + after + ")", after == Math.min(100, before + 5));
             r.send("stop", 0);
             check("stopped", r.state().equals("STOPPED"));
         }
