@@ -2,6 +2,12 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## Unreleased
+
+### ✨ New
+- **DLNA / UPnP casting**: smart TVs from Samsung, LG, Sony, Kodi and others show up in the Cast list ("Name - DLNA"), through the phone like Chromecast.
+- **Fire TV**: install with Downloader code 3116054; the link `releases/latest/download/FMHYPlay-TV.apk` always gets the newest version.
+
 ## 2.16.0
 
 ### ✨ New

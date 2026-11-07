@@ -103,4 +103,6 @@
     <string name="cast_no_receiver">TV tidak memulai pemutar Cast-nya</string>
     <string name="cast_tv_cant_play">TV tidak bisa memutar video ini</string>
     <string name="cast_refused">TV menolak pemutar Cast</string>
+    <string name="cast_label_dlna">%1$s - DLNA</string>
+    <string name="cast_dlna_refused">TV menolak video ini</string>
 </resources>

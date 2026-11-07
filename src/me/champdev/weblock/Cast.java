@@ -223,6 +223,7 @@ final class Cast {
     static final String CHROMECAST = "_googlecast._tcp";
     static final Map<String, String> tvs = new TreeMap<>();          // FMHYPlay TV name -> host:port
     static final Map<String, String> chromecasts = new TreeMap<>();  // Cast device name -> host:port (guarded by tvs)
+    static final Map<String, String> renderers = new TreeMap<>();    // DLNA renderer name -> "avtUrl|rcUrl" (guarded by tvs)
     static final List<NsdManager.DiscoveryListener> finding = new ArrayList<>();
     static Runnable changed = () -> { };
 
@@ -230,6 +231,7 @@ final class Cast {
     static void discover(Context c, Runnable onChange) {
         changed = onChange;
         if (!finding.isEmpty()) return;
+        searchDlna();
         NsdManager nsd = c.getSystemService(NsdManager.class);
         for (String type : new String[]{TYPE, CHROMECAST}) {
             Map<String, String> into = type.equals(TYPE) ? tvs : chromecasts;
@@ -272,12 +274,15 @@ final class Cast {
         NsdManager nsd = c.getSystemService(NsdManager.class);
         for (NsdManager.DiscoveryListener l : finding) try { nsd.stopServiceDiscovery(l); } catch (Exception ignored) { }
         finding.clear();
-        synchronized (tvs) { tvs.clear(); chromecasts.clear(); }
+        synchronized (tvs) { tvs.clear(); chromecasts.clear(); renderers.clear(); }
         changed.run();
         discover(c, changed);
     }
 
-    static boolean any() { synchronized (tvs) { return !tvs.isEmpty() || !chromecasts.isEmpty(); } }
+    static boolean any() { synchronized (tvs) { return !tvs.isEmpty() || !chromecasts.isEmpty() || !renderers.isEmpty(); } }
+
+    /** DLNA renderers answer an SSDP search, not mDNS: one search now (and on each Re-scan). */
+    static void searchDlna() { App.io.execute(() -> Dlna.search(renderers, tvs, changed)); }
 
     /**
      * What the Cast list shows: FMHYPlay TVs first, marked recommended (the stream goes over with everything it needs),
@@ -288,6 +293,7 @@ final class Cast {
         synchronized (tvs) {
             for (Map.Entry<String, String> t : tvs.entrySet()) out.add(new String[]{App.t(R.string.cast_label_app, t.getKey()), "app", t.getKey(), t.getValue()});
             for (Map.Entry<String, String> c : chromecasts.entrySet()) out.add(new String[]{App.t(R.string.cast_label_chromecast, c.getKey()), "cast", c.getKey(), c.getValue()});
+            for (Map.Entry<String, String> d : renderers.entrySet()) out.add(new String[]{App.t(R.string.cast_label_dlna, d.getKey()), "dlna", d.getKey(), d.getValue()});
         }
         return out;
     }

@@ -25,6 +25,16 @@
 <b>TV:</b> put the APK on a USB drive and open it with a file manager, or install over the network:</p>
 <pre><code>adb connect TV_IP_ADDRESS:5555
 adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
+<h3 id="firetv">Fire TV</h3>
+<p>Works on Fire TV sticks, cubes and TVs with Fire OS 7 or newer (the Fire TV Stick 4K and every model since 2019).</p>
+<ol>
+<li>On the Fire TV: <i>Settings, My Fire TV, About</i>, then press <kbd>OK</kbd> on the device name 7 times until it says you are a developer.</li>
+<li>Install <b>Downloader</b> (by AFTVnews) from the Amazon Appstore: search for "Downloader".</li>
+<li><i>Settings, My Fire TV, Developer options, Install unknown apps</i>: turn on <b>Downloader</b>.</li>
+<li>Open Downloader and type the code <kbd>3116054</kbd>, or this address, then <i>Go</i>:<br><code>https://github.com/fmhyplay/android/releases/latest/download/FMHYPlay-TV.apk</code></li>
+<li><i>Install</i>, then <i>Open</i>. Downloader offers to delete the file afterwards; say yes.</li>
+</ol>
+<p>FMHYPlay then updates itself from inside the app. To cast from your phone to the Fire TV, open FMHYPlay on it once; the Fire TV shows up in the phone's Cast list as <i>Name - FMHYPlay</i>.</p>
 <p>Updates install over the old version, because every release is signed with the same key. You can check a file against <code>SHA256SUMS.txt</code> on the release page.</p>
 <p><b>Updates from inside the app</b> (2.14.0 and later): when a newer release is out, Home shows one line with an <i>Install</i> button. FMHYPlay downloads it from GitHub and Android asks you to confirm; the first time, allow FMHYPlay to install unknown apps. <i>Settings, Check for updates</i> looks right away, and <i>Check at app start</i> turns the automatic check (at most every 12 hours) off.</p>
 
@@ -97,7 +107,8 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <img class="shot" src="cast.svg" alt="Cast from the phone to a TV on the same Wi-Fi">
 <table><tr><th>In the list</th><th>What happens</th></tr>
 <tr><td>Bedroom - FMHYPlay (Recommended)</td><td>FMHYPlay on the TV plays the stream itself, with the site's headers and cookie, WARP, ad blocking and subtitles.</td></tr>
-<tr><td>Bedroom - Chromecast</td><td>Any Chromecast, Google TV or TV with Cast built in, without FMHYPlay on it. The phone relays the stream, so keep it on and on the same Wi-Fi.</td></tr></table>
+<tr><td>Bedroom - Chromecast</td><td>Any Chromecast, Google TV or TV with Cast built in, without FMHYPlay on it. The phone relays the stream, so keep it on and on the same Wi-Fi.</td></tr>
+<tr><td>Living room - DLNA</td><td>Smart TVs with DLNA / UPnP (Samsung, LG, Sony, Kodi and others), also through the phone. Not every TV plays HLS streams; MP4 and TS streams work on most.</td></tr></table>
 <p><b>Setting up the TV for FMHYPlay casts:</b> install the TV app and open it once. Then on the TV, open <b>Settings, Cast to this TV</b> and allow <i>Display over other apps</i>: after that a cast opens the player even when FMHYPlay is closed.</p>
 <div class="note">TCL and some other TVs do not let apps start by themselves after the TV restarts. On those, open FMHYPlay once after a restart and the TV shows up on the phone again.</div>
 

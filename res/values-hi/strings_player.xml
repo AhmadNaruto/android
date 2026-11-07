@@ -103,4 +103,6 @@
     <string name="cast_no_receiver">टीवी ने अपना Cast प्लेयर शुरू नहीं किया</string>
     <string name="cast_tv_cant_play">टीवी यह वीडियो नहीं चला सका</string>
     <string name="cast_refused">टीवी ने Cast प्लेयर को मना कर दिया</string>
+    <string name="cast_label_dlna">%1$s - DLNA</string>
+    <string name="cast_dlna_refused">टीवी ने यह वीडियो नहीं चलाया</string>
 </resources>

@@ -61,8 +61,8 @@ final class Chromecast implements Cast.Tv {
     String title = "";
     boolean live;
     Relay relay;
-    PowerManager.WakeLock wake;
-    WifiManager.WifiLock wifi;
+    static PowerManager.WakeLock wake;
+    static WifiManager.WifiLock wifi;
 
     Chromecast(String hostPort) {
         int c = hostPort.lastIndexOf(':');
@@ -163,21 +163,20 @@ final class Chromecast implements Cast.Tv {
     }
 
     /** The phone keeps the relay going with the screen off: a foreground service, the CPU and Wi-Fi held awake. */
-    void awake(boolean on) {
+    static synchronized void awake(boolean on) {
         Context c = App.app;
         App.main.post(() -> {
             try {
                 if (on) c.startForegroundService(new Intent(c, Cast.Keep.class)); else c.stopService(new Intent(c, Cast.Keep.class));
             } catch (Exception e) { Log.w(TAG, e); }
         });
+        if (wake != null && wake.isHeld()) wake.release();   // a new cast replaces the old one's locks
+        if (wifi != null && wifi.isHeld()) wifi.release();
         if (on) {
             wake = ((PowerManager) c.getSystemService(Context.POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "fmhyplay:cast");
             wake.acquire(6 * 3600 * 1000L);
             wifi = ((WifiManager) c.getApplicationContext().getSystemService(Context.WIFI_SERVICE)).createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "fmhyplay:cast");
             wifi.acquire();
-        } else {
-            if (wake != null && wake.isHeld()) wake.release();
-            if (wifi != null && wifi.isHeld()) wifi.release();
         }
     }
 

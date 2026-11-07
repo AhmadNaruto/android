@@ -103,4 +103,6 @@
     <string name="cast_no_receiver">The TV did not start its Cast player</string>
     <string name="cast_tv_cant_play">The TV could not play this video</string>
     <string name="cast_refused">The TV refused the Cast player</string>
+    <string name="cast_label_dlna">%1$s - DLNA</string>
+    <string name="cast_dlna_refused">The TV refused this video</string>
 </resources>

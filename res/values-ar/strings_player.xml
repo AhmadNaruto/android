@@ -103,4 +103,6 @@
     <string name="cast_no_receiver">لم يشغّل التلفزيون مشغّل Cast</string>
     <string name="cast_tv_cant_play">تعذّر على التلفزيون تشغيل هذا الفيديو</string>
     <string name="cast_refused">رفض التلفزيون مشغّل Cast</string>
+    <string name="cast_label_dlna">%1$s - DLNA</string>
+    <string name="cast_dlna_refused">رفض التلفزيون هذا الفيديو</string>
 </resources>

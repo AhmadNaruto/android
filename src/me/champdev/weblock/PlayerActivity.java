@@ -1336,7 +1336,7 @@ public class PlayerActivity extends Activity {
         try {
             m = Cast.describe(getIntent(), player.getCurrentPosition()).put("live", player.isCurrentMediaItemLive()).put("title", title.getText().toString());
         } catch (Exception e) { say(App.t(R.string.cast_failed)); return; }
-        Cast.Tv tv = t[1].equals("cast") ? new Chromecast(t[3]) : new Cast.App2Tv(t[3]);
+        Cast.Tv tv = t[1].equals("cast") ? new Chromecast(t[3]) : t[1].equals("dlna") ? new Dlna(t[3]) : new Cast.App2Tv(t[3]);
         App.io.execute(() -> {
             String why;
             try { why = tv.start(m); } catch (Exception e) { android.util.Log.w(TAG, "cast", e); why = App.t(R.string.cast_unreachable, name); tv.close(); }

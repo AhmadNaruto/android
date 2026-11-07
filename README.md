@@ -40,6 +40,7 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 - The **Cast** button in the phone's player sends the video to a TV on the same Wi-Fi, from the same spot. The phone becomes the remote: play, pause, seek, ±10 s and TV volume (the phone's volume keys work too)
 - **TV with FMHYPlay (recommended)**: the TV plays the stream itself, with the site's headers and cookie, WARP, ad blocking and subtitles. It opens even when FMHYPlay is closed on the TV
 - **Chromecast, Google TV and TVs with Cast built in**: no app needed on the TV; the phone relays the stream so sites still accept it
+- **DLNA / UPnP smart TVs** (Samsung, LG, Sony, Kodi and others): same relay; works best with MP4 and TS streams, since not every TV plays HLS
 
 <p align="center"><img src="docs/cast.svg" alt="Cast from the phone to a TV on the same Wi-Fi" width="760"></p>
 
@@ -116,6 +117,15 @@ Download the APK for your device from [Releases](https://github.com/fmhyplay/and
 Allow installs from your file manager or browser, open the APK, done. On a TV, `adb install -r FMHYPlay-TV-vX.Y.Z.apk` works over the network. Updates install over the old version because releases are signed with the same key. Check a download with `SHA256SUMS.txt` from the release.
 
 Requires Android 8.0 (API 26) or newer, arm64 or 32-bit ARM.
+
+### Fire TV
+
+1. On the Fire TV: *Settings → My Fire TV → About*, press OK on the device name 7 times (developer options on).
+2. Install **Downloader** (by AFTVnews) from the Amazon Appstore.
+3. *Settings → My Fire TV → Developer options → Install unknown apps* → turn on **Downloader**.
+4. In Downloader, type the code **`3116054`** or `https://github.com/fmhyplay/android/releases/latest/download/FMHYPlay-TV.apk`, then *Go → Install → Open*.
+
+Fire OS 7 or newer (Fire TV Stick 4K and later). The app updates itself afterwards. That link always gets the newest TV APK (`FMHYPlay-Android.apk` for phones).
 
 ## Build from source
 
