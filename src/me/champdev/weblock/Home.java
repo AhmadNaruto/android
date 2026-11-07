@@ -786,7 +786,9 @@ public class Home extends Activity {
     void addPlaylistDialog() {
         EditText in = WebActivity.field(this, "https://example.com/playlist.m3u", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         EditText name = WebActivity.field(this, App.t(R.string.home_playlist_name_hint), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        new AlertDialog.Builder(this).setTitle(App.t(R.string.home_add_playlist_title)).setMessage(App.t(R.string.home_add_playlist_msg)).setView(WebActivity.box(this, in, name))
+        TextView stalker = chip(null);   // the dialog's three buttons are taken: Stalker sits under the fields
+        stalker.setText(App.t(R.string.stalker_button));
+        AlertDialog dlg = new AlertDialog.Builder(this).setTitle(App.t(R.string.home_add_playlist_title)).setMessage(App.t(R.string.home_add_playlist_msg)).setView(WebActivity.box(this, in, name, stalker))
             .setPositiveButton(App.t(R.string.home_add), (d, w) -> {
                 String url = in.getText().toString().trim(), label = name.getText().toString();
                 if (url.isEmpty()) return;
@@ -803,6 +805,35 @@ public class Home extends Activity {
             .setNeutralButton(App.t(R.string.home_xtream_login), (d, w) -> xtreamDialog())
             .setNegativeButton(android.R.string.cancel, null)
             .show();
+        stalker.setOnClickListener(v -> { dlg.dismiss(); stalkerDialog(); });
+    }
+
+    /** A Stalker (Ministra) portal: its address and the MAC address the provider registered. Its live channels get their own row. */
+    void stalkerDialog() {
+        EditText name = WebActivity.field(this, App.t(R.string.home_xtream_name_hint), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        EditText portal = WebActivity.field(this, App.t(R.string.stalker_portal_hint), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        EditText mac = WebActivity.field(this, App.t(R.string.stalker_mac_hint), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        mac.setText("00:1A:79:");   // MAG boxes' prefix, which most providers register
+        AlertDialog dlg = new AlertDialog.Builder(this).setTitle(App.t(R.string.stalker_title)).setMessage(App.t(R.string.stalker_msg))
+            .setView(WebActivity.box(this, name, portal, mac))
+            .setPositiveButton(App.t(R.string.home_add), null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+        // Set here so a wrong MAC keeps the dialog (and what was typed) open
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (portal.getText().toString().trim().isEmpty()) { portal.requestFocus(); return; }
+            String url = Stalker.account(portal.getText().toString(), mac.getText().toString());
+            if (url == null) { mac.setError(App.t(R.string.stalker_bad_mac)); mac.requestFocus(); return; }
+            dlg.dismiss();
+            toast(App.t(R.string.home_signing_in));
+            Warp.whenSettled(() -> App.io.execute(() -> {
+                String err = Iptv.addPlaylist(url, name.getText().toString());
+                runOnUiThread(() -> {
+                    toast(err == null ? App.t(R.string.home_channels_added) : err);
+                    build();
+                });
+            }));
+        });
     }
 
     /** An IPTV provider's Xtream Codes login (server, username, password): its live channels get their own row. */

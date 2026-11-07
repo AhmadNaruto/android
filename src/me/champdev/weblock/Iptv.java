@@ -294,9 +294,9 @@ final class Iptv {
                 Set<String> first = new HashSet<>();
                 for (Channel c : favorites()) first.add(c.url);
                 for (Channel c : history()) first.add(c.url);
-                // Never your own per-account streams (user/pass/id, as Xtream providers serve): an account allows one or two connections
-                // at a time, and 16 checks at once could get it locked
-                raw.removeIf(c -> c.cats[0].equals(MINE) && ACCOUNT.matcher(String.valueOf(Uri.parse(c.url).getPath())).matches());
+                // Never your own per-account streams (user/pass/id, as Xtream providers serve, or a Stalker portal's): an account allows one or
+                // two connections at a time, and 16 checks at once could get it locked
+                raw.removeIf(c -> c.url.startsWith(Stalker.SCHEME) || c.cats[0].equals(MINE) && ACCOUNT.matcher(String.valueOf(Uri.parse(c.url).getPath())).matches());
                 for (Channel c : raw) if (first.contains(c.url) && !known(c.url)) todo.add(c);
                 for (Channel c : raw) if (!first.contains(c.url) && !known(c.url)) todo.add(c);
                 sweepDone = 0;
@@ -378,13 +378,14 @@ final class Iptv {
         return Uri.parse(url).getPath() != null && Uri.parse(url).getPath().endsWith("/player_api.php");
     }
 
-    /** The name you gave a playlist; without one its address, or "host · Xtream (user)" so a password never shows. */
+    /** The name you gave a playlist; without one its address, or "host · Xtream (user)" / "host · Stalker" so a password or MAC never shows. */
     static String playlistName(String url) {
         String named = names().optString(url, "");
         if (!named.isEmpty()) return named;
         Uri u = Uri.parse(url);
-        return isXtream(url) ? u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : "") + " \u00B7 Xtream (" + u.getQueryParameter("username") + ")"
-            : url.replaceFirst("(?i)^https?://", "");
+        String host = u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : "");
+        return isXtream(url) ? host + " \u00B7 Xtream (" + u.getQueryParameter("username") + ")"
+            : Stalker.isAccount(url) ? host + " \u00B7 Stalker" : url.replaceFirst("(?i)^https?://", "");
     }
 
     static org.json.JSONObject names() {
@@ -428,7 +429,7 @@ final class Iptv {
      */
     static boolean fetchMine(String url) {
         try {
-            String text = isXtream(url) ? xtreamPlaylist(url) : download(url);
+            String text = isXtream(url) ? xtreamPlaylist(url) : Stalker.isAccount(url) ? Stalker.playlist(url, Warp.proxyFor(Uri.parse(url).getHost())) : download(url);
             if (text == null || !text.trim().startsWith("#EXTM3U")) return false;
             if (parse(text, false).isEmpty() && text.contains("#EXT-X-"))
                 text = "#EXTM3U\n#EXTINF:-1 group-title=\"" + STREAMS + "\"," + (names().has(url) ? names().optString(url) : streamName(url)) + "\n" + url + "\n";
@@ -461,7 +462,7 @@ final class Iptv {
         name(url, name);   // before the download: a single stream link takes it as its channel name
         if (!fetchMine(url)) {
             name(url, null);
-            return App.t(isXtream(url) ? R.string.iptv_cant_sign_in : R.string.iptv_not_playlist);
+            return App.t(isXtream(url) ? R.string.iptv_cant_sign_in : Stalker.isAccount(url) ? R.string.stalker_cant_sign_in : R.string.iptv_not_playlist);
         }
         int n = parse(read(mineFile(url)), false).size();
         if (n == 0) { file(mineFile(url)).delete(); name(url, null); return App.t(R.string.iptv_no_channels); }
@@ -532,7 +533,7 @@ final class Iptv {
                 boolean skip = adult && (CAM.matcher(c.name).find() || PANEL.matcher(line).find() || VOD.matcher(line).find() || ACCOUNT.matcher(String.valueOf(Uri.parse(line).getPath())).matches());
                 // A name with no letter in it ("", "#", "#00054", "1234") is not a channel anyone can pick
                 boolean named = c.name.codePoints().anyMatch(Character::isLetter) && !OLERO.matcher(c.name).find();
-                if (line.startsWith("http") && named && !skip) { c.url = clean(line); out.add(c); }
+                if ((line.startsWith("http") || line.startsWith(Stalker.SCHEME)) && named && !skip) { c.url = clean(line); out.add(c); }
                 c = null;
             }
         }
@@ -678,7 +679,22 @@ final class Iptv {
         Map<String, String> hd = new java.util.HashMap<>();
         if (!c.ua.isEmpty()) hd.put("User-Agent", c.ua);
         if (!c.ref.isEmpty()) hd.put("Referer", c.ref);
-        ctx.startActivity(PlayerActivity.open(ctx, c.url, false, hd, new ArrayList<>(), c.name).putExtra("mime", mime(c.url)));
+        if (!c.url.startsWith(Stalker.SCHEME)) {
+            ctx.startActivity(PlayerActivity.open(ctx, c.url, false, hd, new ArrayList<>(), c.name).putExtra("mime", mime(c.url)));
+            return;
+        }
+        // A Stalker channel: the portal makes a link for this play (it carries a token that runs out)
+        App.io.execute(() -> {
+            String url;
+            try { url = Stalker.link(c.url, Warp.proxyFor(Uri.parse(c.url.substring(Stalker.SCHEME.length())).getHost())); } catch (IOException e) { url = null; }
+            String link = url;
+            App.main.post(() -> {
+                if (link == null) { android.widget.Toast.makeText(ctx, App.t(R.string.stalker_no_link), android.widget.Toast.LENGTH_LONG).show(); return; }
+                // MAG portals mostly send MPEG-TS from a .php address, which mime() would take for HLS
+                String type = link.toLowerCase(Locale.ROOT).contains("m3u8") ? "application/x-mpegURL" : mime(link).contains("dash") ? mime(link) : "";
+                ctx.startActivity(PlayerActivity.open(ctx, link, false, hd, new ArrayList<>(), c.name).putExtra("mime", type).putExtra("channel", c.url));
+            });
+        });
     }
 
     static List<Channel> favorites() {

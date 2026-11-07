@@ -72,7 +72,7 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 **IPTV**
 - More than 11,000 public channels from [iptv-org](https://github.com/iptv-org/iptv), grouped by category and country, with logos
 - A background check hides channels that are offline, and a Working row shows the ones that played
-- **Add your own playlist, a single `.m3u8` stream link or an Xtream Codes login**; each playlist gets its own row
+- **Add your own playlist, a single `.m3u8` stream link, an Xtream Codes login or a Stalker portal (MAC address)**; each playlist gets its own row
 - Favorite channels with a heart; channels also show up in the one search
 
 **Engineering**
