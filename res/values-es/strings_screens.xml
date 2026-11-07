@@ -110,4 +110,8 @@
     <string name="simkl_marked">Marcado como visto en Simkl</string>
     <string name="iptv_all_categories">Todas las categorías</string>
     <string name="iptv_all_languages">Todos los idiomas</string>
+    <string name="iptv_pin">Fijar en la pestaña IPTV</string>
+    <string name="iptv_unpin">Desfijar</string>
+    <string name="iptv_pinned">Fijado: %1$s</string>
+    <string name="iptv_unpinned">Desfijado: %1$s</string>
 </resources>

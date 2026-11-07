@@ -607,6 +607,58 @@ final class Iptv {
         return n.isEmpty() ? code.toUpperCase(Locale.ROOT) : n;
     }
 
+    // ---- pins: a channel list with its chips (India · Hindi · News) kept as its own row on the IPTV tab ----
+
+    static final class Pin {
+        String type = "", key = "", title = "", cat = "", lang = "";
+
+        boolean same(String t, String k, String c, String l) { return type.equals(t) && key.equals(k) && cat.equals(c) && lang.equals(l); }
+    }
+
+    static List<Pin> pins() {
+        List<Pin> out = new ArrayList<>();
+        try {
+            org.json.JSONArray a = new org.json.JSONArray(App.prefs.getString("iptvPins", "[]"));
+            for (int i = 0; i < a.length(); i++) {
+                org.json.JSONObject o = a.getJSONObject(i);
+                Pin p = new Pin();
+                p.type = o.optString("type"); p.key = o.optString("key"); p.title = o.optString("title");
+                p.cat = o.optString("cat"); p.lang = o.optString("lang");
+                out.add(p);
+            }
+        } catch (org.json.JSONException ignored) { }
+        return out;
+    }
+
+    static boolean isPinned(String type, String key, String cat, String lang) {
+        for (Pin p : pins()) if (p.same(type, key, cat, lang)) return true;
+        return false;
+    }
+
+    /** Pins the list with these chips, or unpins it; true when it is pinned now. */
+    static boolean togglePin(String type, String key, String title, String cat, String lang) {
+        List<Pin> list = pins();
+        boolean had = list.removeIf(p -> p.same(type, key, cat, lang));
+        if (!had) {
+            Pin p = new Pin();
+            p.type = type; p.key = key; p.title = title; p.cat = cat; p.lang = lang;
+            list.add(p);
+        }
+        org.json.JSONArray a = new org.json.JSONArray();
+        try {
+            for (Pin p : list) a.put(new org.json.JSONObject().put("type", p.type).put("key", p.key).put("title", p.title).put("cat", p.cat).put("lang", p.lang));
+        } catch (org.json.JSONException ignored) { }
+        App.prefs.edit().putString("iptvPins", a.toString()).apply();
+        return !had;
+    }
+
+    /** The list's channels that match its chips: category by key, language by name; "" means any. */
+    static List<Channel> filter(List<Channel> in, String cat, String lang) {
+        List<Channel> out = new ArrayList<>();
+        for (Channel c : in) if ((cat.isEmpty() || java.util.Arrays.asList(c.cats).contains(cat)) && (lang.isEmpty() || java.util.Arrays.asList(c.langs).contains(lang))) out.add(c);
+        return out;
+    }
+
     /** What people look for first: movies, TV, kids, then information; the rest after these by size. */
     static final List<String> CATEGORY_ORDER = java.util.Arrays.asList("Movies", "Series", "Entertainment", "General", "Kids", "Animation", "Family",
         "News", "Documentary", "Education", "Science", "Sports", "Music", "Comedy", "Lifestyle", "Cooking", "Travel", "Culture", "Classic");

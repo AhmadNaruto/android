@@ -110,4 +110,8 @@
     <string name="simkl_marked">تم وضع علامة «تمت المشاهدة» على Simkl</string>
     <string name="iptv_all_categories">كل الفئات</string>
     <string name="iptv_all_languages">كل اللغات</string>
+    <string name="iptv_pin">تثبيت في تبويب IPTV</string>
+    <string name="iptv_unpin">إلغاء التثبيت</string>
+    <string name="iptv_pinned">تم التثبيت: %1$s</string>
+    <string name="iptv_unpinned">تم إلغاء التثبيت: %1$s</string>
 </resources>

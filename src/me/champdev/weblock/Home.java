@@ -595,6 +595,23 @@ public class Home extends Activity {
                 mr.addView(more);
             }
         }
+        // Pinned lists (a country or category with its chips), each a row with an All tile that opens it filtered
+        for (Iptv.Pin p : Iptv.pins()) {
+            List<Iptv.Channel> in = Iptv.filter(Iptv.list(p.type, p.key), p.cat, p.lang);
+            if (in.isEmpty()) continue;
+            String title = p.title + (p.cat.isEmpty() ? "" : "  \u00B7  " + groupName(p.cat)) + (p.lang.isEmpty() ? "" : "  \u00B7  " + p.lang);
+            col.addView(heading("\uD83D\uDCCC  " + title + "  \u00B7  " + in.size()));
+            LinearLayout pr = row();
+            for (Iptv.Channel c : in.subList(0, Math.min(14, in.size()))) pr.addView(channelCard(c, cols, "pin"));
+            TextView allTile = text(App.t(R.string.home_all_count, in.size()), sp(17, 15), TEXT, true);
+            allTile.setGravity(Gravity.CENTER);
+            allTile.setLayoutParams(cardParams(squareDp(cols), squareDp(cols)));
+            allTile.setBackground(rounded(0xFF2A2236, dp(14)));
+            focusable(allTile, dp(14));
+            allTile.setOnClickListener(v -> startActivity(new Intent(this, IptvActivity.class).putExtra("type", p.type).putExtra("key", p.key)
+                .putExtra("title", p.title).putExtra("cat", p.cat).putExtra("lang", p.lang)));
+            pr.addView(allTile);
+        }
         // Recently watched channels and stars, as rows like Continue watching on Home (movies stay on Home, channels stay here)
         List<Iptv.Channel> recent = Iptv.history();
         if (!recent.isEmpty()) {

@@ -110,4 +110,8 @@
     <string name="simkl_marked">Simkl पर देखा हुआ मार्क किया गया</string>
     <string name="iptv_all_categories">सभी कैटेगरी</string>
     <string name="iptv_all_languages">सभी भाषाएँ</string>
+    <string name="iptv_pin">IPTV टैब पर पिन करें</string>
+    <string name="iptv_unpin">अनपिन करें</string>
+    <string name="iptv_pinned">पिन किया: %1$s</string>
+    <string name="iptv_unpinned">अनपिन किया: %1$s</string>
 </resources>

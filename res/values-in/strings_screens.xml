@@ -110,4 +110,8 @@
     <string name="simkl_marked">Ditandai sudah ditonton di Simkl</string>
     <string name="iptv_all_categories">Semua kategori</string>
     <string name="iptv_all_languages">Semua bahasa</string>
+    <string name="iptv_pin">Sematkan ke tab IPTV</string>
+    <string name="iptv_unpin">Lepas sematan</string>
+    <string name="iptv_pinned">Disematkan: %1$s</string>
+    <string name="iptv_unpinned">Sematan dilepas: %1$s</string>
 </resources>

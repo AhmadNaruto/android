@@ -30,7 +30,8 @@ public class IptvActivity extends Home {
     GridView list;
     int cell;   // tile edge in px
     String query = "";
-    String category = "", language = "";   // "" = all
+    String category = "", language = "";   // category key and language name; "" = all
+    android.widget.ImageView pin;
     LinearLayout filters;
     TextView count;
     BaseAdapter adapter;
@@ -76,6 +77,14 @@ public class IptvActivity extends Home {
         ((LinearLayout.LayoutParams) mic.getLayoutParams()).setMargins(dp(10), 0, 0, 0);
         mic.setColorFilter(TEXT);
         bar.addView(mic);
+        // Pin: this list with the chips that are on becomes a row of its own on the IPTV tab
+        pin = iconButton(R.drawable.ic_pin, App.t(R.string.iptv_pin), v -> {
+            boolean on = Iptv.togglePin(type, key, getIntent().getStringExtra("title"), category, language);
+            toast(App.t(on ? R.string.iptv_pinned : R.string.iptv_unpinned, pinTitle()));
+            pinState();
+        });
+        ((LinearLayout.LayoutParams) pin.getLayoutParams()).setMargins(dp(10), 0, 0, 0);
+        bar.addView(pin);
         root.addView(bar, new LinearLayout.LayoutParams(-1, -2));
         // Category and language chips (each row only when the list has more than one to choose from)
         filters = new LinearLayout(this);
@@ -110,6 +119,8 @@ public class IptvActivity extends Home {
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(root);
 
+        if (getIntent().hasExtra("cat")) category = getIntent().getStringExtra("cat");   // opened from a pinned row
+        if (getIntent().hasExtra("lang")) language = getIntent().getStringExtra("lang");
         chips();
         String q = getIntent().getStringExtra("q");   // from Search's Channels row: the same words, every match
         if (q != null) filter.setText(q); else filter("");
@@ -129,11 +140,23 @@ public class IptvActivity extends Home {
         filter(query);
     }
 
+    String pinTitle() {
+        return getIntent().getStringExtra("title") + (category.isEmpty() ? "" : " \u00B7 " + groupName(category)) + (language.isEmpty() ? "" : " \u00B7 " + language);
+    }
+
+    void pinState() {
+        boolean on = Iptv.isPinned(type, key, category, language);
+        pin.setColorFilter(on ? ACCENT : TEXT);
+        pin.setContentDescription(App.t(on ? R.string.iptv_unpin : R.string.iptv_pin));
+        if (android.os.Build.VERSION.SDK_INT >= 26) pin.setTooltipText(pin.getContentDescription());
+    }
+
     /** The chip rows: the categories and languages in this list, the most common first. */
     void chips() {
+        pinState();
         filters.removeAllViews();
-        chipRow(App.t(R.string.iptv_all_categories), counts(true), category, v -> { category = v; chips(); filter(query); });
-        chipRow(App.t(R.string.iptv_all_languages), counts(false), language, v -> { language = v; chips(); filter(query); });
+        chipRow(App.t(R.string.iptv_all_categories), counts(true), category, true, v -> { category = v; chips(); filter(query); });
+        chipRow(App.t(R.string.iptv_all_languages), counts(false), language, false, v -> { language = v; chips(); filter(query); });
     }
 
     /** The categories (as shown) or languages in this list, ranked like the IPTV tab: Iptv.categoryRank / Iptv.rankLanguages. */
@@ -149,29 +172,32 @@ public class IptvActivity extends Home {
         java.util.Comparator<String> rank = Iptv.categoryRank(k -> n.get(groupName(k)));
         java.util.List<String> keys = new ArrayList<>(shownToKey.values());
         keys.sort(rank);
-        java.util.List<String> out = new ArrayList<>();
-        for (String k : keys) out.add(groupName(k));
-        return out;
+        return keys;
     }
 
-    void chipRow(String allLabel, java.util.List<String> values, String now, java.util.function.Consumer<String> pick) {
+    void chipRow(String allLabel, java.util.List<String> values, String now, boolean cats, java.util.function.Consumer<String> pick) {
         if (values.size() < 2) return;
         LinearLayout row = row(filters);
         values.add(0, "");
+        TextView picked = null;
         for (String v : values) {
             TextView c = chip(x -> pick.accept(v));
-            c.setText(v.isEmpty() ? allLabel : v);
+            c.setText(v.isEmpty() ? allLabel : cats ? groupName(v) : v);
             boolean on = v.equals(now);
             c.setTextColor(on ? Color.WHITE : TEXT);
             c.setBackground(rounded(on ? ACCENT : CARD, dp(22)));
             row.addView(c);
+            if (on && !v.isEmpty()) picked = c;
         }
+        // Keep the chosen chip in view (the row is rebuilt after each pick)
+        TextView keep = picked;
+        if (keep != null) row.post(() -> ((android.widget.HorizontalScrollView) row.getParent()).scrollTo(Math.max(0, keep.getLeft() - dp(40)), 0));
     }
 
     boolean matches(Iptv.Channel c) {
         if (!category.isEmpty()) {
             boolean in = false;
-            for (String v : c.cats) if (groupName(v).equals(category)) in = true;
+            for (String v : c.cats) if (v.equals(category)) in = true;
             if (!in) return false;
         }
         if (!language.isEmpty()) {
