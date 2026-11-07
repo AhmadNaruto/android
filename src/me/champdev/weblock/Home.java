@@ -1061,6 +1061,13 @@ public class Home extends Activity {
         }));
         simklValue.setText(App.t(Simkl.signedIn() ? R.string.home_connected : R.string.home_connect));
         simklValue.setTextColor(Simkl.signedIn() ? GREEN : ACCENT);
+        TextView ppValue = new TextView(this);
+        col.addView(settingRow("PunchPlay", App.t(R.string.punchplay_help), ppValue, v -> {
+            if (PunchPlay.signedIn()) confirm(App.t(R.string.punchplay_disconnect_title), App.t(R.string.punchplay_disconnect_msg), App.t(R.string.home_disconnect), () -> { PunchPlay.signOut(); build(); });
+            else punchPlayDialog();
+        }));
+        ppValue.setText(App.t(PunchPlay.signedIn() ? R.string.home_connected : R.string.home_connect));
+        ppValue.setTextColor(PunchPlay.signedIn() ? GREEN : ACCENT);
 
         col.addView(heading(App.t(R.string.home_updates)));
         String newer = Update.latest();
@@ -1132,6 +1139,40 @@ public class Home extends Activity {
                 });
             });
         }, every * 1000L);
+    }
+
+    /** Shows a code to enter at punchplay.tv/link (where you can also make the free account) and waits for it, as for Simkl. */
+    void punchPlayDialog() {
+        TextView steps = text(App.t(R.string.home_getting_code), sp(17, 15), TEXT, false), code = text("", sp(40, 32), TEXT, true);
+        code.setLetterSpacing(0.15f);
+        code.setPadding(0, dp(14), 0, dp(6));
+        AlertDialog d = new AlertDialog.Builder(this).setTitle(App.t(R.string.punchplay_connect)).setView(WebActivity.box(this, steps, code)).setNegativeButton(android.R.string.cancel, null).create();
+        boolean[] open = {true};
+        d.setOnDismissListener(x -> open[0] = false);
+        d.show();
+        App.io.execute(() -> {
+            PunchPlay.Code c = PunchPlay.newCode();
+            runOnUiThread(() -> {
+                if (!open[0]) return;
+                if (c == null) { steps.setText(App.t(R.string.punchplay_offline)); return; }
+                steps.setText(App.t(R.string.home_simkl_steps, c.page.replaceFirst("^https?://", "")));
+                code.setText(c.user);
+                Runnable[] poll = new Runnable[1];
+                poll[0] = () -> App.io.execute(() -> {
+                    String r = PunchPlay.check(c);
+                    runOnUiThread(() -> {
+                        if (!open[0]) return;
+                        switch (r) {
+                            case "ok": d.dismiss(); toast(App.t(R.string.punchplay_connected)); build(); break;
+                            case "expired": steps.setText(App.t(R.string.punchplay_expired)); break;
+                            case "error": steps.setText(App.t(R.string.punchplay_refused)); break;
+                            default: App.main.postDelayed(poll[0], c.interval * 1000L);
+                        }
+                    });
+                });
+                App.main.postDelayed(poll[0], c.interval * 1000L);
+            });
+        });
     }
 
     /** Update `version`: what's new since this one, then Install runs `install`. */

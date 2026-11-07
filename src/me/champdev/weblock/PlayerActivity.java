@@ -1305,8 +1305,9 @@ public class PlayerActivity extends Activity {
     // ---- Simkl ----
 
     boolean scrobbled, stopped;   // a start went out for this video; the stop went out
+    final String session = java.util.UUID.randomUUID().toString();   // PunchPlay's playback_session_id for this video
 
-    /** Tells Simkl where the video is, for a movie or an episode from the catalog (live streams and unknown episodes are left out). */
+    /** Tells Simkl and PunchPlay where the video is, for a movie or an episode from the catalog (live streams and unknown episodes are left out). */
     void scrobble(String action) {
         if (player == null || player.isCurrentMediaItemLive() || stopped || !scrobbled) return;
         long dur = player.getDuration();
@@ -1317,6 +1318,8 @@ public class PlayerActivity extends Activity {
         if (action.equals("stop")) stopped = true;
         Simkl.scrobble(action, getIntent().getStringExtra("imdb"), episode,
             player.getPlaybackState() == Player.STATE_ENDED ? 100 : player.getCurrentPosition() * 100.0 / dur);
+        PunchPlay.scrobble(action, getIntent().getStringExtra("imdb"), title.getText().toString(), episode,
+            player.getPlaybackState() == Player.STATE_ENDED ? dur : player.getCurrentPosition(), dur, session);
     }
 
     // ---- Cast (phone): send this video to an FMHYPlay TV on the same Wi-Fi, then be its remote ----
