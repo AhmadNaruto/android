@@ -122,6 +122,12 @@ public class PlayerActivity extends Activity {
             .putExtra("headers", new JSONObject(headers).toString()).putStringArrayListExtra("subs", new ArrayList<>(subs)).putExtra("title", title);
     }
 
+    /** The IPTV channel's own address for its records; a Stalker channel plays from a link made for this one play. */
+    String channel() {
+        String c = getIntent().getStringExtra("channel");
+        return c != null ? c : getIntent().getStringExtra("url");
+    }
+
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         current = this;
@@ -761,7 +767,7 @@ public class PlayerActivity extends Activity {
         player.addListener(new Player.Listener() {
             @Override public void onPlaybackStateChanged(int s) {
                 spinner.setVisibility(s == Player.STATE_BUFFERING ? View.VISIBLE : View.GONE);
-                if (s == Player.STATE_READY && getIntent().hasExtra("mime")) Iptv.played(getIntent().getStringExtra("url"));
+                if (s == Player.STATE_READY && getIntent().hasExtra("mime")) Iptv.played(channel());
                 if (s == Player.STATE_READY && !scrobbled && player.getPlayWhenReady()) { scrobbled = true; scrobble("start"); }
                 if (s == Player.STATE_READY && !subsTried) { subsTried = true; autoSubs(); }
                 if (s == Player.STATE_ENDED) { resume.remove(base); scrobble("stop"); finish(); }
@@ -795,7 +801,7 @@ public class PlayerActivity extends Activity {
 
             @Override public void onPlayerError(PlaybackException e) {
                 Log.w(TAG, "playback error", e);
-                if (getIntent().hasExtra("mime")) { Iptv.mark(getIntent().getStringExtra("url"), false); Iptv.saveHealth(); }
+                if (getIntent().hasExtra("mime")) { Iptv.mark(channel(), false); Iptv.saveHealth(); }
                 Toast.makeText(PlayerActivity.this, App.t(getIntent().hasExtra("mime") ? R.string.player_channel_offline : R.string.player_cant_play, e.getErrorCodeName()),
                     Toast.LENGTH_LONG).show();
                 setResult(RESULT_CANCELED);
