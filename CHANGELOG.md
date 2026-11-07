@@ -2,7 +2,7 @@
 
 Each release is a tag `vMAJOR.MINOR.PATCH` that publishes both APKs. The notes for a version are its section here. Earlier releases are on the Releases page.
 
-## Unreleased
+## 2.15.0
 
 - New Home: the name, WARP, Ad block, Search (as wide as the screen allows) and voice across the top; the tabs (Settings is one of them again) below it on a TV, at the bottom on a phone. Then Continue watching, Favorites (once you have some), and Movies, TV and Anime, each with New (newest releases first) and Popular (anime: what is trending on Kitsu).
 - One search for everything, from the top bar on every tab: movies and series, IPTV channels (a Channels row; All opens every match), sites and what you watched.
