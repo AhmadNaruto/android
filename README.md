@@ -52,7 +52,7 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 - **Servers and Quality buttons that control the site's own player**, including players inside cross-origin iframes
 - **Volume boost** (up to +12 dB) and **Dialog boost** (clearer voices, on by default)
 - **OpenSubtitles** built in, remembered per title, optional auto subtitles in your language; size, position, color, background and timing
-- **Simkl** scrobbling (optional): titles you finish are marked watched
+- **Simkl** and **PunchPlay** tracking (optional): what you watch is tracked there, titles you finish are marked watched
 - Phone: follows the rotation lock with a Full screen button; swipe for brightness and volume, double-tap to skip 10 seconds
 
 **Browsing**
@@ -74,6 +74,7 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 - More than 11,000 public channels from [iptv-org](https://github.com/iptv-org/iptv), grouped by category and country, with logos
 - A background check hides channels that are offline, and a Working row shows the ones that played
 - **Add your own playlist, a single `.m3u8` stream link, an Xtream Codes login or a Stalker portal (MAC address)**; each playlist gets its own row
+- **Category and Language filters** in every channel list, and **pins**: keep a list with its filters (India · News · Hindi) as its own row
 - Favorite channels with a heart; channels also show up in the one search
 
 **Engineering**
