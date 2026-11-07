@@ -61,6 +61,13 @@ jobs:
       - name: Build
         run: ./build.sh
 
+      # Fixed names too, so https://github.com/fmhyplay/android/releases/latest/download/FMHYPlay-TV.apk is always the newest
+      # (Fire TV Downloader codes and links point there). The in-app updater only picks the versioned "-TV-" / "-Android-" files.
+      - name: Latest copies
+        run: |
+          cp "FMHYPlay-TV-v$VERSION_NAME.apk" FMHYPlay-TV.apk
+          cp "FMHYPlay-Android-v$VERSION_NAME.apk" FMHYPlay-Android.apk
+
       - name: Checksums and signer
         run: |
           sha256sum FMHYPlay-*.apk | tee SHA256SUMS.txt

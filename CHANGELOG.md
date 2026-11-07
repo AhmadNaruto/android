@@ -2,6 +2,12 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## 2.16.1
+
+### 🐞 Fixed
+- **Dialog boost** is off by default again: it caused sound problems on some devices. Turn it on in Settings or with its button in the player.
+- **TV tabs** show a ring when the remote is on them.
+
 ## 2.16.0
 
 ### ✨ New
