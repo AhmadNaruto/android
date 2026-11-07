@@ -6,7 +6,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 
 ### ✨ New
 - **DLNA / UPnP casting**: smart TVs from Samsung, LG, Sony, Kodi and others show up in the Cast list ("Name - DLNA"), through the phone like Chromecast.
-- **Fire TV**: install with Downloader code 3116054; the link `releases/latest/download/FMHYPlay-TV.apk` always gets the newest version.
+- **Fire TV**: install with Downloader code 9828006; the link `releases/latest/download/FMHYPlay-TV.apk` always gets the newest version.
 - **Stalker portals**: add your IPTV provider's portal address and MAC address (MAG login) next to Xtream; channels get their own row.
 - **PunchPlay**: Settings, PunchPlay connects with a code at punchplay.tv/link; movies and episodes you watch are tracked there, like Simkl.
 
