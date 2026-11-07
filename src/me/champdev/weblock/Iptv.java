@@ -607,7 +607,37 @@ final class Iptv {
         return n.isEmpty() ? code.toUpperCase(Locale.ROOT) : n;
     }
 
-    /** Group name to channels. by = "cat" (A to Z, Mature among them) or "country" (biggest first, your own country on top). */
+    /** What people look for first: movies, TV, kids, then information; the rest after these by size. */
+    static final List<String> CATEGORY_ORDER = java.util.Arrays.asList("Movies", "Series", "Entertainment", "General", "Kids", "Animation", "Family",
+        "News", "Documentary", "Education", "Science", "Sports", "Music", "Comedy", "Lifestyle", "Cooking", "Travel", "Culture", "Classic");
+
+    /** Sorts category keys: CATEGORY_ORDER first, then the rest by how many channels (`size`) they have. */
+    static java.util.Comparator<String> categoryRank(java.util.function.ToIntFunction<String> size) {
+        return (a, b) -> {
+            int ia = CATEGORY_ORDER.indexOf(a), ib = CATEGORY_ORDER.indexOf(b);
+            if (ia >= 0 || ib >= 0) return ia < 0 ? 1 : ib < 0 ? -1 : ia - ib;
+            int d = size.applyAsInt(b) - size.applyAsInt(a);
+            return d != 0 ? d : a.compareToIgnoreCase(b);
+        };
+    }
+
+    /**
+     * Sorts languages: the one picked on the player's Audio button, then the list's biggest language, then English, then the rest
+     * by size (India: Hindi, English, Tamil, ...; the US: English, Spanish, ...).
+     */
+    static List<String> rankLanguages(Map<String, Integer> count) {
+        List<String> bySize = new ArrayList<>(count.keySet());
+        bySize.sort((a, b) -> count.get(b) - count.get(a) != 0 ? count.get(b) - count.get(a) : a.compareToIgnoreCase(b));
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        String picked = App.prefs.getString("audioLang", "");
+        if (!picked.isEmpty() && count.containsKey(new Locale(picked).getDisplayLanguage(Locale.ENGLISH))) out.add(new Locale(picked).getDisplayLanguage(Locale.ENGLISH));
+        if (!bySize.isEmpty()) out.add(bySize.get(0));
+        if (count.containsKey("English")) out.add("English");
+        out.addAll(bySize);
+        return new ArrayList<>(out);
+    }
+
+    /** Group name to channels. by = "cat" (movies, TV, kids, news first: categoryRank) or "country" (biggest first, your own country on top). */
     static Map<String, List<Channel>> groups(String by) {
         Map<String, List<Channel>> m = new LinkedHashMap<>();
         for (Channel c : all()) {
@@ -615,7 +645,10 @@ final class Iptv {
             for (String k : keys) if (!k.isEmpty() && !(by.equals("cat") && k.equals(MINE))) m.computeIfAbsent(k, x -> new ArrayList<>()).add(c);
         }
         List<Map.Entry<String, List<Channel>>> es = new ArrayList<>(m.entrySet());
-        if (by.equals("cat")) es.sort((a, b) -> a.getKey().compareToIgnoreCase(b.getKey()));
+        if (by.equals("cat")) {
+            java.util.Comparator<String> rank = categoryRank(k -> m.get(k).size());
+            es.sort((a, b) -> rank.compare(a.getKey(), b.getKey()));
+        }
         else es.sort((a, b) -> b.getValue().size() - a.getValue().size());
         Map<String, List<Channel>> out = new LinkedHashMap<>();
         String mine = country(Locale.getDefault().getCountry().isEmpty() ? "us" : Locale.getDefault().getCountry().toLowerCase(Locale.ROOT));

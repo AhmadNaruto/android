@@ -136,11 +136,21 @@ public class IptvActivity extends Home {
         chipRow(App.t(R.string.iptv_all_languages), counts(false), language, v -> { language = v; chips(); filter(query); });
     }
 
+    /** The categories (as shown) or languages in this list, ranked like the IPTV tab: Iptv.categoryRank / Iptv.rankLanguages. */
     java.util.List<String> counts(boolean cats) {
         java.util.Map<String, Integer> n = new java.util.HashMap<>();
-        for (Iptv.Channel c : all) for (String v : cats ? c.cats : c.langs) n.merge(cats ? groupName(v) : v, 1, Integer::sum);
-        java.util.List<String> out = new ArrayList<>(n.keySet());
-        out.sort((a, b) -> n.get(b) - n.get(a) != 0 ? n.get(b) - n.get(a) : a.compareToIgnoreCase(b));
+        java.util.Map<String, String> shownToKey = new java.util.HashMap<>();
+        for (Iptv.Channel c : all) for (String v : cats ? c.cats : c.langs) {
+            String label = cats ? groupName(v) : v;
+            n.merge(label, 1, Integer::sum);
+            shownToKey.put(label, v);
+        }
+        if (!cats) return Iptv.rankLanguages(n);
+        java.util.Comparator<String> rank = Iptv.categoryRank(k -> n.get(groupName(k)));
+        java.util.List<String> keys = new ArrayList<>(shownToKey.values());
+        keys.sort(rank);
+        java.util.List<String> out = new ArrayList<>();
+        for (String k : keys) out.add(groupName(k));
         return out;
     }
 
