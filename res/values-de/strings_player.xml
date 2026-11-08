@@ -33,7 +33,7 @@
     <string name="player_full_screen">Vollbild</string>
     <string name="player_subs_file">Untertitel %1$d (%2$s)</string>
     <string name="player_channel_offline">Der Sender ist offline (%1$s)</string>
-    <string name="player_cant_play">Der native Player kann das nicht abspielen (%1$s), zurück zur Seite</string>
+    <string name="player_cant_play">FMHYPlayer kann das nicht abspielen (%1$s), zurück zur Seite</string>
     <string name="player_resumed_at">Fortgesetzt bei %1$s</string>
     <string name="player_live">LIVE</string>
     <string name="player_no_servers">Keine Serverliste auf dieser Seite gefunden</string>

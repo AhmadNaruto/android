@@ -18,11 +18,11 @@
     <string name="web_download_failed">Download fehlgeschlagen: %1$s</string>
     <string name="web_saved">%1$s in Downloads gespeichert</string>
     <string name="web_reload">Neu laden</string>
-    <string name="web_play_native">Im nativen Player abspielen</string>
-    <string name="web_native_auto">Nativer Player: automatisch (wechselt, sobald ein Video startet)</string>
-    <string name="web_native_off">Nativer Player: aus</string>
-    <string name="web_native_off_toast">Nativer Player aus</string>
-    <string name="web_native_on_toast">Nativer Player an</string>
+    <string name="web_play_native">In FMHYPlayer abspielen</string>
+    <string name="web_native_auto">FMHYPlayer: automatisch (wechselt, sobald ein Video startet)</string>
+    <string name="web_native_off">FMHYPlayer: aus</string>
+    <string name="web_native_off_toast">FMHYPlayer aus</string>
+    <string name="web_native_on_toast">FMHYPlayer an</string>
     <string name="web_use_warp">WARP für %1$s verwenden</string>
     <string name="web_no_warp">WARP für %1$s nicht verwenden</string>
     <string name="web_warp_on_site">WARP für diese Seite an</string>

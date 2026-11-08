@@ -18,11 +18,11 @@
     <string name="web_download_failed">डाउनलोड नहीं हुआ: %1$s</string>
     <string name="web_saved">%1$s डाउनलोड्स में सेव हो गया</string>
     <string name="web_reload">रीलोड करें</string>
-    <string name="web_play_native">नेटिव प्लेयर में चलाएँ</string>
-    <string name="web_native_auto">नेटिव प्लेयर: ऑटो (वीडियो शुरू होते ही बदल जाता है)</string>
-    <string name="web_native_off">नेटिव प्लेयर: बंद</string>
-    <string name="web_native_off_toast">नेटिव प्लेयर बंद</string>
-    <string name="web_native_on_toast">नेटिव प्लेयर चालू</string>
+    <string name="web_play_native">FMHYPlayer में चलाएँ</string>
+    <string name="web_native_auto">FMHYPlayer: ऑटो (वीडियो शुरू होते ही बदल जाता है)</string>
+    <string name="web_native_off">FMHYPlayer: बंद</string>
+    <string name="web_native_off_toast">FMHYPlayer बंद</string>
+    <string name="web_native_on_toast">FMHYPlayer चालू</string>
     <string name="web_use_warp">%1$s के लिए WARP इस्तेमाल करें</string>
     <string name="web_no_warp">%1$s के लिए WARP इस्तेमाल न करें</string>
     <string name="web_warp_on_site">इस साइट के लिए WARP चालू</string>

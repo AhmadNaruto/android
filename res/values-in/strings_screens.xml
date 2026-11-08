@@ -18,11 +18,11 @@
     <string name="web_download_failed">Unduhan gagal: %1$s</string>
     <string name="web_saved">%1$s disimpan ke Unduhan</string>
     <string name="web_reload">Muat ulang</string>
-    <string name="web_play_native">Putar di pemutar bawaan</string>
-    <string name="web_native_auto">Pemutar bawaan: otomatis (beralih saat video mulai)</string>
-    <string name="web_native_off">Pemutar bawaan: nonaktif</string>
-    <string name="web_native_off_toast">Pemutar bawaan nonaktif</string>
-    <string name="web_native_on_toast">Pemutar bawaan aktif</string>
+    <string name="web_play_native">Putar di FMHYPlayer</string>
+    <string name="web_native_auto">FMHYPlayer: otomatis (beralih saat video mulai)</string>
+    <string name="web_native_off">FMHYPlayer: nonaktif</string>
+    <string name="web_native_off_toast">FMHYPlayer nonaktif</string>
+    <string name="web_native_on_toast">FMHYPlayer aktif</string>
     <string name="web_use_warp">Gunakan WARP untuk %1$s</string>
     <string name="web_no_warp">Jangan gunakan WARP untuk %1$s</string>
     <string name="web_warp_on_site">WARP aktif untuk situs ini</string>

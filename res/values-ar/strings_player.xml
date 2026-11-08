@@ -33,7 +33,7 @@
     <string name="player_full_screen">ملء الشاشة</string>
     <string name="player_subs_file">الترجمة %1$d (%2$s)</string>
     <string name="player_channel_offline">القناة غير متصلة (%1$s)</string>
-    <string name="player_cant_play">تعذّر على المشغّل الأصلي تشغيل هذا (%1$s)، جارٍ الرجوع إلى الصفحة</string>
+    <string name="player_cant_play">تعذّر على FMHYPlayer تشغيل هذا (%1$s)، جارٍ الرجوع إلى الصفحة</string>
     <string name="player_resumed_at">تم الاستئناف من %1$s</string>
     <string name="player_live">مباشر</string>
     <string name="player_no_servers">لم يتم العثور على قائمة خوادم في هذه الصفحة</string>

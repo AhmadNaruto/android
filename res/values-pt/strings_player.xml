@@ -33,7 +33,7 @@
     <string name="player_full_screen">Tela cheia</string>
     <string name="player_subs_file">Legendas %1$d (%2$s)</string>
     <string name="player_channel_offline">O canal está fora do ar (%1$s)</string>
-    <string name="player_cant_play">O player nativo não conseguiu reproduzir isto (%1$s), voltando para a página</string>
+    <string name="player_cant_play">O FMHYPlayer não conseguiu reproduzir isto (%1$s), voltando para a página</string>
     <string name="player_resumed_at">Retomado em %1$s</string>
     <string name="player_live">AO VIVO</string>
     <string name="player_no_servers">Nenhuma lista de servidores encontrada nesta página</string>

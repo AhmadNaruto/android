@@ -33,7 +33,7 @@
     <string name="player_full_screen">फ़ुल स्क्रीन</string>
     <string name="player_subs_file">सबटाइटल %1$d (%2$s)</string>
     <string name="player_channel_offline">चैनल ऑफ़लाइन है (%1$s)</string>
-    <string name="player_cant_play">नेटिव प्लेयर इसे नहीं चला सका (%1$s), पेज पर वापस जा रहे हैं</string>
+    <string name="player_cant_play">FMHYPlayer इसे नहीं चला सका (%1$s), पेज पर वापस जा रहे हैं</string>
     <string name="player_resumed_at">%1$s से फिर शुरू</string>
     <string name="player_live">लाइव</string>
     <string name="player_no_servers">इस पेज पर सर्वर की लिस्ट नहीं मिली</string>

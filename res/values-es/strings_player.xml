@@ -33,7 +33,7 @@
     <string name="player_full_screen">Pantalla completa</string>
     <string name="player_subs_file">Subtítulos %1$d (%2$s)</string>
     <string name="player_channel_offline">El canal está fuera de línea (%1$s)</string>
-    <string name="player_cant_play">El reproductor nativo no pudo reproducir esto (%1$s), volviendo a la página</string>
+    <string name="player_cant_play">FMHYPlayer no pudo reproducir esto (%1$s), volviendo a la página</string>
     <string name="player_resumed_at">Reanudado en %1$s</string>
     <string name="player_live">EN VIVO</string>
     <string name="player_no_servers">No se encontró una lista de servidores en esta página</string>

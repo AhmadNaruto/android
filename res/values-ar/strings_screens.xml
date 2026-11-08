@@ -18,11 +18,11 @@
     <string name="web_download_failed">فشل التنزيل: %1$s</string>
     <string name="web_saved">تم حفظ %1$s في التنزيلات</string>
     <string name="web_reload">إعادة التحميل</string>
-    <string name="web_play_native">التشغيل في المشغّل الأصلي</string>
-    <string name="web_native_auto">المشغّل الأصلي: تلقائي (يتحوّل عند بدء الفيديو)</string>
-    <string name="web_native_off">المشغّل الأصلي: معطّل</string>
-    <string name="web_native_off_toast">تم إيقاف المشغّل الأصلي</string>
-    <string name="web_native_on_toast">تم تفعيل المشغّل الأصلي</string>
+    <string name="web_play_native">التشغيل في FMHYPlayer</string>
+    <string name="web_native_auto">FMHYPlayer: تلقائي (يتحوّل عند بدء الفيديو)</string>
+    <string name="web_native_off">FMHYPlayer: معطّل</string>
+    <string name="web_native_off_toast">تم إيقاف FMHYPlayer</string>
+    <string name="web_native_on_toast">تم تشغيل FMHYPlayer</string>
     <string name="web_use_warp">استخدام WARP مع %1$s</string>
     <string name="web_no_warp">عدم استخدام WARP مع %1$s</string>
     <string name="web_warp_on_site">تم تفعيل WARP لهذا الموقع</string>

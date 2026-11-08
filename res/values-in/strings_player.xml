@@ -33,7 +33,7 @@
     <string name="player_full_screen">Layar penuh</string>
     <string name="player_subs_file">Subtitle %1$d (%2$s)</string>
     <string name="player_channel_offline">Saluran sedang offline (%1$s)</string>
-    <string name="player_cant_play">Pemutar bawaan tidak bisa memutar ini (%1$s), kembali ke halaman</string>
+    <string name="player_cant_play">FMHYPlayer tidak bisa memutar ini (%1$s), kembali ke halaman</string>
     <string name="player_resumed_at">Dilanjutkan dari %1$s</string>
     <string name="player_live">LIVE</string>
     <string name="player_no_servers">Tidak ada daftar server di halaman ini</string>

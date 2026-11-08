@@ -18,11 +18,11 @@
     <string name="web_download_failed">Error en la descarga: %1$s</string>
     <string name="web_saved">%1$s guardado en Descargas</string>
     <string name="web_reload">Recargar</string>
-    <string name="web_play_native">Reproducir en el reproductor nativo</string>
-    <string name="web_native_auto">Reproductor nativo: automático (cambia al empezar un video)</string>
-    <string name="web_native_off">Reproductor nativo: desactivado</string>
-    <string name="web_native_off_toast">Reproductor nativo desactivado</string>
-    <string name="web_native_on_toast">Reproductor nativo activado</string>
+    <string name="web_play_native">Reproducir en FMHYPlayer</string>
+    <string name="web_native_auto">FMHYPlayer: automático (cambia al empezar un video)</string>
+    <string name="web_native_off">FMHYPlayer: desactivado</string>
+    <string name="web_native_off_toast">FMHYPlayer desactivado</string>
+    <string name="web_native_on_toast">FMHYPlayer activado</string>
     <string name="web_use_warp">Usar WARP en %1$s</string>
     <string name="web_no_warp">No usar WARP en %1$s</string>
     <string name="web_warp_on_site">WARP activado para este sitio</string>

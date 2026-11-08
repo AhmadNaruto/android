@@ -33,7 +33,7 @@
     <string name="player_full_screen">Full screen</string>
     <string name="player_subs_file">Subtitles %1$d (%2$s)</string>
     <string name="player_channel_offline">Channel is offline (%1$s)</string>
-    <string name="player_cant_play">Native player could not play this (%1$s), back to the page</string>
+    <string name="player_cant_play">FMHYPlayer could not play this (%1$s), back to the page</string>
     <string name="player_resumed_at">Resumed at %1$s</string>
     <string name="player_live">LIVE</string>
     <string name="player_no_servers">No servers list found on this page</string>
