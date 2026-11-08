@@ -43,7 +43,6 @@
     <string name="player_no_audio">No audio in this video</string>
     <string name="player_no_subs">No subtitles in this video</string>
     <string name="player_search_subs">"🔍  Search OpenSubtitles…"</string>
-    <string name="player_subs_style">"Aa  Size, position, color, background, timing  (%1$s · %2$s · %3$s · %4$s · %5$s)"</string>
     <string name="player_season_episode">"Season %1$d  ·  Episode %2$d"</string>
     <string name="player_episode">Episode %1$d</string>
     <string name="player_searching_subs">Searching OpenSubtitles…</string>

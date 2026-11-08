@@ -43,7 +43,6 @@
     <string name="player_no_audio">لا يوجد صوت في هذا الفيديو</string>
     <string name="player_no_subs">لا توجد ترجمة في هذا الفيديو</string>
     <string name="player_search_subs">"🔍  البحث في OpenSubtitles…"</string>
-    <string name="player_subs_style">"Aa  الحجم، الموضع، اللون، الخلفية، التوقيت  (%1$s · %2$s · %3$s · %4$s · %5$s)"</string>
     <string name="player_season_episode">"الموسم %1$d  ·  الحلقة %2$d"</string>
     <string name="player_episode">الحلقة %1$d</string>
     <string name="player_searching_subs">جارٍ البحث في OpenSubtitles…</string>

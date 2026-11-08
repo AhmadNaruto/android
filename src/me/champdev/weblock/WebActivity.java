@@ -124,6 +124,7 @@ public class WebActivity extends Activity {
     volatile boolean scanDone;
     // Title to type into the site's own search box (set when you tap Watch on a movie or episode); cleared once typed
     volatile String pendingQuery;
+    volatile String pendingPick;   // searched for this title: press it among the results when they come (cleared once pressed)
     int searchTries;
 
     static Intent open(Context c, String site, String siteUrl, String url) {
@@ -273,6 +274,7 @@ public class WebActivity extends Activity {
         site = getIntent().getStringExtra("site");
         siteUrl = getIntent().getStringExtra("siteUrl");
         pendingQuery = getIntent().getStringExtra("q");
+        pendingPick = pendingQuery;
         String imdb = getIntent().getStringExtra("imdb");
         if (imdb != null && !imdb.isEmpty()) {
             show = new Catalog.Title();
@@ -399,13 +401,14 @@ public class WebActivity extends Activity {
                 if (spatnav != null && !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) v.evaluateJavascript(spatnav, null);
                 if (pointer != null && pointer.on) v.evaluateJavascript("window.__fpClear&&__fpClear()", null);
                 String q = pendingQuery;
-                if (q != null && searchTries++ < 4) autosearch(v, q);
+                if (q != null && searchTries++ < 4) autosearch(v, q, false);
+                else if (pendingPick != null && searchTries++ < 8) autosearch(v, pendingPick, true);   // a results page that loaded anew
                 if (playAfterLoad) {
                     playAfterLoad = false;
                     // twice: single-page players set themselves up a few seconds after the load; never once a stream is found
                     for (long at : new long[]{2500, 6000}) App.main.postDelayed(() -> { if (!sniffer.has() && !isFinishing()) v.evaluateJavascript("postMessage({fp:'play'},'*')", null); }, at);
                 }
-                if (episodeAfterLoad != null) {
+                if (episodeAfterLoad != null && pendingPick == null) {   // on the show's page, not the search
                     int[] ep = episodeAfterLoad;
                     episodeAfterLoad = null;
                     App.main.postDelayed(() -> pressEpisode(ep[0], ep[1]), 2500);   // single-page sites draw their episode list after the load
@@ -469,11 +472,11 @@ public class WebActivity extends Activity {
         web.evaluateJavascript("postMessage({fp:'servers'},'*')", null);
     }
 
-    // Hand the stream over, but let the server scan finish first (it needs the page awake; the player pauses it), at most 2 s
+    // Hand the stream over, but let the server scan finish first (it needs the page awake; the player pauses it), at most 3 s (a Servers menu takes a second to open)
     void onStream() {
         if (!resumed || isFinishing()) return;
         if (!App.prefs.getBoolean("native", true)) { web.evaluateJavascript(CHIP, null); return; }
-        if (scanDone) playNative(); else { handoffWaiting = true; App.main.postDelayed(waitedHandoff, 2000); }
+        if (scanDone) playNative(); else { handoffWaiting = true; App.main.postDelayed(waitedHandoff, 3000); }
     }
 
     // (not Handler.hasCallbacks: it needs Android 10 and the app runs on 8 and 9)
@@ -696,9 +699,10 @@ public class WebActivity extends Activity {
     }
 
     /** Types the title into the site's search box (assets/autosearch.js); the page calls FMHY.searched() once it has. */
-    void autosearch(WebView v, String q) {
+    void autosearch(WebView v, String q, boolean pickOnly) {
+        java.util.regex.Matcher y = java.util.regex.Pattern.compile("\\d{4}").matcher(String.valueOf(getIntent().getStringExtra("year")));
         try {
-            v.evaluateJavascript(Sites.readAll(getAssets().open("autosearch.js")) + "(" + JSONObject.quote(q) + ")", null);
+            v.evaluateJavascript(Sites.readAll(getAssets().open("autosearch.js")) + "(" + JSONObject.quote(q) + "," + JSONObject.quote(y.find() ? y.group() : "") + "," + pickOnly + ")", null);
         } catch (IOException ignored) { }
     }
 
@@ -746,6 +750,17 @@ public class WebActivity extends Activity {
 
         @JavascriptInterface public void searched() {
             pendingQuery = null;
+        }
+
+        // The title was pressed among the results: its page is next (a single-page site shows it without a new load)
+        @JavascriptInterface public void picked() {
+            pendingPick = null;
+            runOnUiThread(() -> {
+                int[] ep = episodeAfterLoad;
+                if (ep == null) return;
+                episodeAfterLoad = null;
+                App.main.postDelayed(() -> pressEpisode(ep[0], ep[1]), 4000);
+            });
         }
 
         // ponytail: whole file goes through a base64 string, very large blobs (100MB+) may OOM

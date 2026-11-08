@@ -43,7 +43,6 @@
     <string name="player_no_audio">इस वीडियो में ऑडियो नहीं है</string>
     <string name="player_no_subs">इस वीडियो में सबटाइटल नहीं हैं</string>
     <string name="player_search_subs">"🔍  OpenSubtitles पर खोजें…"</string>
-    <string name="player_subs_style">"Aa  साइज़, पोज़िशन, रंग, बैकग्राउंड, टाइमिंग  (%1$s · %2$s · %3$s · %4$s · %5$s)"</string>
     <string name="player_season_episode">"सीज़न %1$d  ·  एपिसोड %2$d"</string>
     <string name="player_episode">एपिसोड %1$d</string>
     <string name="player_searching_subs">OpenSubtitles पर खोज रहे हैं…</string>

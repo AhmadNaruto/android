@@ -1127,7 +1127,7 @@ public class PlayerActivity extends Activity {
         int searchAt = search ? labels.size() : -1;
         if (search) labels.add(App.t(R.string.player_search_subs));
         int positionAt = type == C.TRACK_TYPE_TEXT ? labels.size() : -1;
-        if (positionAt >= 0) labels.add(App.t(R.string.player_subs_style, Subs.sizeLabel(), Subs.offsetLabel(), Subs.colorName(), Subs.backgroundLabel(), Subs.delayLabel()));
+        if (positionAt >= 0) labels.add(App.t(R.string.home_tab_settings));   // size, position, color, background, timing
         new AlertDialog.Builder(this).setTitle(name).setItems(labels.toArray(new String[0]), (d, i) -> {
             if (i == searchAt) { searchSubs(); return; }
             if (i == positionAt) { subtitleStyle(); return; }

@@ -154,6 +154,9 @@
     return [];
   };
 
+  // A real list names its entries apart: a pair of "10"s (the player's skip buttons, drawn again) is not a server list
+  const distinct = l => l.length >= 2 && new Set(l.map(x => x.label)).size === l.length && !l.every(x => /^([+-]\d+|\d+\s*s(ec)?)$/i.test(x.label));
+
   // 2) a button called Servers / Sources that opens a menu: open it, read the entries, close it again
   const openers = () => [...document.querySelectorAll('button,[role=button],a')].filter(b => {
     const t = (b.getAttribute('aria-label') || b.title || label(b)).trim();
@@ -173,11 +176,15 @@
     for (const op of ops) {
       const before = new Set(document.getElementsByTagName('*'));
       click(op);
-      await wait(700);
-      const added = [...document.getElementsByTagName('*')].filter(e => !before.has(e));
-      const list = entries(added);
+      // the panel may slide in after the player redraws its own controls: look again a moment later
+      let added = [], list = [];
+      for (let i = 0; i < 3 && !distinct(list); i++) {
+        await wait(i ? 500 : 700);
+        added = [...document.getElementsByTagName('*')].filter(e => !before.has(e));
+        list = entries(added).slice(0, 12).map(e => ({ label: label(e), on: isOn(e), menu: true }));
+      }
       closeMenu(added, op);
-      if (list.length >= 2) return list.slice(0, 12).map(e => ({ label: label(e), on: isOn(e), menu: true }));
+      if (distinct(list)) return list;
     }
     return [];
   };
@@ -370,9 +377,10 @@
       if (ns.a.length < 2) ns.a = audioToggles();
       // a dropdown that is labelled Server / Source is the most reliable list; guessing from the look of buttons comes after it
       let sv = ns.s.length >= 2 ? ns.s : markOdd(onScreen());
-      if (sv.length < 2) sv = h.s;
-      if (sv.length < 2) sv = await viaMenu();
-      if (sv.length < 2) sv = await viaSettings();
+      if (!distinct(sv)) sv = h.s;
+      if (!distinct(sv)) sv = await viaMenu();
+      if (!distinct(sv)) sv = await viaSettings();
+      if (!distinct(sv)) sv = [];
       const qs = h.q.length ? h.q : ns.q;
       items = sv.map(x => Object.assign(x, { kind: 's' })).concat(qs.map(x => Object.assign(x, { kind: 'q' })))
         .concat(ns.a.length >= 2 ? ns.a.map(x => Object.assign(x, { kind: 'a' })) : []);
