@@ -42,13 +42,12 @@
     <string name="player_subs_n">Subtítulos %1$d</string>
     <string name="player_no_audio">No hay audio en este video</string>
     <string name="player_no_subs">No hay subtítulos en este video</string>
-    <string name="player_search_subs">"🔍  Buscar en OpenSubtitles…"</string>
+    <string name="player_search_subs">"🔍  Buscar subtítulos…"</string>
     <string name="player_season_episode">"Temporada %1$d  ·  Episodio %2$d"</string>
     <string name="player_episode">Episodio %1$d</string>
     <string name="player_searching_subs">Buscando en OpenSubtitles…</string>
     <string name="player_open_episode">Primero abre el episodio en el sitio</string>
     <string name="player_not_on_opensubs">No se encuentra este título en OpenSubtitles</string>
-    <string name="player_no_subs_title">No hay subtítulos para este título</string>
     <string name="player_subs_language">Idioma de los subtítulos</string>
     <string name="player_pick_release">%1$s: elige la versión que coincida con tu video</string>
     <string name="player_subs_lang">Subtítulos: %1$s</string>
@@ -111,6 +110,9 @@
     <string name="player_skip_recap">Saltar resumen</string>
     <string name="player_skip_credits">Saltar créditos</string>
     <string name="player_next_in">Siguiente episodio · %1$d</string>
+    <string name="player_no_subs_lang">No hay subtítulos en %1$s para esto</string>
+    <string name="player_subs_failed">No se pudo cargar el archivo de subtítulos</string>
+    <string name="player_subs_synced">Subtítulos sincronizados (%1$s)</string>
     <string name="player_sub_dub">Subtitulado / Doblado: %1$s</string>
     <string name="player_more">Más</string>
 </resources>

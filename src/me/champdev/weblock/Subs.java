@@ -15,6 +15,91 @@ final class Subs {
 
     static final class Sub {
         String url, lang, release;
+        String encoding = "", source = "OpenSubtitles";
+        boolean hearingImpaired;
+    }
+
+    // ---- Search and download (OpenSubtitles per language, SubDL with your key) ----
+
+    /** OpenSubtitles' language codes (ISO 639-2/B, plus pob) for the language list; the rest of the world can type nothing, so this is long. */
+    static final String[] LANGS = ("ara,ben,bul,chi,hrv,cze,dan,dut,eng,est,fin,fre,ger,ell,heb,hin,hun,ind,ita,jpn,kan,kor,lav,lit,"
+        + "may,mal,mar,nor,per,pol,por,pob,rum,rus,scc,sin,slo,slv,spa,swe,tam,tel,tha,tur,ukr,urd,vie").split(",");
+
+    /** The /T spellings Android uses (deu, fra) as OpenSubtitles' /B ones (ger, fre). */
+    static String osCode(String iso3) {
+        String c = iso3 == null ? "" : iso3.toLowerCase(Locale.ROOT);
+        String[] pairs = {"deu ger", "fra fre", "nld dut", "zho chi", "ces cze", "ron rum", "fas per", "slk slo", "msa may", "srp scc",
+            "sqi alb", "hye arm", "eus baq", "mya bur", "kat geo", "isl ice", "mkd mac", "cym wel", "gre ell"};
+        for (String p : pairs) if (p.startsWith(c + " ")) return p.substring(4);
+        return c;
+    }
+
+    /** Language list order: the one picked last, the device's, English, then by name. */
+    static List<String> languages() {
+        List<String> rest = new ArrayList<>(java.util.Arrays.asList(LANGS)), out = new ArrayList<>();
+        for (String first : new String[]{osCode(preferred()), osCode(Locale.getDefault().getISO3Language()), "eng"})
+            if (!out.contains(first)) out.add(first);
+        rest.removeAll(out);
+        rest.sort((a, b) -> language(a).compareToIgnoreCase(language(b)));
+        out.addAll(rest);
+        return out;
+    }
+
+    static final SubOs.Http HTTP = url -> {
+        java.net.HttpURLConnection c = Warp.open(url);
+        c.setRequestProperty("User-Agent", SubOs.UA);   // OpenSubtitles' legacy API wants this one; the others don't mind
+        int code = c.getResponseCode();
+        return code >= 400 && c.getErrorStream() != null ? c.getErrorStream() : c.getInputStream();   // SubDL says why in an error's body
+    };
+
+    /**
+     * Files in one language for a movie (season 0) or episode: OpenSubtitles' (most downloaded first), then SubDL's when you
+     * gave a key (single episodes only: a season pack's zip holds the wrong ones). Falls back to the Stremio addon's sample
+     * when OpenSubtitles can't be reached. Null when nothing could be asked. Off the main thread.
+     */
+    static List<Sub> search(String imdb, int season, int episode, String lang) {
+        String code = osCode(lang);
+        List<Sub> out = new ArrayList<>();
+        boolean asked = false;
+        try {
+            for (SubOs.Result r : SubOs.search(HTTP, imdb, season, episode, code)) {
+                Sub s = new Sub();
+                s.url = r.url;
+                s.lang = r.lang.isEmpty() ? code : r.lang;
+                s.release = r.release;
+                s.encoding = r.encoding;
+                s.hearingImpaired = r.hearingImpaired;
+                out.add(s);
+            }
+            asked = true;
+        } catch (java.io.IOException e) {
+            List<Sub> sample = find(imdb, season, episode);
+            if (sample != null) { asked = true; for (Sub s : sample) if (osCode(s.lang).equals(code)) out.add(s); }
+        }
+        String key = App.prefs.getString("subdlKey", "").trim();
+        if (!key.isEmpty()) {
+            try {
+                for (SubDl.Result r : SubDl.search(HTTP::open, key, imdb, season, episode, code)) {
+                    if (r.pack && season > 0) continue;
+                    Sub s = new Sub();
+                    s.url = r.url;
+                    s.lang = r.lang;
+                    s.release = r.release;
+                    s.source = "SubDL";
+                    s.hearingImpaired = r.hearingImpaired;
+                    out.add(s);
+                }
+                asked = true;
+            } catch (java.io.IOException ignored) { }
+        }
+        return asked ? out : null;
+    }
+
+    /** The file as a local UTF-8 .srt / .ass / .vtt (downloaded, unpacked and converted once, then kept). Off the main thread. */
+    static SubFetch.Fetched fetch(Sub s) throws java.io.IOException {
+        java.io.File dir = new java.io.File(App.app.getCacheDir(), "subs");
+        dir.mkdirs();
+        return SubFetch.fetch(HTTP, s.url, s.encoding, s.lang, dir);
     }
 
     /** How far (dp) subtitles sit above the default spot; negative = lower. Kept across videos. */
@@ -80,6 +165,8 @@ final class Subs {
             s.url = o.getString("url");
             s.lang = o.optString("lang", "und");
             s.release = o.optString("release");
+            s.encoding = o.optString("encoding");
+            s.source = o.optString("source", "OpenSubtitles");
             return s;
         } catch (org.json.JSONException e) {
             return null;
@@ -91,7 +178,7 @@ final class Subs {
         try {
             JSONObject all = new JSONObject(App.prefs.getString("subPicks", "{}"));
             all.remove(key);
-            if (s != null) all.put(key, new JSONObject().put("url", s.url).put("lang", s.lang).put("release", s.release));
+            if (s != null) all.put(key, new JSONObject().put("url", s.url).put("lang", s.lang).put("release", s.release).put("encoding", s.encoding).put("source", s.source));
             // Android's JSONObject keeps insertion order: the first keys are the oldest
             while (all.length() > 300) all.remove(all.keys().next());
             android.content.SharedPreferences.Editor e = App.prefs.edit().putString("subPicks", all.toString());
@@ -143,7 +230,7 @@ final class Subs {
         row(a, body, refresh, App.t(R.string.subs_position), Subs::offsetLabel, by -> bump("subOffset", 0, 10 * by, -100, 200), after);
         row(a, body, refresh, App.t(R.string.subs_color), Subs::colorName, by -> App.prefs.edit().putInt("subColor", Math.floorMod(colorIndex() + by, COLORS.length)).apply(), after);
         row(a, body, refresh, App.t(R.string.subs_background), Subs::backgroundLabel, by -> bump("subBg", 50, 25 * by, 0, 100), after);
-        if (timing) row(a, body, refresh, App.t(R.string.subs_timing), Subs::delayLabel, by -> delayMs = Math.max(-30000, Math.min(30000, delayMs + 100L * by)), after);
+        if (timing) row(a, body, refresh, App.t(R.string.subs_timing), Subs::delayLabel, by -> delayMs = Math.max(-600000, Math.min(600000, delayMs + 100L * by)), after);
         android.widget.TextView help = new android.widget.TextView(a);
         help.setText(App.t(timing ? R.string.subs_help_player : R.string.subs_help_settings));
         help.setTextColor(Home.MUTED);
@@ -254,32 +341,20 @@ final class Subs {
         return hit == null || hit.isEmpty() ? "" : hit.get(0).id;
     }
 
-    /** Languages with their files: the one you last picked, your device's, English, then the biggest. Keys are ISO 639-2 codes. */
-    static Map<String, List<Sub>> byLanguage(List<Sub> all) {
-        Map<String, List<Sub>> m = new LinkedHashMap<>();
-        for (Sub s : all) m.computeIfAbsent(s.lang, k -> new ArrayList<>()).add(s);
-        List<Map.Entry<String, List<Sub>>> es = new ArrayList<>(m.entrySet());
-        String mine = Locale.getDefault().getISO3Language(), last = preferred();
-        es.sort((a, b) -> rank(b, mine, last) - rank(a, mine, last));
-        Map<String, List<Sub>> out = new LinkedHashMap<>();
-        for (Map.Entry<String, List<Sub>> e : es) out.put(e.getKey(), e.getValue());
-        return out;
-    }
-
-    private static int rank(Map.Entry<String, List<Sub>> e, String mine, String last) {
-        return (e.getKey().equals(last) ? 3000 : e.getKey().equals(mine) ? 2000 : e.getKey().equals("eng") ? 1000 : 0) + e.getValue().size();
-    }
-
     // OpenSubtitles' own codes that are not ISO languages
     static final Map<String, String> ODD = new LinkedHashMap<>();
     static {
         ODD.put("pob", "Portuguese (Brazil)"); ODD.put("zht", "Chinese (Traditional)"); ODD.put("zhc", "Chinese (Cantonese)");
         ODD.put("zhe", "Chinese (bilingual)"); ODD.put("spl", "Spanish (Latin America)"); ODD.put("spn", "Spanish (Spain)");
         ODD.put("ex", "Extremaduran"); ODD.put("ze", "Chinese (bilingual)"); ODD.put("pom", "Portuguese");
+        ODD.put("scc", "Serbian");
     }
 
     static String language(String iso3) {
         if (ODD.containsKey(iso3)) return ODD.get(iso3);
+        // the /B codes OpenSubtitles uses (ger, fre) through their /T spelling, which Android names
+        for (String p : new String[]{"deu ger", "fra fre", "nld dut", "zho chi", "ces cze", "ron rum", "fas per", "slk slo", "msa may", "ell gre"})
+            if (p.endsWith(" " + iso3)) iso3 = p.substring(0, 3);
         String n = new Locale(iso3).getDisplayLanguage();
         return n.isEmpty() || n.equals(iso3) ? iso3.toUpperCase(Locale.ROOT) : n;
     }

@@ -42,13 +42,12 @@
     <string name="player_subs_n">الترجمة %1$d</string>
     <string name="player_no_audio">لا يوجد صوت في هذا الفيديو</string>
     <string name="player_no_subs">لا توجد ترجمة في هذا الفيديو</string>
-    <string name="player_search_subs">"🔍  البحث في OpenSubtitles…"</string>
+    <string name="player_search_subs">"🔍  البحث عن ترجمة…"</string>
     <string name="player_season_episode">"الموسم %1$d  ·  الحلقة %2$d"</string>
     <string name="player_episode">الحلقة %1$d</string>
     <string name="player_searching_subs">جارٍ البحث في OpenSubtitles…</string>
     <string name="player_open_episode">افتح الحلقة على الموقع أولًا</string>
     <string name="player_not_on_opensubs">لم يتم العثور على هذا العنوان في OpenSubtitles</string>
-    <string name="player_no_subs_title">لا توجد ترجمة لهذا العنوان</string>
     <string name="player_subs_language">لغة الترجمة</string>
     <string name="player_pick_release">%1$s: اختر الإصدار المطابق للفيديو</string>
     <string name="player_subs_lang">الترجمة: %1$s</string>
@@ -111,6 +110,9 @@
     <string name="player_skip_recap">تخطي الملخص</string>
     <string name="player_skip_credits">تخطي الشارة</string>
     <string name="player_next_in">الحلقة التالية · %1$d</string>
+    <string name="player_no_subs_lang">لا توجد ترجمة %1$s لهذا</string>
+    <string name="player_subs_failed">تعذّر تحميل ملف الترجمة</string>
+    <string name="player_subs_synced">تمت مزامنة الترجمة (%1$s)</string>
     <string name="player_sub_dub">مترجم / مدبلج: %1$s</string>
     <string name="player_more">المزيد</string>
 </resources>

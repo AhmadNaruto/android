@@ -91,6 +91,10 @@ public class PlayerActivity extends Activity {
     Catalog.Title seriesInfo;   // the series playing, with its episodes (for Episodes and Next)
     View panel;                 // the Episodes list, over the video
     TextView skipBtn;           // Skip intro / Skip recap / Next episode, over the picture
+    final SpeechMeter meter = new SpeechMeter();   // how loud the dialogue is, every 0.1 s (subtitle auto-sync)
+    List<long[]> syncCues;      // the downloaded subtitle file's lines, to line up with the speech
+    int syncTries;
+    long syncSet;               // the timing auto-sync last set (a different one means you set it yourself: then it stops)
     List<Skips.Part> skips = new ArrayList<>();
     final java.util.Set<Skips.Part> skipDone = new java.util.HashSet<>();   // skipped, or the next episode was refused by seeking back
     Skips.Part skipShown;
@@ -765,10 +769,11 @@ public class PlayerActivity extends Activity {
         DefaultHttpDataSource.Factory http = new DefaultHttpDataSource.Factory().setUserAgent(ua).setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15000).setReadTimeoutMs(30000).setDefaultRequestProperties(headers);
         // The WebView's cookie for each request's own host, never one site's session sent to another
-        DataSource.Factory data = new ResolvingDataSource.Factory(http, spec -> {
+        DataSource.Factory web = new ResolvingDataSource.Factory(http, spec -> {
             String cookie = CookieManager.getInstance().getCookie(spec.uri.toString());
             return cookie == null || cookie.isEmpty() ? spec : spec.withAdditionalHeaders(Collections.singletonMap("Cookie", cookie));
         });
+        DataSource.Factory data = new androidx.media3.datasource.DefaultDataSource.Factory(this, web);   // downloaded subtitles are local files
 
         // IPTV passes its own media type ("" = let ExoPlayer read it off the URL); pages only ever hand over HLS or DASH
         String mime = getIntent().hasExtra("mime") ? getIntent().getStringExtra("mime") : getIntent().getBooleanExtra("dash", false) ? MimeTypes.APPLICATION_MPD : MimeTypes.APPLICATION_M3U8;
@@ -795,6 +800,12 @@ public class PlayerActivity extends Activity {
 
                     @Override public void resetPosition(long pos, boolean joining) throws androidx.media3.exoplayer.ExoPlaybackException { super.resetPosition(pos - Subs.delayMs * 1000, joining); }
                 });
+            }
+
+            // The sound passes through the speech meter (untouched), for subtitle auto-sync
+            @Override protected androidx.media3.exoplayer.audio.AudioSink buildAudioSink(android.content.Context c, boolean floatOut, boolean params) {
+                return new androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(c).setEnableFloatOutput(floatOut).setEnableAudioTrackPlaybackParams(params)
+                    .setAudioProcessors(new androidx.media3.common.audio.AudioProcessor[]{meter}).build();
             }
         };
         player = new ExoPlayer.Builder(this, renderers.setEnableDecoderFallback(true).setMediaCodecSelector(PlayerActivity::decoders))
@@ -1557,45 +1568,46 @@ public class PlayerActivity extends Activity {
         return getIntent().hasExtra("pageTitle") && player != null && !player.isCurrentMediaItemLive();
     }
 
+    /** Search: pick a language (the one picked last, the device's and English first), then a file in it. */
     void searchSubs() {
-        say(App.t(R.string.player_searching_subs));
-        findSubs(found -> pickSubLanguage(Subs.byLanguage(found)), true);
+        List<String> codes = Subs.languages(), names = new ArrayList<>();
+        for (String c : codes) names.add(Subs.language(c));
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.player_subs_language))
+            .setItems(names.toArray(new String[0]), (d, i) -> {
+                say(App.t(R.string.player_searching_subs));
+                findSubs(codes.get(i), found -> pickRelease(codes.get(i), found), true);
+            }).show();
     }
 
-    /** OpenSubtitles' files for what is playing go to `then` (main thread) when there are any; `loud` says why when there are none. */
-    void findSubs(java.util.function.Consumer<List<Subs.Sub>> then, boolean loud) {
+    /** The files in one language for what is playing go to `then` (main thread) when there are any; `loud` says why when there are none. */
+    void findSubs(String lang, java.util.function.Consumer<List<Subs.Sub>> then, boolean loud) {
         Intent in = getIntent();
         String imdb = in.getStringExtra("imdb"), title = History.cleanTitle(String.valueOf(in.getStringExtra("pageTitle")), String.valueOf(in.getStringExtra("site")));
         // The page's own URL/title say which episode is playing (the site may have moved on from the one picked in the catalog)
         int[] pe = pageEpisode();
-        int season = pe == null ? 0 : pe[0], episode = pe == null ? 0 : pe[1];
-        final int s = season, e = episode;
-        final boolean needsEpisode = in.getBooleanExtra("series", false) && s == 0;
+        final int s = pe == null ? 0 : Math.max(1, pe[0]), e = pe == null ? 0 : pe[1];
+        final boolean needsEpisode = in.getBooleanExtra("series", false) && pe == null;
         App.io.execute(() -> {
-            String id = needsEpisode ? "" : imdb == null || imdb.isEmpty() ? Subs.imdbFor(title, s > 0) : imdb;
-            List<Subs.Sub> found = id.isEmpty() ? null : Subs.find(id, s, e);
+            String id = needsEpisode ? "" : imdb == null || !imdb.startsWith("tt") ? Subs.imdbFor(title, s > 0) : imdb;
+            List<Subs.Sub> found = id.isEmpty() ? null : Subs.search(id, s, e, lang);
             runOnUiThread(() -> {
                 if (isFinishing() || player == null) return;
                 if (found == null) { if (loud) say(App.t(needsEpisode ? R.string.player_open_episode : R.string.player_not_on_opensubs)); }
-                else if (found.isEmpty()) { if (loud) say(App.t(R.string.player_no_subs_title)); }
+                else if (found.isEmpty()) { if (loud) say(App.t(R.string.player_no_subs_lang, Subs.language(lang))); }
                 else then.accept(found);
             });
         });
     }
 
-    void pickSubLanguage(Map<String, List<Subs.Sub>> langs) {
-        List<String> codes = new ArrayList<>(langs.keySet()), labels = new ArrayList<>();
-        for (String c : codes) labels.add(Subs.language(c) + "  \u00B7  " + langs.get(c).size());
-        new AlertDialog.Builder(this).setTitle(App.t(R.string.player_subs_language)).setItems(labels.toArray(new String[0]), (d, i) -> {
-            List<Subs.Sub> files = langs.get(codes.get(i)).subList(0, Math.min(40, langs.get(codes.get(i)).size()));
-            List<String> names = new ArrayList<>();
-            for (Subs.Sub f : files) names.add(f.release);
-            new AlertDialog.Builder(this).setTitle(App.t(R.string.player_pick_release, Subs.language(codes.get(i))))
-                .setItems(names.toArray(new String[0]), (d2, j) -> {
-                    if (subKey() != null) Subs.remember(subKey(), files.get(j));
-                    addSubtitle(files.get(j));
-                }).show();
-        }).show();
+    void pickRelease(String lang, List<Subs.Sub> found) {
+        List<Subs.Sub> files = found.subList(0, Math.min(60, found.size()));
+        List<String> names = new ArrayList<>();
+        for (Subs.Sub f : files) names.add(f.release + (f.hearingImpaired ? "  \u00B7  CC" : "") + (f.source.equals("OpenSubtitles") ? "" : "  \u00B7  " + f.source));
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.player_pick_release, Subs.language(lang)))
+            .setItems(names.toArray(new String[0]), (d, j) -> {
+                if (subKey() != null) Subs.remember(subKey(), files.get(j));
+                addSubtitle(files.get(j));
+            }).show();
     }
 
     /** Which movie or episode is playing, to remember its subtitle file: IMDb id (else the page's title), plus season and episode. Null for an episode we can't tell. */
@@ -1628,9 +1640,7 @@ public class PlayerActivity extends Activity {
                 return;
             }
         }
-        findSubs(found -> {
-            for (Subs.Sub f : found) if (f.lang.equals(lang)) { addSubtitle(f); return; }
-        }, false);
+        findSubs(lang, found -> addSubtitle(found.get(0)), false);   // the most downloaded file in your language
     }
 
     // ---- Volume boost ----
@@ -1699,10 +1709,25 @@ public class PlayerActivity extends Activity {
     }
 
     // Side-load the file and restart the stream at the same spot with it switched on
+    /** Downloads the file (unpacked, converted to UTF-8, kept for next time), then shows it as the subtitle track. */
     void addSubtitle(Subs.Sub sub) {
+        App.io.execute(() -> {
+            SubFetch.Fetched f;
+            try {
+                f = Subs.fetch(sub);
+            } catch (java.io.IOException e) {
+                runOnUiThread(() -> say(App.t(R.string.player_subs_failed)));
+                return;
+            }
+            runOnUiThread(() -> { if (player != null && !isFinishing()) showSubtitle(sub, f); });
+        });
+    }
+
+    void showSubtitle(Subs.Sub sub, SubFetch.Fetched f) {
+        String mime = f.ext.equals("vtt") ? MimeTypes.TEXT_VTT : f.ext.equals("srt") ? MimeTypes.APPLICATION_SUBRIP : MimeTypes.TEXT_SSA;
         subList.removeIf(c -> "opensubtitles".equals(c.id));
-        subList.add(new MediaItem.SubtitleConfiguration.Builder(Uri.parse(sub.url)).setId("opensubtitles").setMimeType(MimeTypes.APPLICATION_SUBRIP)
-            .setLanguage(sub.lang).setLabel(Subs.language(sub.lang) + " (OpenSubtitles)").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build());
+        subList.add(new MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(f.file)).setId("opensubtitles").setMimeType(mime)
+            .setLanguage(sub.lang).setLabel(Subs.language(sub.lang) + " (" + sub.source + ")").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build());
         mediaItem.setSubtitleConfigurations(subList);
         long pos = player.getCurrentPosition();
         boolean playing = player.getPlayWhenReady();
@@ -1711,7 +1736,41 @@ public class PlayerActivity extends Activity {
         player.prepare();
         player.setPlayWhenReady(playing);
         say(App.t(R.string.player_subs_lang, Subs.language(sub.lang)));
+        // Auto-sync: once enough has played, line the file up with the speech (a release with a recap is often minutes off)
+        syncCues = null;
+        syncTries = 0;
+        syncSet = Subs.delayMs;
+        App.io.execute(() -> {
+            try {
+                List<long[]> cues = SubSync.cues(f.file);
+                runOnUiThread(() -> syncCues = cues);
+            } catch (java.io.IOException ignored) { }
+        });
+        App.main.removeCallbacks(syncCheck);
+        App.main.postDelayed(syncCheck, 45000);
     }
+
+    /** Every 45 s (8 times at most) until the file is lined up with the speech, unless you set the timing yourself. */
+    final Runnable syncCheck = new Runnable() {
+        @Override public void run() {
+            if (player == null || isFinishing() || syncCues == null || Subs.delayMs != syncSet || syncTries++ >= 8) return;
+            float[] level = meter.snapshot();
+            List<long[]> cues = syncCues;
+            App.io.execute(() -> {
+                Long d = SubSync.offset(level, cues);
+                Log.i("SubSync", "try " + syncTries + ": " + (d == null ? "not sure yet" : d + " ms"));
+                runOnUiThread(() -> {
+                    if (player == null || isFinishing() || Subs.delayMs != syncSet) return;
+                    if (d == null) { App.main.postDelayed(syncCheck, 45000); return; }
+                    if (Math.abs(d - Subs.delayMs) < 250) return;   // already in sync
+                    boolean jump = Math.abs(d - Subs.delayMs) > 5000;
+                    Subs.delayMs = syncSet = d;
+                    if (jump) player.seekTo(player.getCurrentPosition());   // the subtitle track picks up its new place
+                    say(App.t(R.string.player_subs_synced, Subs.delayLabel()));
+                });
+            });
+        }
+    };
 
     @Override protected void onStop() {
         super.onStop();

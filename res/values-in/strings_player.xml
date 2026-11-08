@@ -42,13 +42,12 @@
     <string name="player_subs_n">Subtitle %1$d</string>
     <string name="player_no_audio">Tidak ada audio di video ini</string>
     <string name="player_no_subs">Tidak ada subtitle di video ini</string>
-    <string name="player_search_subs">"🔍  Cari di OpenSubtitles…"</string>
+    <string name="player_search_subs">"🔍  Cari subtitle…"</string>
     <string name="player_season_episode">"Musim %1$d  ·  Episode %2$d"</string>
     <string name="player_episode">Episode %1$d</string>
     <string name="player_searching_subs">Mencari di OpenSubtitles…</string>
     <string name="player_open_episode">Buka dulu episodenya di situs</string>
     <string name="player_not_on_opensubs">Judul ini tidak ditemukan di OpenSubtitles</string>
-    <string name="player_no_subs_title">Tidak ada subtitle untuk judul ini</string>
     <string name="player_subs_language">Bahasa subtitle</string>
     <string name="player_pick_release">%1$s: pilih rilis yang cocok dengan videomu</string>
     <string name="player_subs_lang">Subtitle: %1$s</string>
@@ -111,6 +110,9 @@
     <string name="player_skip_recap">Lewati rekap</string>
     <string name="player_skip_credits">Lewati kredit</string>
     <string name="player_next_in">Episode berikutnya · %1$d</string>
+    <string name="player_no_subs_lang">Tidak ada subtitle %1$s untuk ini</string>
+    <string name="player_subs_failed">File subtitle tidak bisa dimuat</string>
+    <string name="player_subs_synced">Subtitle disinkronkan (%1$s)</string>
     <string name="player_sub_dub">Sub / Dub: %1$s</string>
     <string name="player_more">Lainnya</string>
 </resources>

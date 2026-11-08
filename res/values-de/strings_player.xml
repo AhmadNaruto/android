@@ -42,13 +42,12 @@
     <string name="player_subs_n">Untertitel %1$d</string>
     <string name="player_no_audio">Kein Ton in diesem Video</string>
     <string name="player_no_subs">Keine Untertitel in diesem Video</string>
-    <string name="player_search_subs">"🔍  Auf OpenSubtitles suchen…"</string>
+    <string name="player_search_subs">"🔍  Untertitel suchen…"</string>
     <string name="player_season_episode">"Staffel %1$d  ·  Folge %2$d"</string>
     <string name="player_episode">Folge %1$d</string>
     <string name="player_searching_subs">Suche auf OpenSubtitles…</string>
     <string name="player_open_episode">Öffne zuerst die Folge auf der Seite</string>
     <string name="player_not_on_opensubs">Dieser Titel ist nicht auf OpenSubtitles zu finden</string>
-    <string name="player_no_subs_title">Keine Untertitel für diesen Titel</string>
     <string name="player_subs_language">Untertitelsprache</string>
     <string name="player_pick_release">%1$s: Wähle die Version, die zu deinem Video passt</string>
     <string name="player_subs_lang">Untertitel: %1$s</string>
@@ -111,6 +110,9 @@
     <string name="player_skip_recap">Rückblick überspringen</string>
     <string name="player_skip_credits">Abspann überspringen</string>
     <string name="player_next_in">Nächste Folge · %1$d</string>
+    <string name="player_no_subs_lang">Keine Untertitel auf %1$s dafür</string>
+    <string name="player_subs_failed">Untertiteldatei konnte nicht geladen werden</string>
+    <string name="player_subs_synced">Untertitel angepasst (%1$s)</string>
     <string name="player_sub_dub">Untertitel / Synchro: %1$s</string>
     <string name="player_more">Mehr</string>
 </resources>

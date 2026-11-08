@@ -42,13 +42,12 @@
     <string name="player_subs_n">सबटाइटल %1$d</string>
     <string name="player_no_audio">इस वीडियो में ऑडियो नहीं है</string>
     <string name="player_no_subs">इस वीडियो में सबटाइटल नहीं हैं</string>
-    <string name="player_search_subs">"🔍  OpenSubtitles पर खोजें…"</string>
+    <string name="player_search_subs">"🔍  सबटाइटल खोजें…"</string>
     <string name="player_season_episode">"सीज़न %1$d  ·  एपिसोड %2$d"</string>
     <string name="player_episode">एपिसोड %1$d</string>
     <string name="player_searching_subs">OpenSubtitles पर खोज रहे हैं…</string>
     <string name="player_open_episode">पहले साइट पर एपिसोड खोलें</string>
     <string name="player_not_on_opensubs">यह टाइटल OpenSubtitles पर नहीं मिला</string>
-    <string name="player_no_subs_title">इस टाइटल के लिए सबटाइटल नहीं हैं</string>
     <string name="player_subs_language">सबटाइटल की भाषा</string>
     <string name="player_pick_release">%1$s: अपने वीडियो से मेल खाने वाली रिलीज़ चुनें</string>
     <string name="player_subs_lang">सबटाइटल: %1$s</string>
@@ -111,6 +110,9 @@
     <string name="player_skip_recap">रीकैप छोड़ें</string>
     <string name="player_skip_credits">क्रेडिट्स छोड़ें</string>
     <string name="player_next_in">अगला एपिसोड · %1$d</string>
+    <string name="player_no_subs_lang">इसके लिए %1$s सबटाइटल नहीं मिले</string>
+    <string name="player_subs_failed">सबटाइटल फ़ाइल लोड नहीं हो सकी</string>
+    <string name="player_subs_synced">सबटाइटल सिंक हो गए (%1$s)</string>
     <string name="player_sub_dub">सब / डब: %1$s</string>
     <string name="player_more">और</string>
 </resources>
