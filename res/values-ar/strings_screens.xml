@@ -79,7 +79,7 @@
     <string name="title_season">الموسم %1$d</string>
     <string name="title_episode">الحلقة %1$d</string>
     <string name="title_no_site_toast">لا يوجد موقع للمشاهدة</string>
-    <string name="title_pick_episode">الموسم %1$d، الحلقة %2$d: اخترها من الموقع</string>
+    <string name="web_pick_episode">S%1$d E%2$d: اخترها في الصفحة</string>
     <string name="category_hint_tv">اضغط مع الاستمرار على OK فوق موقع للمفضلة والمواقع البديلة</string>
     <string name="category_hint_touch">اضغط مع الاستمرار على موقع للمفضلة والمواقع البديلة</string>
     <string name="category_picks">اختيارات FMHY</string>

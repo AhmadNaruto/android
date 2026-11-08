@@ -105,4 +105,9 @@
     <string name="cast_refused">टीवी ने Cast प्लेयर को मना कर दिया</string>
     <string name="cast_label_dlna">%1$s - DLNA</string>
     <string name="cast_dlna_refused">टीवी ने यह वीडियो नहीं चलाया</string>
+    <string name="player_episodes">एपिसोड</string>
+    <string name="player_next_episode">अगला: S%1$d E%2$d</string>
+    <string name="player_next_short">E%1$d</string>
+    <string name="player_sub_dub">सब / डब: %1$s</string>
+    <string name="player_more">और</string>
 </resources>

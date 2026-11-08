@@ -61,13 +61,50 @@ final class Sites {
 
     /** The title's own page on a site we know the address pattern of (by TMDB or IMDb id); null means search for the name instead. */
     static String deeplink(String siteUrl, Catalog.Title t) {
+        Map<String, String> v = new java.util.HashMap<>();
+        v.put("tmdb", t.tmdb);
+        v.put("imdb", t.id.startsWith("tt") ? t.id : "");
+        return link(siteUrl, t.series() ? "tv" : "movie", v);
+    }
+
+    /** Whether the site has an address of this kind ("episode" for one TV episode, "anime" for one anime episode). */
+    static boolean hasLink(String siteUrl, String key) {
+        org.json.JSONObject site = deeplinks().optJSONObject(hostOf(siteUrl));
+        return site != null && !site.optString(key).isEmpty();
+    }
+
+    /** Whether the site's anime address says Sub or Dub. */
+    static boolean hasAudioLink(String siteUrl) {
+        org.json.JSONObject site = deeplinks().optJSONObject(hostOf(siteUrl));
+        return site != null && site.optString("anime").contains("{audio}");
+    }
+
+    static String hostOf(String url) {
+        return String.valueOf(Uri.parse(url).getHost()).replaceFirst("^www\\.", "");
+    }
+
+    /**
+     * A site's address of one kind (movie, tv, episode, anime) with its {placeholders} filled from vars: tmdb, imdb, season, episode,
+     * anilist, mal, kitsu, anidb, audio (sub or dub; the site's "audio" map turns it into what its address says). Null when the site
+     * has no such address or a value it needs is missing.
+     */
+    static String link(String siteUrl, String key, Map<String, String> vars) {
         Uri u = Uri.parse(siteUrl);
-        org.json.JSONObject site = deeplinks().optJSONObject(String.valueOf(u.getHost()).replaceFirst("^www\\.", ""));
-        if (site == null) return null;
-        String tpl = site.optString(t.series() ? "tv" : "movie");
-        String imdb = t.id.startsWith("tt") ? t.id : "";
-        if (tpl.isEmpty() || (tpl.contains("{tmdb}") && t.tmdb.isEmpty()) || (tpl.contains("{imdb}") && imdb.isEmpty())) return null;
-        return u.getScheme() + "://" + u.getHost() + tpl.replace("{tmdb}", t.tmdb).replace("{imdb}", imdb);
+        org.json.JSONObject site = deeplinks().optJSONObject(hostOf(siteUrl));
+        String tpl = site == null ? "" : site.optString(key);
+        if (tpl.isEmpty()) return null;
+        org.json.JSONObject audio = site.optJSONObject("audio");
+        java.util.regex.Matcher m = Pattern.compile("\\{(\\w+)\\}").matcher(tpl);
+        StringBuffer out = new StringBuffer();
+        while (m.find()) {
+            String v = vars.get(m.group(1));
+            if (m.group(1).equals("audio") && v != null && audio != null) v = audio.optString(v, v);
+            if (v == null || v.isEmpty()) return null;
+            m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(Uri.encode(v)));
+        }
+        m.appendTail(out);
+        String path = out.toString();
+        return path.startsWith("http") ? path : u.getScheme() + "://" + u.getHost() + path;
     }
 
     /** Category title -> sites, in display order. */

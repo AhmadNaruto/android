@@ -2,6 +2,7 @@
 //   pause   = stop the page's own players
 //   servers = list the page's server / source choices (buttons on screen, or the menu behind a "Servers" button)
 //   click   = press one of the choices that were listed
+//   episode = press an episode (and its season) in the page's own episode list
 (() => {
   if (window.__fpf) return;
   window.__fpf = 1;
@@ -87,6 +88,62 @@
     return out;
   };
 
+  // 1c) native <select> dropdowns: custom-styled players (Miruro and others) keep their real choices in <select>s behind the pretty ones.
+  //     AUDIO / LANGUAGE (sub, dub) is its own group ('a'): the language is picked first, then the server (whose list changes with it)
+  const capRe = /^(audio|languages?|lang|servers?|sources?|mirrors?|providers?|quality|qualities|resolution)\b/i;
+  const audioWords = /^(sub(bed|s)?|dub(bed|s)?|raw|soft-?sub|hard-?sub|multi(-audio)?|original)$/i;
+  const caps = root => [...root.querySelectorAll('*')].filter(e => e.children.length <= 1 && !e.closest('select,option') && (e.textContent || '').trim().length < 24 && capRe.test((e.textContent || '').trim()));
+  const kindOf = hint => /audio|lang|dub/i.test(hint) ? 'a' : /server|source|mirror|provider/i.test(hint) ? 's' : /quality|resolution/i.test(hint) ? 'q' : '';
+  const selects = () => {
+    const out = { s: [], a: [], q: [] };
+    const all = [...document.querySelectorAll('select')].filter(x => x.options.length >= 2 && x.options.length <= 40);
+    for (const sel of all) {
+      const names = [...sel.options].map(o => (o.textContent || '').trim());
+      if (names.some(n => !n || n.length > 40)) continue;
+      if (names.every(n => /^[\d\s.,-–]+$/.test(n))) continue;   // episode ranges, page numbers, years: not a server or language
+      let kind = kindOf([sel.getAttribute('aria-label'), sel.name, sel.id].join(' '));
+      const lab = !kind && sel.id && document.querySelector('label[for="' + CSS.escape(sel.id) + '"]');
+      if (lab) kind = kindOf(lab.textContent || '');
+      // captions in a row above the dropdowns (AUDIO, SERVER (6)): the n-th caption names the n-th dropdown
+      for (let a = sel.parentElement, i = 0; !kind && a && i < 6; a = a.parentElement, i++) {
+        const sels = [...a.querySelectorAll('select')].filter(x => x.options.length >= 2), cs = caps(a);
+        if (sels.length >= 2 && cs.length === sels.length) kind = kindOf((cs[sels.indexOf(sel)].textContent || '').trim());
+        else if (sels.length === 1 && cs.length && i < 3) kind = kindOf((cs.filter(c => c.compareDocumentPosition(sel) & 4).pop() || cs[0]).textContent || '');
+      }
+      if (!kind && names.every(n => audioWords.test(n))) kind = 'a';
+      if (kind) out[kind] = out[kind].concat(names.map((n, i) => ({ label: n, on: sel.selectedIndex === i, sel, idx: i })));
+    }
+    return out;
+  };
+
+  // 1d) ARIA comboboxes (the phone layout of the same players): a button that says what it picks (aria-label "Language", "Server")
+  //     and opens a listbox only when pressed: open it, read the options, close it again
+  const shown = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const visibleOptions = () => [...document.querySelectorAll('[role=option]')].filter(shown);
+  const picked = e => e.getAttribute('aria-selected') === 'true' || e.getAttribute('aria-checked') === 'true' || e.getAttribute('data-state') === 'checked' || e.hasAttribute('data-selected') || /\b(selected|active|current)\b/i.test(String(e.className));
+  const comboBtn = kind => [...document.querySelectorAll('[role=combobox],button[aria-haspopup=listbox]')].find(b => shown(b) && kindOf(b.getAttribute('aria-label') || '') === kind);
+  const closeList = async b => {
+    for (const t of [document.activeElement, document, document.body]) if (t) t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
+    await wait(120);
+    if (visibleOptions().length) { click(b); await wait(150); }
+  };
+  const combos = async () => {
+    const out = { s: [], a: [], q: [] };
+    for (const kind of ['a', 's', 'q']) {
+      const b = comboBtn(kind);
+      if (!b) continue;
+      const before = new Set(visibleOptions());
+      click(b);
+      await wait(350);
+      const opts = visibleOptions().filter(o => !before.has(o));
+      const names = opts.map(textOf);
+      const now = firstText(b);
+      if (opts.length >= 2 && names.every(n => n.length >= 1 && n.length <= 40)) out[kind] = names.map((n, i) => ({ label: n, on: picked(opts[i]) || n === now, combo: b }));
+      await closeList(b);
+    }
+    return out;
+  };
+
   // 2) a button called Servers / Sources that opens a menu: open it, read the entries, close it again
   const openers = () => [...document.querySelectorAll('button,[role=button],a')].filter(b => {
     const t = (b.getAttribute('aria-label') || b.title || label(b)).trim();
@@ -144,7 +201,28 @@
     return [];
   };
   // Press a listed choice (a menu has to be opened again first, then the entry with that label is pressed)
+  const choose = (sel, idx) => {
+    // the way a user's pick reaches React and friends: set through the native setter, then fire input and change
+    const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+    set.call(sel, sel.options[idx].value);
+    sel.dispatchEvent(new Event('input', { bubbles: true }));
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  };
   const press = async it => {
+    if (it.combo) {
+      const b = document.contains(it.combo) ? it.combo : comboBtn(it.kind);
+      if (!b) return;
+      click(b);
+      await wait(450);
+      const t = visibleOptions().find(o => textOf(o) === it.label);
+      if (t) click(t); else await closeList(b);
+      return;
+    }
+    if (it.sel) {
+      if (!document.contains(it.sel)) { const fresh = selects()[it.kind].find(x => x.label === it.label); if (fresh) choose(fresh.sel, fresh.idx); }
+      else choose(it.sel, it.idx);
+      return;
+    }
     if (it.el && document.contains(it.el)) { click(it.el); return; }
     // The page re-drew its list while it was paused: find the entry again by its name
     if (it.el) {
@@ -216,6 +294,39 @@
     };
   } catch (e) { }
 
+  // An episode in the page's own list: the season first (a <select>, tab or button that says "Season 2" / "S2"), then the entry
+  // that says 3 / "Ep 3" / "Episode 3 - Name" (or carries data-episode / data-number 3) among 3+ such entries under one parent
+  const seasonRe = n => new RegExp('^(season|s)\\s*0*' + n + '(?![0-9])', 'i');
+  const epAny = /^(e|ep|eps|episode)?\.?\s*\d{1,4}(?![0-9])/i;
+  const epRe = n => new RegExp('^(e|ep|eps|episode)?\\.?\\s*0*' + n + '(?![0-9])(?!\\s*(min|mins|h|sec|views?|st|nd|rd|th)\\b)', 'i');
+  const epNum = e => e.getAttribute('data-episode') || e.getAttribute('data-number') || e.getAttribute('data-ep');
+  const pickEpisode = async (s, n) => {
+    if (s > 0) {
+      const sel = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => seasonRe(s).test(o.text.trim())));
+      if (sel) {
+        const i = [...sel.options].findIndex(o => seasonRe(s).test(o.text.trim()));
+        if (sel.selectedIndex !== i) { choose(sel, i); await wait(1200); }
+      } else {
+        const b = [...document.querySelectorAll('button,a,li,[role=tab],[role=option],[role=button]')].find(x => leaf(x) && label(x).length < 20 && seasonRe(s).test(label(x)));
+        if (b && !isOn(b)) { click(b); await wait(1200); }
+      }
+    }
+    // its own text, or a piece of it: "E3 · 53 min" under the episode's name
+    const pieces = x => [label(x)].concat([...x.querySelectorAll('*')].filter(c => !c.children.length).map(c => (c.textContent || '').trim()).filter(t => t && t.length < 40));
+    const all = [...document.querySelectorAll('a,button,li,article,[role=button],[role=option],[data-episode],[data-number],[data-ep]')].filter(x => {
+      const t = label(x);
+      return epNum(x) !== null || (t && t.length < 400 && pieces(x).some(p => epAny.test(p)));
+    });
+    const g = new Map();
+    for (const x of all) { const p = x.parentElement; if (!g.has(p)) g.set(p, []); g.get(p).push(x); }
+    for (const v of g.values()) {
+      if (v.length < 3) continue;
+      const hit = v.find(x => +epNum(x) === n) || v.find(x => pieces(x).some(p => epRe(n).test(p)));
+      if (hit) { hit.scrollIntoView({ block: 'center' }); click(hit); return true; }
+    }
+    return false;
+  };
+
   const up = m => window === top ? (window.FMHY && FMHY.servers(JSON.stringify(m.items))) : parent.postMessage(m, '*');
   const down = m => { for (let i = 0; i < frames.length; i++) try { frames[i].postMessage(m, '*'); } catch (x) { } };
   addEventListener('message', async e => {
@@ -225,13 +336,24 @@
     else if (d.fp === 'servers') {
       down(d);
       const h = headed();
-      let sv = markOdd(onScreen());
+      let ns = selects();
+      if (ns.a.length < 2 && ns.s.length < 2) {   // no <select>s: the phone layout's comboboxes
+        const c = await combos();
+        ns = { s: ns.s.length >= 2 ? ns.s : c.s, a: ns.a.length >= 2 ? ns.a : c.a, q: ns.q.length ? ns.q : c.q };
+      }
+      // a dropdown that is labelled Server / Source is the most reliable list; guessing from the look of buttons comes after it
+      let sv = ns.s.length >= 2 ? ns.s : markOdd(onScreen());
       if (sv.length < 2) sv = h.s;
       if (sv.length < 2) sv = await viaMenu();
       if (sv.length < 2) sv = await viaSettings();
-      items = sv.map(x => Object.assign(x, { kind: 's' })).concat(h.q.map(x => Object.assign(x, { kind: 'q' })));
+      const qs = h.q.length ? h.q : ns.q;
+      items = sv.map(x => Object.assign(x, { kind: 's' })).concat(qs.map(x => Object.assign(x, { kind: 'q' })))
+        .concat(ns.a.length >= 2 ? ns.a.map(x => Object.assign(x, { kind: 'a' })) : []);
       if (items.length) up({ fp: 'reply', items: items.map((it, i) => ({ k: fid + ':' + i, label: it.label, on: it.on, kind: it.kind })) });
       if (window === top && window.FMHY) FMHY.scanDone();
+    } else if (d.fp === 'episode') {
+      down(d);
+      if (await pickEpisode(d.s, d.e) && window.FMHY) FMHY.episodeFound();
     } else if (d.fp === 'reply') up(d);
     else if (d.fp === 'click') {
       const i = items.findIndex((_, j) => fid + ':' + j === d.k);

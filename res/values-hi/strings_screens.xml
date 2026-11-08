@@ -79,7 +79,7 @@
     <string name="title_season">सीज़न %1$d</string>
     <string name="title_episode">एपिसोड %1$d</string>
     <string name="title_no_site_toast">देखने के लिए कोई साइट नहीं</string>
-    <string name="title_pick_episode">सीज़न %1$d, एपिसोड %2$d: इसे साइट पर चुनें</string>
+    <string name="web_pick_episode">S%1$d E%2$d: पेज पर चुनें</string>
     <string name="category_hint_tv">पसंदीदा और मिरर के लिए किसी साइट पर OK दबाए रखें</string>
     <string name="category_hint_touch">पसंदीदा और मिरर के लिए किसी साइट को देर तक दबाएँ</string>
     <string name="category_picks">FMHY की पसंद</string>

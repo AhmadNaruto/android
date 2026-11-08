@@ -25,3 +25,9 @@ FMHYPlay is MIT licensed (see `LICENSE`). It includes, or downloads at build or 
 | Cloudflare WARP | the optional tunnel; registered through Cloudflare's own endpoint at first start |
 
 FMHYPlay is not affiliated with or endorsed by FMHY, Cloudflare, Stremio, OpenSubtitles, iptv-org or any streaming site.
+
+## Icons
+
+| Component | License | Used for |
+| --- | --- | --- |
+| [Material Symbols](https://github.com/google/material-design-icons) by Google (Rounded, filled) | Apache-2.0 | the player icons (`res/drawable/ic_p_*.xml`, `ic_pb_*.xml`) |

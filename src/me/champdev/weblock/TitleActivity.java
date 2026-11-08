@@ -26,6 +26,7 @@ public class TitleActivity extends Home {
         t.name = getIntent().getStringExtra("name");
         t.year = String.valueOf(getIntent().getStringExtra("year"));
         t.poster = String.valueOf(getIntent().getStringExtra("poster"));
+        t.anime = getIntent().getBooleanExtra("anime", false);
         super.onCreate(state);
         App.io.execute(() -> {
             Catalog.fill(t);
@@ -195,8 +196,11 @@ public class TitleActivity extends Home {
     /** The site picked last time, else your first favorite, else FMHY's first pick for this kind of title. */
     List<Sites.Site> options() {
         List<Sites.Site> out = new ArrayList<>(Sites.favorites());
-        List<Sites.Site> row = Sites.load().get(t.series() ? Cats.TV : Cats.MOVIES);
-        if (row != null) for (Sites.Site s : row) if (!Sites.has(out, s.url) && out.size() < 30) out.add(s);
+        // Anime: the anime sites first (they have Sub / Dub), then the TV ones
+        for (String cat : t.anime ? new String[]{Cats.ANIME, Cats.TV} : new String[]{t.series() ? Cats.TV : Cats.MOVIES}) {
+            List<Sites.Site> row = Sites.load().get(cat);
+            if (row != null) for (Sites.Site s : row) if (!Sites.has(out, s.url) && out.size() < 30) out.add(s);
+        }
         return out;
     }
 
@@ -222,13 +226,13 @@ public class TitleActivity extends Home {
     void watch(Catalog.Episode e) {
         Sites.Site s = chosen();
         if (s == null) { toast(App.t(R.string.title_no_site_toast)); return; }
-        if (e != null) toast(App.t(R.string.title_pick_episode, e.season, e.number));
         startActivity(withTitle(titleIntent(s))
             .putExtra("season", e == null ? 0 : e.season).putExtra("episode", e == null ? 0 : e.number));
     }
 
     // What the native player needs to look up subtitles for this title
     android.content.Intent withTitle(android.content.Intent in) {
-        return in.putExtra("imdb", t.id).putExtra("series", t.series()).putExtra("name", t.name).putExtra("poster", t.poster);
+        return in.putExtra("imdb", t.id).putExtra("series", t.series()).putExtra("name", t.name).putExtra("poster", t.poster)
+            .putExtra("tmdb", t.tmdb).putExtra("anime", t.anime);
     }
 }

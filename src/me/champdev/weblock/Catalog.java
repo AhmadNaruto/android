@@ -168,6 +168,34 @@ final class Catalog {
         }
     }
 
+    /**
+     * An anime's ids on AniList, MyAnimeList, Kitsu and AniDB for one season, with the episode numbered the way those sites count it:
+     * they have one entry per season, or one entry for the whole run (One Piece), counted from its first episode.
+     * From arm.haglund.dev (by IMDb id); empty when unknown. Call off the main thread.
+     */
+    static java.util.Map<String, String> animeEntry(Title t, int season, int episode) {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        String text = t.id.startsWith("tt") ? get("https://arm.haglund.dev/api/v2/imdb?id=" + t.id, true) : null;
+        if (text == null) return out;
+        try {
+            JSONArray all = new JSONArray(text);
+            List<JSONObject> tv = new ArrayList<>();
+            for (int i = 0; i < all.length(); i++) if (!"OVA".equals(all.getJSONObject(i).optString("media")) && !"SPECIAL".equals(all.getJSONObject(i).optString("media"))) tv.add(all.getJSONObject(i));
+            JSONObject pick = null;
+            // ponytail: a season aired in two parts (Attack on Titan S3) gets the first part's id; placing part 2 needs AniList's episode counts
+            for (JSONObject o : tv) if (o.optInt("thetvdb-season", -1) == season) { pick = o; break; }
+            boolean whole = pick == null && tv.size() == 1;
+            if (whole) pick = tv.get(0);
+            if (pick == null) return out;
+            String[][] keys = {{"anilist", "anilist"}, {"myanimelist", "mal"}, {"kitsu", "kitsu"}, {"anidb", "anidb"}};
+            for (String[] k : keys) if (!pick.isNull(k[0]) && pick.has(k[0])) out.put(k[1], String.valueOf(pick.get(k[0])));
+            int n = 0;
+            if (whole) for (Episode e : t.episodes) if (e.season < season || (e.season == season && e.number <= episode)) n++;
+            out.put("episode", String.valueOf(n > 0 ? n : episode));
+        } catch (JSONException ignored) { }
+        return out;
+    }
+
     /** Fills in the overview, runtime, backdrop and episodes of a title from its detail page. */
     static void fill(Title t) {
         String text = get("/meta/" + t.type + "/" + t.id + ".json", true);

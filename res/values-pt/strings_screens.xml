@@ -79,7 +79,7 @@
     <string name="title_season">Temporada %1$d</string>
     <string name="title_episode">Episódio %1$d</string>
     <string name="title_no_site_toast">Nenhum site para assistir</string>
-    <string name="title_pick_episode">Temporada %1$d, episódio %2$d: escolha no site</string>
+    <string name="web_pick_episode">T%1$d E%2$d: escolha na página</string>
     <string name="category_hint_tv">Segure OK em um site para favoritos e espelhos</string>
     <string name="category_hint_touch">Toque e segure um site para favoritos e espelhos</string>
     <string name="category_picks">Escolhas do FMHY</string>

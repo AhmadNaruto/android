@@ -1339,7 +1339,7 @@ public class Home extends Activity {
         card.setClipToOutline(true);
         focusable(card, dp(12));
         card.setOnClickListener(v -> startActivity(new Intent(this, TitleActivity.class)
-            .putExtra("id", t.id).putExtra("type", t.type).putExtra("name", t.name).putExtra("year", t.year).putExtra("poster", t.poster)));
+            .putExtra("id", t.id).putExtra("type", t.type).putExtra("name", t.name).putExtra("year", t.year).putExtra("poster", t.poster).putExtra("anime", t.anime)));
         card.setOnLongClickListener(v -> {
             toast(App.t(Catalog.toggleMine(t) ? R.string.home_added_mylist : R.string.home_removed_mylist));
             if (tab == 0 && tabs()) build();
@@ -1754,13 +1754,13 @@ public class Home extends Activity {
         if (placeholder != null) placeholder.setVisibility(View.GONE);
     }
 
-    Bitmap fetch(String url) {
+    static Bitmap fetch(String url) {
         try {
             byte[] sha = MessageDigest.getInstance("SHA-1").digest(url.getBytes("UTF-8"));
             StringBuilder name = new StringBuilder();
             for (byte x : sha) name.append(String.format("%02x", x));
             // Kept in app storage (not cache) so Continue watching posters survive cache clears
-            File dir = new File(getFilesDir(), "img");
+            File dir = new File(App.app.getFilesDir(), "img");
             dir.mkdirs();
             File f = new File(dir, name.toString());
             if (!f.exists()) {

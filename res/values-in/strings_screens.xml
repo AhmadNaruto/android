@@ -79,7 +79,7 @@
     <string name="title_season">Musim %1$d</string>
     <string name="title_episode">Episode %1$d</string>
     <string name="title_no_site_toast">Tidak ada situs untuk menonton</string>
-    <string name="title_pick_episode">Musim %1$d, episode %2$d: pilih di situsnya</string>
+    <string name="web_pick_episode">S%1$d E%2$d: pilih di halaman</string>
     <string name="category_hint_tv">Tahan OK pada situs untuk favorit dan mirror</string>
     <string name="category_hint_touch">Tekan lama situs untuk favorit dan mirror</string>
     <string name="category_picks">Pilihan FMHY</string>

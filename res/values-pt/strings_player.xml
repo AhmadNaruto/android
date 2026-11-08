@@ -105,4 +105,9 @@
     <string name="cast_refused">A TV recusou o player do Cast</string>
     <string name="cast_label_dlna">%1$s - DLNA</string>
     <string name="cast_dlna_refused">A TV recusou este vídeo</string>
+    <string name="player_episodes">Episódios</string>
+    <string name="player_next_episode">Próximo: T%1$d E%2$d</string>
+    <string name="player_next_short">E%1$d</string>
+    <string name="player_sub_dub">Legendado / Dublado: %1$s</string>
+    <string name="player_more">Mais</string>
 </resources>

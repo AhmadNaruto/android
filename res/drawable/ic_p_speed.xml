@@ -1,4 +1,7 @@
+<!-- Material Symbols Rounded "speed" (filled), Apache-2.0, github.com/google/material-design-icons -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M12,4C7.58,4 4,7.58 4,12c0,1.85 0.63,3.55 1.69,4.9L7.1,15.5C6.4,14.6 6,13.35 6,12c0,-3.31 2.69,-6 6,-6s6,2.69 6,6c0,1.35 -0.4,2.6 -1.1,3.5l1.41,1.4C19.37,15.55 20,13.85 20,12c0,-4.42 -3.58,-8 -8,-8zM12.7,11.3L16.5,8 11.3,12.7c-0.4,0.4 -0.4,1 0,1.4s1,0.4 1.4,0 0.4,-1 0,-1.4z"/>
+    android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+    <group android:translateY="960">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M418-340q25 25 63 23.5t55-27.5l169-253q9-14-2.5-25.5T677-625L424-456q-26 18-28.5 54.5T418-340ZM204-160q-22 0-40.5-9.5T134-198q-26-47-40-97.5T80-400q0-83 31.5-156T197-683q54-54 127-85.5T480-800q82 0 154 31t126 84.5q54 53.5 86 125T879-406q1 55-12.5 107.5T825-198q-11 19-29.5 28.5T755-160H204Z"/>
+    </group>
 </vector>

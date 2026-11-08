@@ -113,8 +113,13 @@ public class WebActivity extends Activity {
     boolean resumed;
     // The native player lists these (found on the page when a stream starts) and asks us to press one
     static WebActivity active;
-    final java.util.Map<String, String[]> servers = new java.util.LinkedHashMap<>(), qualities = new java.util.LinkedHashMap<>();
+    final java.util.Map<String, String[]> servers = new java.util.LinkedHashMap<>(), qualities = new java.util.LinkedHashMap<>(), audios = new java.util.LinkedHashMap<>();
+    String audioTriedAt = "";   // the page address the remembered Sub / Dub pick was last applied on
     String pendingServer;
+    int[] pendingEpisode;      // {season, episode} picked in the player's Episodes list, opened when the page is back
+    int[] episodeAfterLoad;    // the episode to press on the page once it has loaded (a site without an episode address)
+    volatile boolean episodeFound;
+    Catalog.Title show;        // the series or anime being watched (from the catalog, or found by the player from the page's title)
     volatile boolean scanDone;
     // Title to type into the site's own search box (set when you tap Watch on a movie or episode); cleared once typed
     volatile String pendingQuery;
@@ -267,6 +272,15 @@ public class WebActivity extends Activity {
         site = getIntent().getStringExtra("site");
         siteUrl = getIntent().getStringExtra("siteUrl");
         pendingQuery = getIntent().getStringExtra("q");
+        String imdb = getIntent().getStringExtra("imdb");
+        if (imdb != null && !imdb.isEmpty()) {
+            show = new Catalog.Title();
+            show.id = imdb;
+            show.type = getIntent().getBooleanExtra("series", false) ? "series" : "movie";
+            show.name = String.valueOf(getIntent().getStringExtra("name"));
+            show.tmdb = String.valueOf(getIntent().getStringExtra("tmdb")).replace("null", "");
+            show.anime = getIntent().getBooleanExtra("anime", false);
+        }
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Home.BG);
@@ -331,6 +345,8 @@ public class WebActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setSupportMultipleWindows(true);
+        // Only in the emulator test build (it is marked debuggable): lets Chrome DevTools attach to the page
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
         s.setUseWideViewPort(true);
@@ -383,6 +399,11 @@ public class WebActivity extends Activity {
                 if (pointer != null && pointer.on) v.evaluateJavascript("window.__fpClear&&__fpClear()", null);
                 String q = pendingQuery;
                 if (q != null && searchTries++ < 4) autosearch(v, q);
+                if (episodeAfterLoad != null) {
+                    int[] ep = episodeAfterLoad;
+                    episodeAfterLoad = null;
+                    App.main.postDelayed(() -> pressEpisode(ep[0], ep[1]), 2500);   // single-page sites draw their episode list after the load
+                }
                 scheduleCapture();
             }
 
@@ -416,7 +437,9 @@ public class WebActivity extends Activity {
             status.setVisibility(View.GONE);
             if (Warp.state == Warp.State.FAILED) toast(App.t(R.string.web_warp_failed));
             Warp.route(!Warp.bypassed(siteOf(String.valueOf(Uri.parse(siteUrl).getHost()))));
-            web.loadUrl(url);
+            int sn = getIntent().getIntExtra("season", 0), en = getIntent().getIntExtra("episode", 0);
+            if (show != null && show.series() && en > 0) openEpisode(Math.max(1, sn), en, url);
+            else web.loadUrl(url);
             web.requestFocus();
         });
     }
@@ -434,6 +457,7 @@ public class WebActivity extends Activity {
         if (!resumed || isFinishing()) return;
         servers.clear();
         qualities.clear();
+        audios.clear();
         scanDone = false;
         web.evaluateJavascript("postMessage({fp:'servers'},'*')", null);
     }
@@ -469,6 +493,81 @@ public class WebActivity extends Activity {
             .putExtra("pageTitle", String.valueOf(web.getTitle())).putExtra("pageUrl", String.valueOf(web.getUrl())).putExtra("site", site)
             .putExtra("imdb", in.getStringExtra("imdb")).putExtra("series", in.getBooleanExtra("series", false))
             .putExtra("season", in.getIntExtra("season", 0)).putExtra("episode", in.getIntExtra("episode", 0)), REQ_PLAY);
+    }
+
+    /** The Sub / Dub (or language) picked in the player's Servers list is remembered per site and used on the next pages. */
+    void rememberAudio(String label) {
+        App.prefs.edit().putString("siteAudio:" + siteKey(), label).apply();
+    }
+
+    /**
+     * A site that offers Sub and Dub (a language to pick before the server) starts in its own default: if you picked another one
+     * before, press it now, before the stream goes to the player. If the stream does not change in a few seconds, put it back.
+     */
+    boolean tryPreferredAudio() {
+        String want = App.prefs.getString("siteAudio:" + siteKey(), ""), url = String.valueOf(web.getUrl());
+        if (want.isEmpty() || audios.size() < 2 || url.equals(audioTriedAt) || PlayerActivity.current != null) return false;
+        audioTriedAt = url;
+        String wantKey = null, nowKey = null;
+        for (Map.Entry<String, String[]> e : audios.entrySet()) {
+            if (e.getValue()[0].equalsIgnoreCase(want)) wantKey = e.getKey();
+            if (!e.getValue()[1].isEmpty()) nowKey = e.getKey();
+        }
+        if (wantKey == null || wantKey.equals(nowKey)) return false;
+        App.main.removeCallbacks(waitedHandoff);
+        handoffWaiting = false;
+        sniffer.switching();
+        web.evaluateJavascript("postMessage({fp:'click',k:" + JSONObject.quote(wantKey) + "},'*')", null);
+        final String back = nowKey;
+        App.main.postDelayed(() -> {
+            if (!resumed || isFinishing() || sniffer.has() || back == null) return;
+            sniffer.fresh();
+            web.evaluateJavascript("postMessage({fp:'click',k:" + JSONObject.quote(back) + "},'*')", null);
+        }, 9000);
+        return true;
+    }
+
+    /**
+     * One episode: the site's own page for it when its address pattern is known (deeplinks "episode", or "anime" with Sub / Dub),
+     * else the page it is on (or `fallback`) and the episode pressed in its list. The stream that starts goes to the player as usual.
+     */
+    void openEpisode(int season, int episode, String fallback) {
+        getIntent().putExtra("season", season).putExtra("episode", episode);
+        Catalog.Title t = show;
+        String audio = App.prefs.getString("siteAudio:" + siteKey(), "").toLowerCase(java.util.Locale.ROOT).contains("dub") ? "dub" : "sub";
+        App.io.execute(() -> {
+            String link = null;
+            if (t != null) {
+                Map<String, String> v = new HashMap<>();
+                v.put("tmdb", t.tmdb);
+                v.put("imdb", t.id.startsWith("tt") ? t.id : "");
+                v.put("season", String.valueOf(season));
+                v.put("episode", String.valueOf(episode));
+                v.put("audio", audio);
+                if (t.anime && Sites.hasLink(siteUrl, "anime")) {
+                    if (t.episodes.isEmpty()) Catalog.fill(t);
+                    v.putAll(Catalog.animeEntry(t, season, episode));   // the anime sites' own episode number replaces the season's
+                    link = Sites.link(siteUrl, "anime", v);
+                }
+                if (link == null) link = Sites.link(siteUrl, "episode", v);
+            }
+            String go = link;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                sniffer.switching();
+                if (go != null) web.loadUrl(go);
+                else if (fallback != null) { episodeAfterLoad = new int[]{season, episode}; web.loadUrl(fallback); }
+                else pressEpisode(season, episode);
+            });
+        });
+    }
+
+    /** Press the episode in the page's own list (assets/frame.js); say so when no frame found it. */
+    void pressEpisode(int season, int episode) {
+        if (isFinishing()) return;
+        episodeFound = false;
+        web.evaluateJavascript("postMessage({fp:'episode',s:" + season + ",e:" + episode + "},'*')", null);
+        App.main.postDelayed(() -> { if (!episodeFound && !isFinishing()) toast(App.t(R.string.web_pick_episode, season, episode)); }, 4000);
     }
 
     /** From the native player's Servers list: leave the player, press that button on the page, and go native again when its stream starts. */
@@ -605,7 +704,8 @@ public class WebActivity extends Activity {
                     try {
                         for (int i = 0; i < a.length(); i++) {
                             JSONObject o = a.getJSONObject(i);
-                            ("q".equals(o.optString("kind")) ? qualities : servers).put(o.getString("k"), new String[]{o.getString("label"), o.optBoolean("on") ? "1" : ""});
+                            String kind = o.optString("kind");
+                            ("q".equals(kind) ? qualities : "a".equals(kind) ? audios : servers).put(o.getString("k"), new String[]{o.getString("label"), o.optBoolean("on") ? "1" : ""});
                         }
                     } catch (Exception ignored) { }
                 });
@@ -621,9 +721,14 @@ public class WebActivity extends Activity {
         }
 
         // The page's own frame has finished looking for servers
+        @JavascriptInterface public void episodeFound() {
+            episodeFound = true;
+        }
+
         @JavascriptInterface public void scanDone() {
             App.main.postDelayed(() -> {
                 scanDone = true;
+                if (tryPreferredAudio()) return;   // the page restarts in your language: the hand-off follows with that stream
                 if (handoffWaiting) { App.main.removeCallbacks(waitedHandoff); waitedHandoff.run(); }
             }, 250);
         }
@@ -701,8 +806,10 @@ public class WebActivity extends Activity {
         if (req == REQ_PLAY) {
             // Back from the player: offer the way back (a server switch keeps the page going, it is about to load the new stream)
             // The episode the catalog opened may not be the one picked on the site from here on
-            getIntent().removeExtra("season");
-            getIntent().removeExtra("episode");
+            if (pendingEpisode == null) {
+                getIntent().removeExtra("season");
+                getIntent().removeExtra("episode");
+            }
             web.evaluateJavascript(CHIP, null);
             if (pendingServer == null) web.evaluateJavascript("postMessage({fp:'pause'},'*')", null);
             return;
@@ -813,6 +920,11 @@ public class WebActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        if (pendingEpisode != null) {
+            int[] ep = pendingEpisode;
+            pendingEpisode = null;
+            openEpisode(ep[0], ep[1], null);
+        }
         if (pendingServer != null) {
             String k = pendingServer;
             pendingServer = null;

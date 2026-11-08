@@ -87,7 +87,10 @@ public class PlayerActivity extends Activity {
     long hideAt;
     LinearLayout chipRow;
     final List<LinearLayout> chips = new ArrayList<>();
-    LinearLayout chipCast, chipRotate, chipRestart, chipServers, chipQuality, chipAudio, chipBoost, chipVoice, chipSubs, chipSpeed, chipZoom;
+    LinearLayout chipCast, chipRotate, chipEpisodes, chipNext, chipDub, chipServers, chipQuality, chipAudio, chipSubs, chipMore;
+    Catalog.Title seriesInfo;   // the series playing, with its episodes (for Episodes and Next)
+    View panel;                 // the Episodes list, over the video
+    int cutTop, cutRight;       // the camera cutout's room at the top and right (the Episodes list keeps clear of it)
     String chipLayoutKey = "";
     LinearLayout topBar, bottomBar;      // padded for notches; the centre buttons stay centred
     View rew, fwd;                       // the -10 / +10 buttons beside play
@@ -357,33 +360,30 @@ public class PlayerActivity extends Activity {
         timeTotal.setPadding(dp(10), 0, 0, 0);
         row.addView(timeTotal);
         bar.addView(row);
-        // All actions sit on the bar itself as round icon buttons, spread evenly (never wider than the screen):
-        // Down puts the remote on them, Left/Right moves, OK opens the choice, the label shows at the top
+        // The actions, most used first: what to watch (Episodes, Next, Sub / Dub, Servers), then how it plays (Subtitles, Audio,
+        // Quality), the rest (speed, boosts, zoom, from the start) behind More. Spread evenly, never wider than the screen:
+        // Down puts the remote on them, Left/Right moves, OK opens the choice. Cast and Full screen sit in the top bar (phone).
         chipRow = new LinearLayout(this);
         chipRow.setOrientation(LinearLayout.VERTICAL);
         chipRow.setGravity(Gravity.CENTER_HORIZONTAL);
         chipRow.setPadding(0, dp(6), 0, 0);
-        chipCast = chip(R.drawable.ic_p_cast, () -> { if (casting != null) openRemote(); else pickTv(); });
-        chipRestart = chip(R.drawable.ic_refresh, () -> {
-            player.seekTo(0);
-            player.play();
-            say(App.t(R.string.player_from_start));
-        });
+        chipEpisodes = chip(R.drawable.ic_p_episodes, this::episodesPanel);
+        chipNext = chip(R.drawable.ic_p_next, () -> { int[] n = nextEpisode(); if (n != null) playEpisode(n[0], n[1]); });
+        chipDub = chip(R.drawable.ic_p_dub, this::pickSubDub);
         chipServers = chip(R.drawable.ic_p_servers, () -> pickServer());
-        chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
-        chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, App.t(R.string.player_audio), false));
-        chipBoost = chip(R.drawable.ic_p_volume, this::pickBoost);
-        chipVoice = chip(R.drawable.ic_p_voice, () -> {
-            voice = !voice;
-            applyBoost(true);
-            refreshChips();
-            say(App.t(voice ? R.string.player_dialog_on_video : R.string.player_dialog_off_video));
-        });
         chipSubs = chip(R.drawable.ic_p_subs, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_TEXT, App.t(R.string.player_subtitles), true));
-        chipSpeed = chip(R.drawable.ic_p_speed, this::pickSpeed);
-        chipZoom = chip(R.drawable.ic_p_zoom, this::cycleZoom);
+        chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, App.t(R.string.player_audio), false));
+        chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
+        chipMore = chip(R.drawable.ic_p_tune, this::more);
+        chipCast = chip(R.drawable.ic_p_cast, () -> { if (casting != null) openRemote(); else pickTv(); });
         chipRotate = chip(R.drawable.ic_p_fullscreen, () -> setRequestedOrientation(landscape()
             ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE));
+        for (LinearLayout c : new LinearLayout[]{chipCast, chipRotate}) {
+            chips.remove(c);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(44));
+            lp.leftMargin = dp(8);
+            top.addView(c, lp);
+        }
         int screenW = getResources().getDisplayMetrics().widthPixels;
         bar.addView(chipRow, new LinearLayout.LayoutParams(screenW - 2 * pad, -2));
         ((LinearLayout.LayoutParams) chipRow.getLayoutParams()).gravity = Gravity.CENTER_HORIZONTAL;
@@ -400,6 +400,8 @@ public class PlayerActivity extends Activity {
                 r = in.getDisplayCutout().getSafeInsetRight();
                 bt = in.getDisplayCutout().getSafeInsetBottom();
             }
+            cutTop = t;
+            cutRight = r;
             int pad2 = dp(24);
             topBar.setPadding(pad2 + l, dp(10) + t, pad2 + r, dp(26));
             bottomBar.setPadding(pad2 + l, dp(30), pad2 + r, dp(10) + bt);
@@ -637,16 +639,18 @@ public class PlayerActivity extends Activity {
         } else show(chipQuality, video > 1, App.t(R.string.player_quality_now, manual ? h : h.isEmpty() ? App.t(R.string.player_auto) : App.t(R.string.player_auto_quality, h)),
             manual, h.isEmpty() ? App.t(R.string.player_auto) : h);
         show(chipAudio, audio > 1, App.t(R.string.player_audio_now, audioNow), false, audioCode);
-        show(chipBoost, audio > 0, App.t(R.string.player_boost_now, boost == 0 ? App.t(R.string.player_off) : App.t(R.string.player_db, boost)), boost > 0, boost > 0 ? "+" + boost : "");
-        show(chipVoice, audio > 0, App.t(R.string.player_dialog_now, App.t(voice ? R.string.player_on : R.string.player_off)), voice, voice ? App.t(R.string.player_on) : "");
         boolean subsOn = textNow != null;
         String off = App.t(R.string.player_off);
         show(chipSubs, text > 0 || canSearchSubs(), App.t(R.string.player_subs_now, subsOn ? textNow : off), subsOn, subsOn ? (textCode.isEmpty() ? "CC" : textCode) : off);
         float sp = player.getPlaybackParameters().speed;
-        show(chipSpeed, true, App.t(R.string.player_speed_now, speedLabel(sp)), sp != 1f, speedLabel(sp));
-        show(chipZoom, true, App.t(R.string.player_zoom_now, App.t(ZOOMS[zoom])), zoom != 0, App.t(ZOOMS[zoom]));
+        // More is tinted, with the speed if that is what changed, when any of its settings is not the default
+        show(chipMore, true, App.t(R.string.player_more), sp != 1f || boost > 0 || voice || zoom != 0, sp != 1f ? speedLabel(sp) : "");
+        int[] next = nextEpisode();
+        show(chipEpisodes, seriesInfo != null, App.t(R.string.player_episodes), false, App.t(R.string.player_episodes));
+        show(chipNext, next != null, next == null ? "" : App.t(R.string.player_next_episode, next[0], next[1]), false, next == null ? "" : App.t(R.string.player_next_short, next[1]));
+        String sd = subDubNow();
+        show(chipDub, subDub().size() >= 2, App.t(R.string.player_sub_dub, sd), false, sd.length() > 6 ? sd.substring(0, 6) : sd);
         show(chipCast, !App.tv && (casting != null || Cast.any()), casting != null ? App.t(R.string.cast_playing_on, casting) : App.t(R.string.cast_to_tv), casting != null, casting != null ? casting : "");
-        show(chipRestart, !player.isCurrentMediaItemLive(), App.t(R.string.player_restart), false, "");
         ((ImageView) chipRotate.getChildAt(0)).setImageResource(landscape() ? R.drawable.ic_p_fullscreen_exit : R.drawable.ic_p_fullscreen);
         show(chipRotate, !App.tv, App.t(landscape() ? R.string.player_portrait : R.string.player_full_screen), false, "");
         fitChips();
@@ -778,7 +782,12 @@ public class PlayerActivity extends Activity {
                 if (s == Player.STATE_READY && getIntent().hasExtra("mime")) Iptv.played(channel());
                 if (s == Player.STATE_READY && !scrobbled && player.getPlayWhenReady()) { scrobbled = true; scrobble("start"); }
                 if (s == Player.STATE_READY && !subsTried) { subsTried = true; autoSubs(); }
-                if (s == Player.STATE_ENDED) { resume.remove(base); scrobble("stop"); finish(); }
+                if (s == Player.STATE_ENDED) {
+                    resume.remove(base);
+                    scrobble("stop");
+                    int[] n = nextEpisode();
+                    if (n != null) playEpisode(n[0], n[1]); else finish();   // a series goes on with the next episode
+                }
                 update();
             }
 
@@ -832,6 +841,7 @@ public class PlayerActivity extends Activity {
         player.prepare();
         player.play();
         episodeLine();
+        loadSeries();
         showControls();
         App.main.post(tick);
     }
@@ -970,6 +980,10 @@ public class PlayerActivity extends Activity {
 
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
         if (player == null) return super.dispatchKeyEvent(e);
+        if (panel != null) {   // the Episodes list: normal focus keys, Back closes it
+            if (e.getKeyCode() == KeyEvent.KEYCODE_BACK) { if (e.getAction() == KeyEvent.ACTION_UP) closePanel(); return true; }
+            return super.dispatchKeyEvent(e);
+        }
         int k = e.getKeyCode(), r = e.getRepeatCount();
         boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
         if (inRow()) {
@@ -1021,7 +1035,8 @@ public class PlayerActivity extends Activity {
     // The page's own server list, read from the page when the stream started
     void pickServer() {
         WebActivity page = WebActivity.active;
-        pickFromPage(page == null ? null : page.servers, App.t(R.string.player_servers), App.t(R.string.player_no_servers));
+        if (page == null) { pickFromPage(null, App.t(R.string.player_servers), App.t(R.string.player_no_servers)); return; }
+        pickFromPage(page.servers, App.t(R.string.player_servers), App.t(R.string.player_no_servers));
     }
 
     // Quality: the stream's own choices if it has several, else the page's quality list (a page that serves one playlist per quality)
@@ -1147,6 +1162,290 @@ public class PlayerActivity extends Activity {
         String label = pe[0] > 0 ? App.t(R.string.player_season_episode, pe[0], pe[1]) : App.t(R.string.player_episode, pe[1]);
         epLine.setText(label);
         epLine.setVisibility(View.VISIBLE);
+    }
+
+    /** More: the settings changed less often, each with its value now. */
+    void more() {
+        List<String> labels = new ArrayList<>();
+        List<Runnable> acts = new ArrayList<>();
+        labels.add(App.t(R.string.player_speed_now, speedLabel(player.getPlaybackParameters().speed)));
+        acts.add(this::pickSpeed);
+        labels.add(App.t(R.string.player_boost_now, boost == 0 ? App.t(R.string.player_off) : App.t(R.string.player_db, boost)));
+        acts.add(this::pickBoost);
+        labels.add(App.t(R.string.player_dialog_now, App.t(voice ? R.string.player_on : R.string.player_off)));
+        acts.add(() -> {
+            voice = !voice;
+            applyBoost(true);
+            refreshChips();
+            say(App.t(voice ? R.string.player_dialog_on_video : R.string.player_dialog_off_video));
+        });
+        labels.add(App.t(R.string.player_zoom_now, App.t(ZOOMS[zoom])));
+        acts.add(this::cycleZoom);
+        if (!player.isCurrentMediaItemLive()) {
+            labels.add(App.t(R.string.player_restart));
+            acts.add(() -> { player.seekTo(0); player.play(); say(App.t(R.string.player_from_start)); });
+        }
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.player_more))
+            .setItems(labels.toArray(new String[0]), (d, i) -> acts.get(i).run()).show();
+    }
+
+    // ---- Episodes, Next, Sub / Dub ----
+
+    /** The series playing, with its episodes: the page's (opened from the catalog), else looked up by the page's title. Once, in the background. */
+    void loadSeries() {
+        WebActivity page = WebActivity.active;
+        if (page == null || seriesInfo != null || !getIntent().hasExtra("pageTitle")) return;
+        Catalog.Title known = page.show;
+        if (known != null && !known.series()) return;
+        if (known == null && pageEpisode() == null) return;   // a movie, or a page that doesn't say it is an episode
+        String name = History.cleanTitle(String.valueOf(getIntent().getStringExtra("pageTitle")), String.valueOf(getIntent().getStringExtra("site")));
+        App.io.execute(() -> {
+            Catalog.Title t = known;
+            if (t == null) {
+                String id = Subs.imdbFor(name.replaceAll("(?i)\\b(S\\d+\\s*E\\d+|season \\d+|episode \\d+)\\b.*", "").trim(), true);
+                if (id.isEmpty()) return;
+                t = new Catalog.Title();
+                t.id = id;
+                t.type = "series";
+                t.name = name;
+            }
+            if (t.episodes.isEmpty()) Catalog.fill(t);
+            Catalog.Title done = t;
+            runOnUiThread(() -> {
+                if (isFinishing() || done.episodes.isEmpty()) return;
+                seriesInfo = done;
+                if (page.show == null) page.show = done;
+                refreshChips();
+            });
+        });
+    }
+
+    /** The episode after the one playing (by season, then number); null at the end or when unknown. */
+    int[] nextEpisode() {
+        int[] pe = pageEpisode();
+        if (seriesInfo == null || pe == null) return null;
+        int s = pe[0] > 0 ? pe[0] : 1;
+        Catalog.Episode best = null;
+        for (Catalog.Episode e : seriesInfo.episodes) {
+            boolean after = e.season > s || (e.season == s && e.number > pe[1]);
+            if (after && (best == null || e.season < best.season || (e.season == best.season && e.number < best.number))) best = e;
+        }
+        return best == null ? null : new int[]{best.season, best.number};
+    }
+
+    /** Leave the player and let the page open that episode (WebActivity.openEpisode); its stream comes back here. */
+    void playEpisode(int season, int episode) {
+        WebActivity page = WebActivity.active;
+        if (page == null) { finish(); return; }
+        page.pendingEpisode = new int[]{season, episode};
+        Toast.makeText(this, App.t(R.string.player_season_episode, season, episode), Toast.LENGTH_SHORT).show();
+        finish();
+    }
+
+    int panelSeason;
+
+    void episodesPanel() {
+        if (seriesInfo == null) return;
+        int[] pe = pageEpisode();
+        panelSeason = pe != null && pe[0] > 0 ? pe[0] : seriesInfo.episodes.get(0).season;
+        hideControls();
+        buildPanel();
+    }
+
+    /** The Episodes list: seasons across the top, the season's episodes (still, number, name, summary) below; the one playing is marked. */
+    void buildPanel() {
+        FrameLayout root = (FrameLayout) controls.getParent();
+        if (panel != null) root.removeView(panel);
+        int[] pe = pageEpisode();
+        LinearLayout p = new LinearLayout(this);
+        p.setOrientation(LinearLayout.VERTICAL);
+        p.setClickable(true);   // taps on it never reach the video underneath
+        p.setBackgroundColor(0xF00E0E12);
+        p.setPadding(dp(16), dp(14) + cutTop, dp(12) + cutRight, 0);
+
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        TextView h = new TextView(this);
+        h.setText(App.t(R.string.player_episodes));
+        h.setTextColor(Color.WHITE);
+        h.setTextSize(20);
+        h.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        head.addView(h, new LinearLayout.LayoutParams(0, -2, 1));
+        head.addView(circle(R.drawable.ic_p_close, 40, this::closePanel));
+        p.addView(head);
+
+        java.util.TreeSet<Integer> seasons = new java.util.TreeSet<>();
+        for (Catalog.Episode e : seriesInfo.episodes) seasons.add(e.season);
+        if (seasons.size() > 1) {
+            LinearLayout row = new LinearLayout(this);
+            row.setPadding(0, dp(8), 0, dp(8));
+            for (int n : seasons) {
+                TextView c = new TextView(this);
+                c.setText(App.t(R.string.title_season, n));
+                c.setTextSize(14);
+                c.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                c.setTextColor(Color.WHITE);
+                c.setGravity(Gravity.CENTER);
+                c.setPadding(dp(14), 0, dp(14), 0);
+                c.setBackground(pill(n == panelSeason ? Home.ACCENT : 0x33FFFFFF));
+                c.setFocusable(true);
+                c.setOnClickListener(v -> { panelSeason = n; buildPanel(); });
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(36));
+                lp.rightMargin = dp(8);
+                row.addView(c, lp);
+            }
+            HorizontalScrollView sc = new HorizontalScrollView(this);
+            sc.setHorizontalScrollBarEnabled(false);
+            sc.addView(row);
+            p.addView(sc);
+        }
+
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(0, dp(4), 0, dp(16));
+        View current = null;
+        for (Catalog.Episode e : seriesInfo.episodes) {
+            if (e.season != panelSeason) continue;
+            boolean playing = pe != null && Math.max(1, pe[0]) == e.season && pe[1] == e.number;
+            LinearLayout row = new LinearLayout(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(8), dp(8), dp(8), dp(8));
+            ImageView still = new ImageView(this);
+            still.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            GradientDrawable sb = new GradientDrawable();
+            sb.setCornerRadius(dp(8));
+            sb.setColor(0x22FFFFFF);
+            still.setBackground(sb);
+            still.setClipToOutline(true);
+            if (!e.thumb.isEmpty()) loadStill(still, e.thumb);
+            row.addView(still, new LinearLayout.LayoutParams(dp(112), dp(63)));
+            LinearLayout text = new LinearLayout(this);
+            text.setOrientation(LinearLayout.VERTICAL);
+            text.setPadding(dp(12), 0, 0, 0);
+            TextView name = new TextView(this);
+            name.setText(e.number + "  " + (e.title.isEmpty() ? App.t(R.string.player_episode, e.number) : e.title));
+            name.setTextColor(playing ? Home.ACCENT : Color.WHITE);
+            name.setTextSize(15);
+            name.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            name.setSingleLine();
+            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            text.addView(name);
+            if (!e.overview.isEmpty()) {
+                TextView o = new TextView(this);
+                o.setText(e.overview);
+                o.setTextColor(0xB3FFFFFF);
+                o.setTextSize(12);
+                o.setMaxLines(2);
+                o.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                text.addView(o);
+            }
+            row.addView(text, new LinearLayout.LayoutParams(0, -2, 1));
+            android.graphics.drawable.StateListDrawable bg = new android.graphics.drawable.StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_focused}, rounded(0x55FFFFFF));
+            bg.addState(new int[]{android.R.attr.state_pressed}, rounded(0x33FFFFFF));
+            bg.addState(new int[0], rounded(playing ? 0x26FFFFFF : 0x00000000));
+            row.setBackground(bg);
+            row.setFocusable(true);
+            row.setOnClickListener(v -> { closePanel(); if (!playing) playEpisode(e.season, e.number); });
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
+            rp.bottomMargin = dp(4);
+            list.addView(row, rp);
+            if (playing) current = row;
+        }
+        sv.addView(list);
+        p.addView(sv, new LinearLayout.LayoutParams(-1, 0, 1));
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        root.addView(p, new FrameLayout.LayoutParams(landscape() || App.tv ? Math.min(dp(440), screenW / 2) : -1, -1, Gravity.END));
+        panel = p;
+        View first = current != null ? current : list.getChildCount() > 0 ? list.getChildAt(0) : null;
+        if (first != null) first.post(() -> { sv.scrollTo(0, Math.max(0, first.getTop() - dp(80))); first.requestFocus(); });
+    }
+
+    GradientDrawable pill(int color) {
+        GradientDrawable d = new GradientDrawable();
+        d.setCornerRadius(dp(18));
+        d.setColor(color);
+        return d;
+    }
+
+    GradientDrawable rounded(int color) {
+        GradientDrawable d = new GradientDrawable();
+        d.setCornerRadius(dp(12));
+        d.setColor(color);
+        return d;
+    }
+
+    void loadStill(ImageView into, String url) {
+        into.setTag(url);
+        android.graphics.Bitmap hit = Home.images.get(url);
+        if (hit != null) { into.setImageBitmap(hit); return; }
+        App.io.execute(() -> {
+            android.graphics.Bitmap b = Home.fetch(url);
+            if (b == null) return;
+            Home.images.put(url, b);
+            runOnUiThread(() -> { if (url.equals(into.getTag())) into.setImageBitmap(b); });
+        });
+    }
+
+    void closePanel() {
+        if (panel == null) return;
+        ((android.view.ViewGroup) panel.getParent()).removeView(panel);
+        panel = null;
+    }
+
+    /** Sub / Dub: the page's own choice (a dropdown or toggle that frame.js found: label -> its key), else Sub and Dub by the site's address (key ""). */
+    Map<String, String> subDub() {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        WebActivity page = WebActivity.active;
+        if (page == null) return out;
+        if (page.audios.size() >= 2) for (Map.Entry<String, String[]> e : page.audios.entrySet()) out.put(e.getValue()[0], e.getKey());
+        else if (page.show != null && page.show.anime && Sites.hasAudioLink(page.siteUrl) && pageEpisode() != null) {
+            out.put("Sub", "");
+            out.put("Dub", "");
+        }
+        return out;
+    }
+
+    /** The Sub / Dub playing: the page's selected one, else the one picked for this site before, else Sub. */
+    String subDubNow() {
+        WebActivity page = WebActivity.active;
+        if (page == null) return "";
+        for (String[] v : page.audios.values()) if (!v[1].isEmpty()) return v[0];
+        String want = App.prefs.getString("siteAudio:" + page.siteKey(), "");
+        return want.isEmpty() ? "Sub" : want;
+    }
+
+    /** One tap switches between two (Sub, Dub); more than two (Sub, Dub, Hindi) are listed. */
+    void pickSubDub() {
+        Map<String, String> m = subDub();
+        if (m.size() < 2) return;
+        List<String> labels = new ArrayList<>(m.keySet());
+        String now = subDubNow();
+        if (labels.size() == 2) {
+            String other = labels.get(labels.get(0).equalsIgnoreCase(now) ? 1 : 0);
+            switchSubDub(other, m.get(other));
+            return;
+        }
+        List<String> shown = new ArrayList<>();
+        for (String l : labels) shown.add(l + (l.equalsIgnoreCase(now) ? "  \u2713" : ""));
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.player_sub_dub, now))
+            .setItems(shown.toArray(new String[0]), (d, i) -> switchSubDub(labels.get(i), m.get(labels.get(i)))).show();
+    }
+
+    void switchSubDub(String label, String key) {
+        WebActivity page = WebActivity.active;
+        if (page == null) return;
+        page.rememberAudio(label);
+        carryMs = player.getCurrentPosition();   // the same episode in the other language: carry on from here
+        carryAt = SystemClock.elapsedRealtime();
+        if (!key.isEmpty()) page.switchServer(key);
+        else {
+            int[] pe = pageEpisode();
+            page.pendingEpisode = new int[]{Math.max(1, pe[0]), pe[1]};
+        }
+        say(label);
+        finish();
     }
 
     // ---- OpenSubtitles ----
