@@ -377,7 +377,7 @@ public class Home extends Activity {
         return h;   // Search and voice are in the top bar
     }
 
-    /** On every tab: the name, WARP and ad block, then Search filling the rest, and voice. The tabs (with Settings) sit below it on a TV, at the bottom on a phone. */
+    /** On every tab: the logo (and name on a TV), WARP and ad block, then Search filling the rest, and voice. The tabs (with Settings) sit below it on a TV, at the bottom on a phone. */
     View topBar() {
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
@@ -394,7 +394,9 @@ public class Home extends Activity {
         brand.setSpan(new android.text.style.ForegroundColorSpan(ACCENT), 4, 8, 0);
         name.setText(brand);
         name.setPadding(dp(4), 0, u(24, 10), 0);
-        bar.addView(name);
+        // A phone shows the logo alone, so Search gets the room; a TV has width for the name
+        if (App.tv) bar.addView(name);
+        else ((LinearLayout.LayoutParams) logo.getLayoutParams()).rightMargin = dp(8);
         // WARP and ad block state left of Search on every tab (icons only on a phone, where the row is narrow)
         warpChip = chip(v -> {
             boolean on = Warp.state == Warp.State.ON || Warp.state == Warp.State.CONNECTING;
