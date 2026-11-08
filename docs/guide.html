@@ -181,6 +181,7 @@ My channels|https://example.com/my-channels.m3u
 
 <h2 id="network">WARP and ad blocking</h2>
 <p><b>WARP</b> (Settings, Connection) is a Cloudflare tunnel that carries only this app's traffic, with no VPN permission. It helps with networks that block sites or DNS. Addresses on your own network are never sent through it. Turn it off if a network does not allow it.</p>
+<p><b>If WARP says it cannot connect</b> (<i>Settings, WARP log</i> shows why): the first start signs up for a free WARP account with Cloudflare. FMHYPlay looks for Cloudflare's address in several places at once and tries three times. If your network blocks DNS, open <i>Settings, WARP DNS</i> and type your internet provider's DNS addresses (they are on your router's status page); they are asked first. If the log says <i>HTTP 429</i>, Cloudflare is limiting sign-ups from your network: try again later or on another connection. WARP is optional: the app works without it, only blocked sites need it.</p>
 <p><b>Ad block</b> blocks ad and tracker domains, pop-ups and redirects on every site, using a domain list that refreshes weekly. If a site breaks, turn it off for a moment in Settings.</p>
 
 <h2 id="troubleshooting">Troubleshooting</h2>

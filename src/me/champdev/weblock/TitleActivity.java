@@ -27,14 +27,14 @@ public class TitleActivity extends Home {
         t.year = String.valueOf(getIntent().getStringExtra("year"));
         t.poster = String.valueOf(getIntent().getStringExtra("poster"));
         super.onCreate(state);
-        Warp.whenSettled(() -> App.io.execute(() -> {
+        App.io.execute(() -> {
             Catalog.fill(t);
             runOnUiThread(() -> {
                 if (t.series() && Catalog.seasons(t) > 0 && season > Catalog.seasons(t)) season = 1;
                 refocus = true;
                 build();
             });
-        }));
+        });
     }
 
     @Override protected void onResume() {

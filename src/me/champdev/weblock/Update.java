@@ -40,7 +40,7 @@ final class Update {
     static boolean check() {
         busy = true;
         try {
-            JSONArray all = new JSONArray(Sites.readAll(Warp.open(API).getInputStream()));
+            JSONArray all = new JSONArray(Sites.readAll(Warp.openPublic(API, 6000, 20000)));
             JSONObject r = null;
             StringBuilder notes = new StringBuilder();
             for (int i = 0; i < all.length(); i++) {

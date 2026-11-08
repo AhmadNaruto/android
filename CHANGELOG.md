@@ -2,6 +2,17 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## Unreleased
+
+### 🐞 Fixed
+- **App closed on start on Android 8 and 9** (many TV boxes, Fire OS 7, older Sony TVs) because of the cast service; some sites could also close the app there.
+- **Subtitle settings in landscape**: the panel scrolls and Reset / Done stay on screen.
+
+### 🔧 Changed
+- **WARP connects on more networks**: it looks for Cloudflare's sign-up address in several places at once (built-in, your network's DNS, public DNS, DNS over HTTPS), tries three times, and says why it failed. If Cloudflare is limiting sign-ups from your network (HTTP 429) it stops at once instead of retrying.
+- **Settings, WARP DNS**: type your internet provider's DNS (from your router) if WARP can't connect; it is asked first.
+- **Movies, TV, Anime and the update alert no longer wait for WARP**: they go out directly first, and use WARP only if that fails.
+
 ## 2.17.1
 
 ### 🐞 Fixed

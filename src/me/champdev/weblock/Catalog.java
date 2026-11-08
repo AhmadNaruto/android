@@ -144,10 +144,8 @@ final class Catalog {
     static java.util.Set<String> animeIds(String query) {
         java.util.Set<String> ids = new java.util.HashSet<>();
         try {
-            java.net.HttpURLConnection c = Warp.open("https://anime-kitsu.strem.fun/catalog/anime/kitsu-anime-list/search=" + android.net.Uri.encode(query) + ".json");
-            c.setConnectTimeout(5000);
-            c.setReadTimeout(5000);   // only labels depend on it: never hold the results up for long
-            JSONArray metas = new JSONObject(Sites.readAll(c.getInputStream())).getJSONArray("metas");
+            // only labels depend on it: never hold the results up for long
+            JSONArray metas = new JSONObject(Sites.readAll(Warp.openPublic("https://anime-kitsu.strem.fun/catalog/anime/kitsu-anime-list/search=" + android.net.Uri.encode(query) + ".json", 5000, 5000))).getJSONArray("metas");
             for (int i = 0; i < metas.length(); i++) {
                 String id = metas.getJSONObject(i).optString("imdb_id");
                 if (id.startsWith("tt")) ids.add(id);
@@ -260,7 +258,7 @@ final class Catalog {
         File f = file(path);
         try {
             if (f.exists() && System.currentTimeMillis() - f.lastModified() < TTL) return Sites.readAll(new java.io.FileInputStream(f));
-            String text = Sites.readAll(Warp.open(path.startsWith("http") ? path : BASE + path).getInputStream());   // Kitsu passes a full URL
+            String text = Sites.readAll(Warp.openPublic(path.startsWith("http") ? path : BASE + path, 6000, 20000));   // Kitsu passes a full URL
             if (keep) try (FileOutputStream out = new FileOutputStream(f)) { out.write(text.getBytes(StandardCharsets.UTF_8)); }
             return text;
         } catch (IOException e) {

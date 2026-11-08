@@ -184,7 +184,7 @@ public class SearchActivity extends Home {
         if (q.length() < 2 || q.equals(titlesFor)) return;
         String extra = "search=" + android.net.Uri.encode(q);
         // Movies, series and Kitsu's anime list (only for the Anime label) at the same time
-        Warp.whenSettled(() -> {
+        {
             CompletableFuture<java.util.Set<String>> anime = CompletableFuture.supplyAsync(() -> Catalog.animeIds(q), lane);
             CompletableFuture.supplyAsync(() -> Catalog.list("movie", extra), lane)
                 .thenCombine(CompletableFuture.supplyAsync(() -> Catalog.list("series", extra), lane), (movies, series) -> {
@@ -208,7 +208,7 @@ public class SearchActivity extends Home {
                     });
                     return null;
                 });
-        });
+        };
     }
 
     /** A spinner and a line while the catalog answers. */

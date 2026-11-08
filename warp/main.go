@@ -55,16 +55,12 @@ func main() {
 		os.Setenv("SSL_CERT_DIR", "/apex/com.android.conscrypt/cacerts:/system/etc/security/cacerts")
 	}
 
-	// Android has no /etc/resolv.conf; only the WARP API lookup uses this resolver.
-	net.DefaultResolver = &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
-		var d net.Dialer
-		return d.DialContext(ctx, "udp", "1.1.1.1:53")
-	}}
+	addDNS(os.Getenv("WARP_DNS")) // DNS servers the user typed in Settings (their ISP's, from the router), asked first
 
 	path := filepath.Join(os.Args[1], "warp.json")
 	acc, err := load(path)
 	if err != nil {
-		if acc, err = register(); err != nil {
+		if acc, err = registerRetry(); err != nil {
 			fail("register: " + err.Error())
 		}
 		save(path, acc)
@@ -110,8 +106,33 @@ func save(path string, a *account) {
 	os.WriteFile(path, b, 0o600)
 }
 
+// errRateLimited: Cloudflare limits WARP sign-ups per network address (many phones share one address on a mobile network, and
+// retrying only keeps the limit going), so a 429 is final for this start.
+var errRateLimited = errors.New("Cloudflare is limiting new WARP sign-ups from your network (HTTP 429): try again later, or on another connection")
+
+// registerRetry signs up, up to three tries (a slow or flaky network often fails the first), each one asking every DNS source
+// and every address at once (resolve.go). Worst case about 40 s before it gives up.
+func registerRetry() (*account, error) {
+	var err error
+	for try := 1; try <= 3; try++ {
+		var acc *account
+		if acc, err = register(12 * time.Second); err == nil {
+			return acc, nil
+		}
+		log(fmt.Sprintf("sign-up try %d of 3: %s", try, short(err)))
+		verbose.Store(false)
+		if errors.Is(err, errRateLimited) {
+			return nil, err
+		}
+		if try < 3 {
+			time.Sleep(time.Duration(try) * time.Second)
+		}
+	}
+	return nil, err
+}
+
 // register creates a free WARP device the same way the 1.1.1.1 app does.
-func register() (*account, error) {
+func register(timeout time.Duration) (*account, error) {
 	priv := make([]byte, 32)
 	rand.Read(priv)
 	priv[0] &= 248
@@ -128,12 +149,15 @@ func register() (*account, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "okhttp/3.12.1")
 	req.Header.Set("CF-Client-Version", "a-6.11-2158")
-	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(req)
+	resp, err := (&http.Client{Timeout: timeout, Transport: &http.Transport{DialTLSContext: dialAPI, DisableKeepAlives: true}}).Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, errRateLimited
+	}
 	var r struct {
 		Config struct {
 			Peers []struct {

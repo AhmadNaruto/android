@@ -8,6 +8,7 @@ import androidx.webkit.WebViewFeature;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -65,7 +66,10 @@ final class Warp {
             Process p = null;
             try {
                 String bin = App.app.getApplicationInfo().nativeLibraryDir + "/libwarp.so";
-                p = new ProcessBuilder(bin, App.app.getFilesDir().getPath()).redirectErrorStream(true).start();
+                ProcessBuilder pb = new ProcessBuilder(bin, App.app.getFilesDir().getPath()).redirectErrorStream(true);
+                String dns = App.prefs.getString("warpDns", "");   // DNS servers typed in Settings (your ISP's), asked first for Cloudflare's address
+                if (!dns.isEmpty()) pb.environment().put("WARP_DNS", dns);
+                p = pb.start();
                 synchronized (Warp.class) {
                     if (gen != mine) { p.destroy(); return; }
                     proc = p;
@@ -200,11 +204,27 @@ final class Warp {
     /** Plain HTTP for the app's own fetches (site list, blocklist, icons), through WARP when it's on. */
     static HttpURLConnection open(String url) throws IOException {
         int p = port;
-        Proxy proxy = p > 0 ? new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", p)) : Proxy.NO_PROXY;
+        return connect(url, p > 0 ? new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", p)) : Proxy.NO_PROXY, 15000, 30000);
+    }
+
+    static HttpURLConnection connect(String url, Proxy proxy, int connectMs, int readMs) throws IOException {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection(proxy);
-        c.setConnectTimeout(15000);
-        c.setReadTimeout(30000);
+        c.setConnectTimeout(connectMs);
+        c.setReadTimeout(readMs);
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36");
         return c;
+    }
+
+    /**
+     * For open public services (Cinemeta, Kitsu, poster servers): straight out first, so nothing waits for WARP to connect;
+     * WARP only when the direct try fails and it is on (a network that blocks them).
+     */
+    static InputStream openPublic(String url, int connectMs, int readMs) throws IOException {
+        try {
+            return connect(url, Proxy.NO_PROXY, connectMs, readMs).getInputStream();
+        } catch (IOException direct) {
+            if (state != State.ON || port <= 0) throw direct;
+            return open(url).getInputStream();
+        }
     }
 }

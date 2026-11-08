@@ -108,7 +108,7 @@ public class Home extends Activity {
         // Test the channels that were not checked lately (a few at a time, in the background)
         Warp.whenSettled(() -> App.io.execute(Iptv::sweep));
         // A newer release on GitHub shows as a line on Home
-        if (Update.due()) Warp.whenSettled(() -> App.io.execute(() -> { if (Update.check()) runOnUiThread(this::build); }));
+        if (Update.due()) App.io.execute(() -> { if (Update.check()) runOnUiThread(this::build); });   // GitHub's API is open: no waiting for WARP
     }
 
     @Override protected void onResume() {
@@ -431,7 +431,7 @@ public class Home extends Activity {
         List<Catalog.Title> hit = Catalog.cached(type, extra);
         if (hit != null) { fillPosters(row, hit, extra, moreTab); return; }
         row.addView(note(App.t(R.string.home_loading)));
-        Warp.whenSettled(() -> App.io.execute(() -> {
+        App.io.execute(() -> {
             List<Catalog.Title> list = Catalog.list(type, extra);
             runOnUiThread(() -> {
                 if (id != built) return;
@@ -439,7 +439,7 @@ public class Home extends Activity {
                 if (list == null || list.isEmpty()) row.addView(note(App.t(R.string.home_catalog_offline)));
                 else fillPosters(row, list, extra, moreTab);
             });
-        }));
+        });
     }
 
     /** `extra` "genre=X": More opens the tab on that genre chip. moreTab -1: no More (the row is on that tab already). */
@@ -510,7 +510,7 @@ public class Home extends Activity {
         if (hit != null) { showPage(type, genre, skip, holder, grid, id, hit); return; }
         View loading = note(App.t(R.string.home_loading));
         holder.addView(loading);
-        Warp.whenSettled(() -> App.io.execute(() -> {
+        App.io.execute(() -> {
             List<Catalog.Title> list = Catalog.list(type, extra);
             runOnUiThread(() -> {
                 if (id != built) return;
@@ -524,7 +524,7 @@ public class Home extends Activity {
                     holder.addView(retry);
                 } else showPage(type, genre, skip, holder, grid, id, list);
             });
-        }));
+        });
     }
 
     void showPage(String type, String genre, int skip, LinearLayout holder, Grid grid, int id, List<Catalog.Title> list) {
@@ -860,6 +860,27 @@ public class Home extends Activity {
         });
     }
 
+    /** The DNS servers WARP asks first for Cloudflare's sign-up address (a network that blocks DNS: type your ISP's, from the router). */
+    void warpDnsDialog() {
+        EditText field = WebActivity.field(this, App.t(R.string.warp_dns_hint), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        field.setText(App.prefs.getString("warpDns", ""));
+        new AlertDialog.Builder(this).setTitle(App.t(R.string.warp_dns_title)).setMessage(App.t(R.string.warp_dns_msg))
+            .setView(WebActivity.box(this, field))
+            .setPositiveButton(App.t(R.string.warp_dns_save), (d, w) -> saveWarpDns(field.getText().toString()))
+            .setNeutralButton(App.t(R.string.warp_dns_auto), (d, w) -> saveWarpDns(""))
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    /** Keeps only valid-looking IPv4/IPv6 addresses, then starts WARP again with them (when it is switched on). */
+    void saveWarpDns(String typed) {
+        StringBuilder ok = new StringBuilder();
+        for (String ip : typed.split("[,;\\s]+")) if (ip.matches("[0-9a-fA-F:.]{3,45}") && (ip.contains(".") || ip.contains(":"))) ok.append(ok.length() > 0 ? "," : "").append(ip);
+        App.prefs.edit().putString("warpDns", ok.toString()).apply();
+        if (App.prefs.getBoolean("warp", true)) { Warp.stop(); Warp.start(); }
+        build();
+    }
+
     /** An IPTV provider's Xtream Codes login (server, username, password): its live channels get their own row. */
     void xtreamDialog() {
         EditText name = WebActivity.field(this, App.t(R.string.home_xtream_name_hint), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
@@ -935,6 +956,11 @@ public class Home extends Activity {
             App.prefs.edit().putBoolean("warp", !on).apply();
             if (on) Warp.stop(); else Warp.start();
         }));
+        TextView dnsValue = new TextView(this);
+        String savedDns = App.prefs.getString("warpDns", "");
+        col.addView(settingRow(App.t(R.string.warp_dns_title), App.t(R.string.warp_dns_help), dnsValue, v -> warpDnsDialog()));
+        dnsValue.setText(savedDns.isEmpty() ? App.t(R.string.warp_dns_auto) : savedDns);
+        dnsValue.setTextColor(savedDns.isEmpty() ? MUTED : GREEN);
         adValue = new TextView(this);
         col.addView(settingRow(App.t(R.string.home_ad_block), App.t(R.string.home_ad_block_help), adValue, v -> {
             App.prefs.edit().putBoolean("adblock", !AdBlock.enabled()).apply();
@@ -1739,7 +1765,7 @@ public class Home extends Activity {
             File f = new File(dir, name.toString());
             if (!f.exists()) {
                 File tmp = new File(dir, name + ".tmp");
-                try (InputStream in = Warp.open(url).getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
+                try (InputStream in = Warp.openPublic(url, 6000, 20000); FileOutputStream out = new FileOutputStream(tmp)) {
                     byte[] buf = new byte[16384];
                     for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
                 }
