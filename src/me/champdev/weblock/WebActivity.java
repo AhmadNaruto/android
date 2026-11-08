@@ -442,10 +442,12 @@ public class WebActivity extends Activity {
     void onStream() {
         if (!resumed || isFinishing()) return;
         if (!App.prefs.getBoolean("native", true)) { web.evaluateJavascript(CHIP, null); return; }
-        if (scanDone) playNative(); else App.main.postDelayed(waitedHandoff, 2000);
+        if (scanDone) playNative(); else { handoffWaiting = true; App.main.postDelayed(waitedHandoff, 2000); }
     }
 
-    final Runnable waitedHandoff = () -> { if (resumed && !isFinishing() && sniffer.best() != null) playNative(); };
+    // (not Handler.hasCallbacks: it needs Android 10 and the app runs on 8 and 9)
+    volatile boolean handoffWaiting;
+    final Runnable waitedHandoff = () -> { handoffWaiting = false; if (resumed && !isFinishing() && sniffer.best() != null) playNative(); };
 
     void playNative() {
         Sniffer.Hit h = sniffer.best();
@@ -622,7 +624,7 @@ public class WebActivity extends Activity {
         @JavascriptInterface public void scanDone() {
             App.main.postDelayed(() -> {
                 scanDone = true;
-                if (App.main.hasCallbacks(waitedHandoff)) { App.main.removeCallbacks(waitedHandoff); waitedHandoff.run(); }
+                if (handoffWaiting) { App.main.removeCallbacks(waitedHandoff); waitedHandoff.run(); }
             }, 250);
         }
 

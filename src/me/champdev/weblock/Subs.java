@@ -130,19 +130,26 @@ final class Subs {
         title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         title.setPadding(0, 0, 0, Home.dp(a, 8));
         box.addView(title);
+        // Title and the Reset / Done buttons stay put; the rows between them scroll when the screen is short (a phone in landscape)
+        android.widget.LinearLayout body = new android.widget.LinearLayout(a);
+        body.setOrientation(android.widget.LinearLayout.VERTICAL);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(a);
+        scroll.setFillViewport(false);
+        scroll.addView(body);
+        box.addView(scroll, new android.widget.LinearLayout.LayoutParams(-1, 0, 1));
         List<Runnable> refresh = new ArrayList<>();
         Runnable after = () -> { for (Runnable r : refresh) r.run(); changed.run(); };
-        row(a, box, refresh, App.t(R.string.subs_size), Subs::sizeLabel, by -> bump("subSize", 100, 10 * by, 50, 250), after);
-        row(a, box, refresh, App.t(R.string.subs_position), Subs::offsetLabel, by -> bump("subOffset", 0, 10 * by, -100, 200), after);
-        row(a, box, refresh, App.t(R.string.subs_color), Subs::colorName, by -> App.prefs.edit().putInt("subColor", Math.floorMod(colorIndex() + by, COLORS.length)).apply(), after);
-        row(a, box, refresh, App.t(R.string.subs_background), Subs::backgroundLabel, by -> bump("subBg", 50, 25 * by, 0, 100), after);
-        if (timing) row(a, box, refresh, App.t(R.string.subs_timing), Subs::delayLabel, by -> delayMs = Math.max(-30000, Math.min(30000, delayMs + 100L * by)), after);
+        row(a, body, refresh, App.t(R.string.subs_size), Subs::sizeLabel, by -> bump("subSize", 100, 10 * by, 50, 250), after);
+        row(a, body, refresh, App.t(R.string.subs_position), Subs::offsetLabel, by -> bump("subOffset", 0, 10 * by, -100, 200), after);
+        row(a, body, refresh, App.t(R.string.subs_color), Subs::colorName, by -> App.prefs.edit().putInt("subColor", Math.floorMod(colorIndex() + by, COLORS.length)).apply(), after);
+        row(a, body, refresh, App.t(R.string.subs_background), Subs::backgroundLabel, by -> bump("subBg", 50, 25 * by, 0, 100), after);
+        if (timing) row(a, body, refresh, App.t(R.string.subs_timing), Subs::delayLabel, by -> delayMs = Math.max(-30000, Math.min(30000, delayMs + 100L * by)), after);
         android.widget.TextView help = new android.widget.TextView(a);
         help.setText(App.t(timing ? R.string.subs_help_player : R.string.subs_help_settings));
         help.setTextColor(Home.MUTED);
         help.setTextSize(13);
         help.setPadding(0, Home.dp(a, 6), 0, Home.dp(a, 4));
-        box.addView(help);
+        body.addView(help);
         android.widget.LinearLayout foot = new android.widget.LinearLayout(a);
         foot.setGravity(android.view.Gravity.END);
         foot.addView(button(a, App.t(R.string.subs_reset), 0, v -> {
@@ -157,11 +164,15 @@ final class Subs {
         w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
         w.setGravity(android.view.Gravity.TOP);
         w.setDimAmount(0.15f);
-        w.setLayout(Math.min(a.getResources().getDisplayMetrics().widthPixels - Home.dp(a, 24), Home.dp(a, 560)), -2);
+        // As tall as it needs, but never past the screen (then the rows scroll)
+        int fullH = a.getResources().getDisplayMetrics().heightPixels - Home.dp(a, 32);
+        box.measure(android.view.View.MeasureSpec.makeMeasureSpec(Math.min(a.getResources().getDisplayMetrics().widthPixels - Home.dp(a, 24), Home.dp(a, 560)), android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.UNSPECIFIED);
+        w.setLayout(Math.min(a.getResources().getDisplayMetrics().widthPixels - Home.dp(a, 24), Home.dp(a, 560)), Math.min(fullH, box.getMeasuredHeight()));
         w.getAttributes().y = Home.dp(a, 16);
         d.setOnDismissListener(x -> closed.run());
         d.show();
-        box.getChildAt(1).findViewWithTag("plus").requestFocus();   // the remote starts on Size +
+        body.findViewWithTag("plus").requestFocus();   // the remote starts on Size +
     }
 
     /** Label, − button, value, + button. `step` gets −1 or +1. */

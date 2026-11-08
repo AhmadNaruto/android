@@ -207,7 +207,11 @@ final class Cast {
             super.onCreate();
             getSystemService(NotificationManager.class).createNotificationChannel(new NotificationChannel("cast", App.t(R.string.cast_channel), NotificationManager.IMPORTANCE_MIN));
             Notification n = new Notification.Builder(this, "cast").setSmallIcon(R.drawable.ic_p_cast).setContentTitle(App.t(App.tv ? R.string.cast_ready : R.string.cast_sending_video)).build();
-            try { startForeground(1, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE); } catch (Exception e) { Log.w(TAG, e); stopSelf(); }
+            try {
+                // The version with a service type only exists from Android 10; before that (Android 8 and 9, many TV boxes and Fire OS 7) it is the plain one
+                if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(1, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+                else startForeground(1, n);
+            } catch (Exception e) { Log.w(TAG, e); stopSelf(); }
         }
 
         @Override public IBinder onBind(Intent i) { return null; }
