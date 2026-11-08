@@ -193,26 +193,45 @@ public class TitleActivity extends Home {
         }
     }
 
-    /** The site picked last time, else your first favorite, else FMHY's first pick for this kind of title. */
+    /**
+     * The sites for this kind of title: your favorites first, then FMHY's list. Anime gets only FMHY's anime streaming sites
+     * (favorites included only when they are among them), and the TV ones only if there are none.
+     */
     List<Sites.Site> options() {
-        List<Sites.Site> out = new ArrayList<>(Sites.favorites());
-        // Anime: the anime sites first (they have Sub / Dub), then the TV ones
-        for (String cat : t.anime ? new String[]{Cats.ANIME, Cats.TV} : new String[]{t.series() ? Cats.TV : Cats.MOVIES}) {
-            List<Sites.Site> row = Sites.load().get(cat);
-            if (row != null) for (Sites.Site s : row) if (!Sites.has(out, s.url) && out.size() < 30) out.add(s);
+        List<Sites.Site> row = Sites.load().get(t.anime ? Cats.ANIME : t.series() ? Cats.TV : Cats.MOVIES);
+        if (t.anime && row != null) {
+            // FMHY's anime sites only, not the general ones that also carry anime
+            List<Sites.Site> only = new ArrayList<>();
+            for (Sites.Site s : row) if (s.group.equals("Anime Streaming")) only.add(s);
+            if (!only.isEmpty()) row = only;
         }
+        if (t.anime && (row == null || row.isEmpty())) row = Sites.load().get(Cats.TV);
+        if (row != null) {
+            // the sites that open the title (or episode) directly come first, FMHY's order kept within each half
+            String kind = t.anime ? "anime" : t.series() ? "tv" : "movie";
+            row = new ArrayList<>(row);
+            row.sort(java.util.Comparator.comparing(s -> !Sites.hasLink(s.url, kind)));
+        }
+        List<Sites.Site> out = new ArrayList<>();
+        for (Sites.Site f : Sites.favorites()) if (!t.anime || (row != null && Sites.has(row, f.url))) out.add(f);
+        if (row != null) for (Sites.Site s : row) if (!Sites.has(out, s.url) && out.size() < 30) out.add(s);
         return out;
     }
 
+    /** The site picked last time for this kind (anime keeps its own), else the first option. */
     Sites.Site chosen() {
         List<Sites.Site> options = options();
-        String url = App.prefs.getString("watchsite", "");
+        String url = App.prefs.getString(siteKey(), "");
         for (Sites.Site s : options) if (s.url.equals(url)) return s;
         return options.isEmpty() ? null : options.get(0);
     }
 
+    String siteKey() {
+        return t.anime ? "watchsite:anime" : "watchsite";
+    }
+
     @Override void openSite(Sites.Site s) {
-        App.prefs.edit().putString("watchsite", s.url).apply();
+        App.prefs.edit().putString(siteKey(), s.url).apply();
         startActivity(withTitle(titleIntent(s)));
     }
 
@@ -226,6 +245,9 @@ public class TitleActivity extends Home {
     void watch(Catalog.Episode e) {
         Sites.Site s = chosen();
         if (s == null) { toast(App.t(R.string.title_no_site_toast)); return; }
+        // A site that has episode pages but no page for the show (most anime sites): Watch starts the first episode
+        if (e == null && t.series() && Sites.deeplink(s.url, t) == null && Sites.hasLink(s.url, t.anime ? "anime" : "episode"))
+            for (Catalog.Episode x : t.episodes) if (e == null || x.season < e.season || (x.season == e.season && x.number < e.number)) e = x;
         startActivity(withTitle(titleIntent(s))
             .putExtra("season", e == null ? 0 : e.season).putExtra("episode", e == null ? 0 : e.number));
     }

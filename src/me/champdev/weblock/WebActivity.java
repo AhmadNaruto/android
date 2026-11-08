@@ -565,7 +565,11 @@ public class WebActivity extends Activity {
             runOnUiThread(() -> {
                 if (isFinishing()) return;
                 sniffer.switching();
-                if (go != null) { playAfterLoad = true; web.loadUrl(go); }
+                if (go != null) {
+                    pendingQuery = pendingPick = null;   // the episode's own page: no search for the name on it
+                    playAfterLoad = true;
+                    web.loadUrl(go);
+                }
                 else if (fallback != null) { episodeAfterLoad = new int[]{season, episode}; web.loadUrl(fallback); }
                 else pressEpisode(season, episode);
             });

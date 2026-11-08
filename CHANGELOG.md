@@ -9,6 +9,8 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Sub / Dub button** in the player for anime: one tap switches, and each site remembers your pick.
 - **Episodes open directly** on 34 TV sites and 22 anime sites (no searching or clicking on the site); on other sites the app presses the episode in the site's own list.
 - **Sites without a known address open the title's page too**: the app searches the site, then opens the matching result (name, and year when shown) instead of leaving you on the results.
+- **Anime opens on anime sites only**, the ones that open episodes directly first; Watch starts Episode 1 there.
+- **Site nag pop-ups closed by themselves**: "Join our Discord", "What's new", donate, ad-block and new-domain notices.
 - **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
 
 ### 🐞 Fixed

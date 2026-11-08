@@ -438,3 +438,32 @@
     if (a && window.FMHY && /^https?:/.test(a.href)) FMHY.clicked(a.href);
   }, true);
 })();
+
+// Nag pop-ups (top frame): "Join our Discord", "What's new in v1.5", donate, "disable your ad blocker", new domain notices.
+// A dialog that says one of those is closed with its own Close / Got it / Later button, or taken away when it has none.
+// Only for the first half minute of a page: a dialog the user opens later is theirs.
+(() => {
+  if (window !== top || window.__fpNag) return;
+  window.__fpNag = 1;
+  const nag = /discord|telegram|reddit|join (us|our)|what'?s new|changelog|release notes|announcement|new update|v\d+\.\d+|donat|support us|patreon|ko-?fi|ad ?block|new domain|bookmark|official (site|domain)|mirror/i;
+  const closeWord = /^(got it!?|ok(ay)?|close|dismiss|(maybe )?later|no,? thanks|not now|skip|continue( to site)?|i understand|understood|x|×|✕|✖)$/i;
+  const visible = e => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity > 0.05; };
+  const dialogs = () => [...document.querySelectorAll('[role=dialog],[role=alertdialog],[aria-modal=true],dialog[open],[class*=modal i],[class*=popup i],[class*=dialog i],[class*=announce i],[class*=changelog i]')].filter(d => {
+    if (!visible(d) || d.closest('video') || d.querySelector('video,iframe')) return false;
+    const r = d.getBoundingClientRect();
+    return r.width * r.height > innerWidth * innerHeight * 0.12 && nag.test((d.innerText || '').slice(0, 2000));
+  });
+  const sweep = () => {
+    for (const d of dialogs()) {
+      const b = [...d.querySelectorAll('button,[role=button],a')].find(x => closeWord.test(((x.innerText || '').trim() || x.getAttribute('aria-label') || x.title || '').trim()) && !/discord|telegram|reddit/i.test(x.href || ''));
+      if (b) { b.click(); continue; }
+      const box = d.closest('[role=dialog],[aria-modal=true],dialog') || d;
+      // nothing to press: take it away, with the dimmed layer behind it, and let the page scroll again
+      const back = box.parentElement && getComputedStyle(box.parentElement).position === 'fixed' ? box.parentElement : box;
+      back.remove();
+      for (const el of [document.documentElement, document.body]) if (el && getComputedStyle(el).overflow === 'hidden') el.style.setProperty('overflow', 'auto', 'important');
+    }
+  };
+  let n = 0;
+  const t = setInterval(() => { try { sweep(); } catch (e) { } if (++n > 30) clearInterval(t); }, 1000);
+})();
