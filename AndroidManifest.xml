@@ -37,6 +37,7 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode"
             android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".PlayerActivity" android:exported="false" android:screenOrientation="fullUser"
+            android:supportsPictureInPicture="true" android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode"/>
         <activity android:name=".Cast$Remote" android:exported="false" android:screenOrientation="portrait"/>
         <service android:name=".Cast$Keep" android:exported="false" android:foregroundServiceType="connectedDevice"/>

@@ -887,7 +887,7 @@ public class PlayerActivity extends Activity {
                     resume.remove(base);
                     scrobble("stop");
                     int[] n = episodeStep(1);
-                    if (n != null) playEpisode(n[0], n[1]); else finish();   // a series goes on with the next episode
+                    if (n != null && !inPip) playEpisode(n[0], n[1]); else if (!inPip) finish();   // a series goes on with the next episode
                 }
                 update();
             }
@@ -899,6 +899,7 @@ public class PlayerActivity extends Activity {
 
             @Override public void onIsPlayingChanged(boolean playing) {
                 update();
+                updatePip();
                 if (playing) hideAt = System.currentTimeMillis() + 3500; else showControls();
             }
 
@@ -908,6 +909,7 @@ public class PlayerActivity extends Activity {
                 fpsFrames = 0;
                 if (v.width > 0 && v.height > 0) videoRatio = v.width * v.pixelWidthHeightRatio / v.height;
                 fit();
+                updatePip();
                 refreshChips();
             }
 
@@ -945,6 +947,8 @@ public class PlayerActivity extends Activity {
         loadSeries();
         showControls();
         App.main.post(tick);
+        if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(pipToggle, new android.content.IntentFilter(PIP_TOGGLE), 4 /* RECEIVER_NOT_EXPORTED */);
+        else registerReceiver(pipToggle, new android.content.IntentFilter(PIP_TOGGLE));
     }
 
     /**
@@ -1044,6 +1048,7 @@ public class PlayerActivity extends Activity {
     final Runnable hideNotice = () -> notice.setVisibility(View.GONE);
 
     void showControls() {
+        if (inPip) return;
         controls.setVisibility(View.VISIBLE);
         hideAt = System.currentTimeMillis() + (inRow() ? 8000 : 3500);
         refreshChips();
@@ -1314,7 +1319,7 @@ public class PlayerActivity extends Activity {
      * episode with a 10 s countdown (it plays by itself at 0), or to skip the credits when they don't run to the end.
      */
     void checkSkip() {
-        if (player == null) return;
+        if (player == null || inPip) return;   // the small window is just the picture
         long pos = player.getCurrentPosition(), dur = player.getDuration();
         Skips.Part now = null;
         int[] next = episodeStep(1);
@@ -1839,8 +1844,67 @@ public class PlayerActivity extends Activity {
         }
     };
 
+    // ---- Picture in picture (phone): Home while a video plays keeps it playing in a small window ----
+
+    static final String PIP_TOGGLE = "me.champdev.weblock.PIP_TOGGLE";
+    boolean inPip, offScreen;   // in the small window; stopped (not seen at all)
+    final android.content.BroadcastReceiver pipToggle = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(android.content.Context c, Intent i) {
+            if (player == null) return;
+            if (player.isPlaying()) player.pause(); else player.play();
+        }
+    };
+
+    boolean canPip() {
+        return !App.tv && player != null && casting == null && !isFinishing()
+            && getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE);
+    }
+
+    /** The window's shape (the picture's, within what Android allows), a play / pause button, and (Android 12+) going in by itself on Home while playing. */
+    android.app.PictureInPictureParams pipParams() {
+        float r = videoRatio > 0 ? Math.max(0.42f, Math.min(2.38f, videoRatio)) : 16f / 9;
+        boolean playing = player.isPlaying();
+        String label = App.t(playing ? R.string.player_pause : R.string.player_play);
+        android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(this, 0, new Intent(PIP_TOGGLE).setPackage(getPackageName()),
+            android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+        android.app.RemoteAction act = new android.app.RemoteAction(android.graphics.drawable.Icon.createWithResource(this, playing ? R.drawable.ic_p_pause : R.drawable.ic_p_play), label, label, pi);
+        android.app.PictureInPictureParams.Builder b = new android.app.PictureInPictureParams.Builder()
+            .setAspectRatio(new android.util.Rational(Math.round(r * 1000), 1000)).setActions(Collections.singletonList(act));
+        if (android.os.Build.VERSION.SDK_INT >= 31) b.setAutoEnterEnabled(playing).setSeamlessResizeEnabled(true);
+        return b.build();
+    }
+
+    void updatePip() {
+        if (canPip()) try { setPictureInPictureParams(pipParams()); } catch (IllegalStateException ignored) { }
+    }
+
+    // Before Android 12 there is no going in by itself: Home (leaving while it plays) asks for it
+    @Override protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (android.os.Build.VERSION.SDK_INT < 31 && canPip() && player.isPlaying()) {
+            try { enterPictureInPictureMode(pipParams()); } catch (IllegalStateException ignored) { }
+        }
+    }
+
+    @Override public void onPictureInPictureModeChanged(boolean in, android.content.res.Configuration c) {
+        super.onPictureInPictureModeChanged(in, c);
+        inPip = in;
+        if (in) {
+            closePanel();
+            hideControls();
+            skipBtn.setVisibility(View.GONE);
+            notice.setVisibility(View.GONE);
+        } else if (offScreen) finishAndRemoveTask();   // the small window was closed: the video is done with
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        offScreen = false;
+    }
+
     @Override protected void onStop() {
         super.onStop();
+        offScreen = true;
         if (player == null) return;
         player.pause();
         long dur = player.getDuration(), pos = player.getCurrentPosition();
@@ -1931,6 +1995,7 @@ public class PlayerActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        try { unregisterReceiver(pipToggle); } catch (IllegalArgumentException ignored) { }
         if (current == this) current = null;
         scrobble("stop");
         if (getIntent().hasExtra("mime")) Iptv.saveHealth();

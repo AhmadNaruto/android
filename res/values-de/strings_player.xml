@@ -115,6 +115,8 @@
     <string name="player_subs_synced">Untertitel angepasst (%1$s)</string>
     <string name="player_skipped_intro">Intro übersprungen</string>
     <string name="player_skipped_recap">Rückblick übersprungen</string>
+    <string name="player_play">Abspielen</string>
+    <string name="player_pause">Pause</string>
     <string name="player_sub_dub">Untertitel / Synchro: %1$s</string>
     <string name="player_more">Mehr</string>
 </resources>

@@ -115,6 +115,8 @@
     <string name="player_subs_synced">Subtítulos sincronizados (%1$s)</string>
     <string name="player_skipped_intro">Intro saltada</string>
     <string name="player_skipped_recap">Resumen saltado</string>
+    <string name="player_play">Reproducir</string>
+    <string name="player_pause">Pausa</string>
     <string name="player_sub_dub">Subtitulado / Doblado: %1$s</string>
     <string name="player_more">Más</string>
 </resources>

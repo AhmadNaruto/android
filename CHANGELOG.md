@@ -15,6 +15,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Skip intro, recap and credits**, for series, anime and movies: a button over the picture during the intro or recap; it takes the remote's focus, so OK presses it. At the credits it offers the next episode and plays it after 10 s; with no next one it skips the credits. Times come from TheIntroDB and AniSkip; without them the last 30 s of an episode offer the next one.
 - **Settings, Skip intros**: intros and recaps go by themselves when their times are known.
 - **Subtitles in any language**: pick a language first (Arabic and others that never showed now do), then a file; files are converted so every script shows right. They also line up with the speech by themselves when a file is off (a release with a recap can be minutes off).
+- **Picture in picture** (phone): Home while a video plays keeps it playing in a small window, with play / pause; tap it for full screen, close it to stop.
 - **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
 
 ### 🐞 Fixed
@@ -32,6 +33,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **FMHYPlayer**: the player has a name. Its button sits on the site's own player, with the app's icon, and shows as soon as a stream is found.
 - **Subtitles**: the style entry is called Settings.
 - **On a TV**, the player button the remote is on shows its name above it.
+- **Phone top bar**: the logo alone, so Search gets the room.
 
 ## 2.17.1
 

@@ -115,6 +115,8 @@
     <string name="player_subs_synced">تمت مزامنة الترجمة (%1$s)</string>
     <string name="player_skipped_intro">تم تخطي المقدمة</string>
     <string name="player_skipped_recap">تم تخطي الملخص</string>
+    <string name="player_play">تشغيل</string>
+    <string name="player_pause">إيقاف مؤقت</string>
     <string name="player_sub_dub">مترجم / مدبلج: %1$s</string>
     <string name="player_more">المزيد</string>
 </resources>

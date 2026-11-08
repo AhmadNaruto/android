@@ -115,6 +115,8 @@
     <string name="player_subs_synced">Legendas sincronizadas (%1$s)</string>
     <string name="player_skipped_intro">Abertura pulada</string>
     <string name="player_skipped_recap">Resumo pulado</string>
+    <string name="player_play">Reproduzir</string>
+    <string name="player_pause">Pausar</string>
     <string name="player_sub_dub">Legendado / Dublado: %1$s</string>
     <string name="player_more">Mais</string>
 </resources>

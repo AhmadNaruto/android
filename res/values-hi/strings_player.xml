@@ -115,6 +115,8 @@
     <string name="player_subs_synced">सबटाइटल सिंक हो गए (%1$s)</string>
     <string name="player_skipped_intro">इंट्रो छोड़ा गया</string>
     <string name="player_skipped_recap">रीकैप छोड़ा गया</string>
+    <string name="player_play">चलाएँ</string>
+    <string name="player_pause">रोकें</string>
     <string name="player_sub_dub">सब / डब: %1$s</string>
     <string name="player_more">और</string>
 </resources>

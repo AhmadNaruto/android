@@ -115,6 +115,8 @@
     <string name="player_subs_synced">Subtitle disinkronkan (%1$s)</string>
     <string name="player_skipped_intro">Intro dilewati</string>
     <string name="player_skipped_recap">Rekap dilewati</string>
+    <string name="player_play">Putar</string>
+    <string name="player_pause">Jeda</string>
     <string name="player_sub_dub">Sub / Dub: %1$s</string>
     <string name="player_more">Lainnya</string>
 </resources>
