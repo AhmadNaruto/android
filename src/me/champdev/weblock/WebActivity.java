@@ -71,9 +71,15 @@ import java.util.Map;
 public class WebActivity extends Activity {
     static final int REQ_FILE = 1, REQ_STORAGE = 5, REQ_PLAY = 6;
     // The chip that takes you back to the native player after Back
-    // The Native player button: a tab on the right edge, half way down (site headers keep their search and profile icons top right)
-    static final String CHIP = "(()=>{if(document.getElementById('fp-native'))return;const b=document.createElement('button');b.id='fp-native';b.textContent='\u25B6';b.title=b.ariaLabel='Native player';"
-        + "b.style.cssText='position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:2147483647;padding:12px 11px 12px 13px;font:600 18px sans-serif;line-height:1;color:#fff;background:#ff3b5c;border:0;border-radius:10px 0 0 10px;opacity:.9;box-shadow:0 2px 8px rgba(0,0,0,.4)';"
+    // The Native player button: on the site's own player (the biggest video, else the biggest frame), top left, scrolling with it;
+    // a tab on the right edge when there is no player to sit on
+    static final String CHIP = "(()=>{if(document.getElementById('fp-native'))return;const b=document.createElement('button');b.id='fp-native';b.textContent='\u25B6 Native player';"
+        + "b.style.cssText='z-index:2147483647;padding:6px 11px;font:600 13px sans-serif;color:#fff;background:#ff3b5c;border:0;border-radius:8px;opacity:.92;box-shadow:0 2px 8px rgba(0,0,0,.4)';"
+        + "const big=sel=>{let best=null,area=0;for(const e of document.querySelectorAll(sel)){const r=e.getBoundingClientRect();if(r.width>=160&&r.height>=90&&r.width*r.height>area){area=r.width*r.height;best=r}}return best};"
+        + "const place=()=>{const r=big('video')||big('iframe');const s=b.style;"
+        + "if(r){s.position='absolute';s.top=(r.top+scrollY+8)+'px';s.left=(r.left+scrollX+8)+'px';s.right='';s.transform='';s.borderRadius='8px'}"
+        + "else{s.position='fixed';s.top='50%';s.left='';s.right='0';s.transform='translateY(-50%)';s.borderRadius='10px 0 0 10px'}};"
+        + "place();const t=setInterval(()=>{if(!document.contains(b))clearInterval(t);else place()},1000);"
         + "b.onclick=e=>{e.stopPropagation();FMHY.openNative()};document.documentElement.appendChild(b)})()";
     // Remember <a download="name"> so blob downloads keep the page's filename
     static final String DL_HOOK = "if(!window.__wl){window.__wl=1;const c=HTMLAnchorElement.prototype.click;"
