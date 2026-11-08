@@ -19,7 +19,7 @@ final class Subs {
         boolean hearingImpaired;
     }
 
-    // ---- Search and download (OpenSubtitles per language, SubDL with your key) ----
+    // ---- Search and download (OpenSubtitles, per language) ----
 
     /** OpenSubtitles' language codes (ISO 639-2/B, plus pob) for the language list; the rest of the world can type nothing, so this is long. */
     static final String[] LANGS = ("ara,ben,bul,chi,hrv,cze,dan,dut,eng,est,fin,fre,ger,ell,heb,hin,hun,ind,ita,jpn,kan,kor,lav,lit,"
@@ -47,9 +47,8 @@ final class Subs {
 
     static final SubOs.Http HTTP = url -> {
         java.net.HttpURLConnection c = Warp.open(url);
-        c.setRequestProperty("User-Agent", SubOs.UA);   // OpenSubtitles' legacy API wants this one; the others don't mind
-        int code = c.getResponseCode();
-        return code >= 400 && c.getErrorStream() != null ? c.getErrorStream() : c.getInputStream();   // SubDL says why in an error's body
+        c.setRequestProperty("User-Agent", SubOs.UA);   // OpenSubtitles' legacy API wants this one
+        return c.getInputStream();
     };
 
     /**
@@ -75,22 +74,6 @@ final class Subs {
         } catch (java.io.IOException e) {
             List<Sub> sample = find(imdb, season, episode);
             if (sample != null) { asked = true; for (Sub s : sample) if (osCode(s.lang).equals(code)) out.add(s); }
-        }
-        String key = App.prefs.getString("subdlKey", "").trim();
-        if (!key.isEmpty()) {
-            try {
-                for (SubDl.Result r : SubDl.search(HTTP::open, key, imdb, season, episode, code)) {
-                    if (r.pack && season > 0) continue;
-                    Sub s = new Sub();
-                    s.url = r.url;
-                    s.lang = r.lang;
-                    s.release = r.release;
-                    s.source = "SubDL";
-                    s.hearingImpaired = r.hearingImpaired;
-                    out.add(s);
-                }
-                asked = true;
-            } catch (java.io.IOException ignored) { }
         }
         return asked ? out : null;
     }

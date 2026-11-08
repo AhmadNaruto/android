@@ -113,6 +113,8 @@
     <string name="player_no_subs_lang">Sem legendas em %1$s para este</string>
     <string name="player_subs_failed">Não foi possível carregar o arquivo de legenda</string>
     <string name="player_subs_synced">Legendas sincronizadas (%1$s)</string>
+    <string name="player_skipped_intro">Abertura pulada</string>
+    <string name="player_skipped_recap">Resumo pulado</string>
     <string name="player_sub_dub">Legendado / Dublado: %1$s</string>
     <string name="player_more">Mais</string>
 </resources>

@@ -91,6 +91,7 @@ public class PlayerActivity extends Activity {
     Catalog.Title seriesInfo;   // the series playing, with its episodes (for Episodes and Next)
     View panel;                 // the Episodes list, over the video
     TextView skipBtn;           // Skip intro / Skip recap / Next episode, over the picture
+    TextView tip;               // the name of the button the remote is on (icons only otherwise)
     final SpeechMeter meter = new SpeechMeter();   // how loud the dialogue is, every 0.1 s (subtitle auto-sync)
     List<long[]> syncCues;      // the downloaded subtitle file's lines, to line up with the speech
     int syncTries;
@@ -386,6 +387,17 @@ public class PlayerActivity extends Activity {
         overlay.addView(bar, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         controls = overlay;
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
+        tip = new TextView(this);
+        tip.setTextColor(Color.WHITE);
+        tip.setTextSize(14);
+        tip.setSingleLine();
+        tip.setPadding(dp(12), dp(6), dp(12), dp(6));
+        GradientDrawable tbg = new GradientDrawable();
+        tbg.setCornerRadius(dp(8));
+        tbg.setColor(0xE6000000);
+        tip.setBackground(tbg);
+        tip.setVisibility(View.GONE);
+        overlay.addView(tip, new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.START));
 
         // Skip intro / Skip recap / Next episode: bottom right, over the picture, also while the controls are hidden
         skipBtn = new TextView(this);
@@ -595,6 +607,7 @@ public class PlayerActivity extends Activity {
         t.setClickable(true);
         t.setFocusable(false);
         t.setOnClickListener(v -> { showControls(); action.run(); });
+        t.setOnFocusChangeListener((v, has) -> { if (has) showTip(v); else if (!inRow()) tip.setVisibility(View.GONE); });
         chips.add(t);
         return t;
     }
@@ -726,6 +739,21 @@ public class PlayerActivity extends Activity {
             if (c.getVisibility() == View.VISIBLE) chipRow.addView(c, new LinearLayout.LayoutParams(size, size));
         }
         if (had != null && chips.contains(had)) had.requestFocus();
+    }
+
+    /** The focused button's name in a small label just above it (a remote has no long press for the tooltip). */
+    void showTip(View v) {
+        CharSequence name = v.getContentDescription();
+        if (name == null || name.length() == 0) { tip.setVisibility(View.GONE); return; }
+        tip.setText(name);
+        tip.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int[] at = new int[2], base = new int[2];
+        v.getLocationInWindow(at);
+        controls.getLocationInWindow(base);
+        int w = tip.getMeasuredWidth(), x = at[0] - base[0] + v.getWidth() / 2 - w / 2;
+        tip.setTranslationX(Math.max(dp(8), Math.min(controls.getWidth() - w - dp(8), x)));
+        tip.setTranslationY(at[1] - base[1] - tip.getMeasuredHeight() - dp(6));
+        tip.setVisibility(View.VISIBLE);
     }
 
     // Put the remote on the action row (on) or give it back to play/seek (off)
@@ -997,6 +1025,7 @@ public class PlayerActivity extends Activity {
     }
 
     void hideControls() {
+        tip.setVisibility(View.GONE);
         rowFocus(false);
         controls.setVisibility(View.GONE);
     }
@@ -1282,7 +1311,16 @@ public class PlayerActivity extends Activity {
             if (player.isPlaying()) countdownMs -= 500;
             if (countdownMs <= 0) { skipDone.add(now); playEpisode(next[0], next[1]); return; }
             skipBtn.setText(App.t(R.string.player_next_in, (int) Math.ceil(countdownMs / 1000.0)));
-        } else skipBtn.setText(App.t(now.kind.equals("recap") ? R.string.player_skip_recap : end ? R.string.player_skip_credits : R.string.player_skip_intro));
+        } else {
+            // Settings, Skip intros: an intro or recap goes by itself (credits still ask: they may hide a scene)
+            if (!end && App.prefs.getBoolean("autoSkip", false) && player.isPlaying()) {
+                skipShown = now;
+                pressSkip();
+                say(App.t(now.kind.equals("recap") ? R.string.player_skipped_recap : R.string.player_skipped_intro));
+                return;
+            }
+            skipBtn.setText(App.t(now.kind.equals("recap") ? R.string.player_skip_recap : end ? R.string.player_skip_credits : R.string.player_skip_intro));
+        }
         if (skipBtn.getVisibility() != View.VISIBLE) {
             skipBtn.setVisibility(View.VISIBLE);
             if (!inRow() && panel == null) skipBtn.requestFocus();   // OK presses it

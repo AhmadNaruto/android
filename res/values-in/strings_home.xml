@@ -154,6 +154,8 @@
     <string name="home_volume_boost_help">Lebih keras dari batas maksimum perangkat, untuk stream yang pelan. Setiap video dimulai dengan ini; tombol Penguat volume di pemutar mengubahnya untuk satu video.</string>
     <string name="home_dialog_boost">Penguat dialog</string>
     <string name="home_dialog_boost_help">Suara dialog lebih keras, dengung berkurang. Setiap video dimulai dengan ini; tombol Penguat dialog di pemutar mengubahnya untuk satu video.</string>
+    <string name="home_auto_skip">Lewati intro</string>
+    <string name="home_auto_skip_help">Intro dan rekap terlewati sendiri bila waktunya diketahui. Di kredit tetap ada tombol Episode berikutnya.</string>
     <string name="home_auto_subs">Subtitel otomatis</string>
     <string name="home_auto_subs_help">Film dan episode dimulai dengan subtitel %1$s (bahasa terakhir yang kamu pilih): bawaan stream, kalau tidak ada dari OpenSubtitles. File yang kamu pilih untuk sebuah video selalu dipakai lagi.</string>
     <string name="home_simkl_help">Menandai film dan episode yang kamu tonton di pemutar sebagai sudah ditonton di Simkl, pelacak gratis. Untuk judul yang dibuka dari Film, Serial TV, atau Anime.</string>

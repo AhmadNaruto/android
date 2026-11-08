@@ -154,6 +154,8 @@
     <string name="home_volume_boost_help">صوت أعلى من الحد الأقصى للجهاز، للبث الهادئ. يبدأ كل فيديو به؛ وزر تعزيز الصوت في المشغّل يغيّره لفيديو واحد.</string>
     <string name="home_dialog_boost">تعزيز الحوار</string>
     <string name="home_dialog_boost_help">أصوات أعلى وهدير أقل. يبدأ كل فيديو به؛ وزر تعزيز الحوار في المشغّل يغيّره لفيديو واحد.</string>
+    <string name="home_auto_skip">تخطي المقدمات</string>
+    <string name="home_auto_skip_help">تُتخطى المقدمات والملخصات تلقائيًا عندما تكون أوقاتها معروفة. تظل الشارة تعرض زر الحلقة التالية.</string>
     <string name="home_auto_subs">ترجمة تلقائية</string>
     <string name="home_auto_subs_help">تبدأ الأفلام والحلقات بترجمة %1$s (آخر لغة اخترتها): ترجمة البث نفسه، وإلا فمن OpenSubtitles. الملف الذي اخترته لفيديو يعود دائمًا.</string>
     <string name="home_simkl_help">يحدّد الأفلام والحلقات التي تشاهدها في المشغّل كمُشاهَدة على Simkl، وهو متتبّع مجاني. للعناوين المفتوحة من أفلام أو مسلسلات أو أنمي.</string>

@@ -1104,6 +1104,14 @@ public class Home extends Activity {
         }));
         autoSub.setText(App.t(Subs.auto() ? R.string.home_on : R.string.home_off));
         autoSub.setTextColor(Subs.auto() ? GREEN : MUTED);
+        TextView autoSkip = new TextView(this);
+        boolean skipOn = App.prefs.getBoolean("autoSkip", false);
+        col.addView(settingRow(App.t(R.string.home_auto_skip), App.t(R.string.home_auto_skip_help), autoSkip, v -> {
+            App.prefs.edit().putBoolean("autoSkip", !skipOn).apply();
+            build();
+        }));
+        autoSkip.setText(App.t(skipOn ? R.string.home_on : R.string.home_off));
+        autoSkip.setTextColor(skipOn ? GREEN : MUTED);
         TextView simklValue = new TextView(this);
         col.addView(settingRow("Simkl", App.t(R.string.home_simkl_help), simklValue, v -> {
             if (Simkl.signedIn()) confirm(App.t(R.string.home_simkl_disconnect_title), App.t(R.string.home_simkl_disconnect_msg), App.t(R.string.home_disconnect), () -> { Simkl.signOut(); build(); });

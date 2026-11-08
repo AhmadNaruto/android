@@ -113,6 +113,8 @@
     <string name="player_no_subs_lang">لا توجد ترجمة %1$s لهذا</string>
     <string name="player_subs_failed">تعذّر تحميل ملف الترجمة</string>
     <string name="player_subs_synced">تمت مزامنة الترجمة (%1$s)</string>
+    <string name="player_skipped_intro">تم تخطي المقدمة</string>
+    <string name="player_skipped_recap">تم تخطي الملخص</string>
     <string name="player_sub_dub">مترجم / مدبلج: %1$s</string>
     <string name="player_more">المزيد</string>
 </resources>

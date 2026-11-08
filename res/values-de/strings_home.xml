@@ -154,6 +154,8 @@
     <string name="home_volume_boost_help">Lauter als das Maximum des Geräts, für leise Streams. Jedes Video startet damit; die Lautstärke-Boost-Taste im Player ändert es für ein Video.</string>
     <string name="home_dialog_boost">Dialog-Boost</string>
     <string name="home_dialog_boost_help">Lautere Stimmen, weniger Dröhnen. Jedes Video startet damit; die Dialog-Boost-Taste im Player ändert es für ein Video.</string>
+    <string name="home_auto_skip">Intros überspringen</string>
+    <string name="home_auto_skip_help">Intros und Rückblicke werden von selbst übersprungen, wenn ihre Zeiten bekannt sind. Beim Abspann bleibt der Knopf Nächste Folge.</string>
     <string name="home_auto_subs">Automatische Untertitel</string>
     <string name="home_auto_subs_help">Filme und Folgen starten mit Untertiteln auf %1$s (die zuletzt gewählte Sprache): die des Streams, sonst von OpenSubtitles. Eine Datei, die du für ein Video gewählt hast, kommt immer wieder.</string>
     <string name="home_simkl_help">Markiert Filme und Folgen, die du im Player schaust, auf Simkl als gesehen, einem kostenlosen Tracker. Titel aus Filme, Serien oder Anime.</string>

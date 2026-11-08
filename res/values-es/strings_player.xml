@@ -113,6 +113,8 @@
     <string name="player_no_subs_lang">No hay subtítulos en %1$s para esto</string>
     <string name="player_subs_failed">No se pudo cargar el archivo de subtítulos</string>
     <string name="player_subs_synced">Subtítulos sincronizados (%1$s)</string>
+    <string name="player_skipped_intro">Intro saltada</string>
+    <string name="player_skipped_recap">Resumen saltado</string>
     <string name="player_sub_dub">Subtitulado / Doblado: %1$s</string>
     <string name="player_more">Más</string>
 </resources>
