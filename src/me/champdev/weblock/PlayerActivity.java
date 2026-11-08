@@ -87,7 +87,7 @@ public class PlayerActivity extends Activity {
     long hideAt;
     LinearLayout chipRow;
     final List<LinearLayout> chips = new ArrayList<>();
-    LinearLayout chipCast, chipRotate, chipEpisodes, chipPrev, chipNext, chipDub, chipServers, chipQuality, chipAudio, chipSubs, chipMore;
+    LinearLayout chipCast, chipRotate, chipEpisodes, chipPrev, chipNext, chipDub, chipServers, chipQuality, chipAudio, chipSubs, chipDownload, chipMore;
     Catalog.Title seriesInfo;   // the series playing, with its episodes (for Episodes and Next)
     View panel;                 // the Episodes list, over the video
     TextView skipBtn;           // Skip intro / Skip recap / Next episode, over the picture
@@ -379,6 +379,7 @@ public class PlayerActivity extends Activity {
         chipEpisodes = chip(R.drawable.ic_p_episodes, this::episodesPanel);
         chipServers = chip(R.drawable.ic_p_servers, () -> pickServer());
         chipSubs = chip(R.drawable.ic_p_subs, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_TEXT, App.t(R.string.player_subtitles), true));
+        chipDownload = chip(R.drawable.ic_p_download, this::promptDownload);
         chipMore = chip(R.drawable.ic_p_tune, this::more);
         chipCast = chip(R.drawable.ic_p_cast, () -> { if (casting != null) openRemote(); else pickTv(); });
         chipRotate = chip(R.drawable.ic_p_fullscreen, () -> setRequestedOrientation(landscape()
@@ -713,6 +714,16 @@ public class PlayerActivity extends Activity {
         boolean subsOn = textNow != null;
         String off = App.t(R.string.player_off);
         show(chipSubs, text > 0 || canSearchSubs(), App.t(R.string.player_subs_now, subsOn ? textNow : off));
+        String dlTip = App.t(R.string.player_download);
+        String dlUrl = getIntent().getStringExtra("url");
+        if (dlUrl != null) {
+            if (Downloads.isDownloaded(dlUrl)) dlTip = App.t(R.string.player_downloaded);
+            else if (Downloads.isDownloading(dlUrl)) {
+                Downloads.Entry de = Downloads.getEntry(dlUrl);
+                dlTip = de != null ? String.format(Locale.ROOT, "%s (%.0f%%)", App.t(R.string.player_download), de.percent) : App.t(R.string.player_download);
+            }
+        }
+        show(chipDownload, !player.isCurrentMediaItemLive(), dlTip);
         float sp = player.getPlaybackParameters().speed;
         show(chipMore, true, App.t(R.string.player_more));
         int[] next = episodeStep(1), prev = episodeStep(-1);
@@ -827,6 +838,11 @@ public class PlayerActivity extends Activity {
             return cookie == null || cookie.isEmpty() ? spec : spec.withAdditionalHeaders(Collections.singletonMap("Cookie", cookie));
         });
         DataSource.Factory data = new androidx.media3.datasource.DefaultDataSource.Factory(this, web);   // downloaded subtitles are local files
+        Downloads.rememberHeaders(url, getIntent().getStringExtra("headers"));
+        DataSource.Factory cachedData = new androidx.media3.datasource.cache.CacheDataSource.Factory()
+            .setCache(Downloads.getCache(this))
+            .setUpstreamDataSourceFactory(data)
+            .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
 
         // IPTV passes its own media type ("" = let ExoPlayer read it off the URL); pages hand over HLS, DASH or a live FLV
         String mime = getIntent().hasExtra("mime") ? getIntent().getStringExtra("mime") : getIntent().getBooleanExtra("dash", false) ? MimeTypes.APPLICATION_MPD
@@ -863,7 +879,7 @@ public class PlayerActivity extends Activity {
             }
         };
         player = new ExoPlayer.Builder(this, renderers.setEnableDecoderFallback(true).setMediaCodecSelector(PlayerActivity::decoders))
-            .setMediaSourceFactory(new DefaultMediaSourceFactory(data)).setHandleAudioBecomingNoisy(true).build();
+            .setMediaSourceFactory(new DefaultMediaSourceFactory(cachedData)).setHandleAudioBecomingNoisy(true).build();
         player.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true);
         player.setVideoSurfaceView(surface);
@@ -1290,11 +1306,27 @@ public class PlayerActivity extends Activity {
         labels.add(App.t(R.string.player_zoom_now, App.t(ZOOMS[zoom])));
         acts.add(this::cycleZoom);
         if (!player.isCurrentMediaItemLive()) {
+            labels.add(App.t(R.string.player_download));
+            acts.add(this::promptDownload);
             labels.add(App.t(R.string.player_restart));
             acts.add(() -> { player.seekTo(0); player.play(); say(App.t(R.string.player_from_start)); });
         }
         new AlertDialog.Builder(this).setTitle(App.t(R.string.player_more))
             .setItems(labels.toArray(new String[0]), (d, i) -> acts.get(i).run()).show();
+    }
+
+    void promptDownload() {
+        String url = getIntent().getStringExtra("url");
+        if (url == null || player == null) return;
+        if (player.isCurrentMediaItemLive()) {
+            say(App.t(R.string.player_download_live_unsupported));
+            return;
+        }
+        Downloads.prompt(this, url, getIntent().getStringExtra("title"), getIntent().getStringExtra("headers"),
+            getIntent().getStringExtra("mime"), getIntent().getBooleanExtra("dash", false),
+            seriesInfo != null ? seriesInfo : (WebActivity.active != null ? WebActivity.active.show : null),
+            getIntent().getStringArrayListExtra("subs"),
+            player);
     }
 
     // ---- Skip intro, recap and credits ----

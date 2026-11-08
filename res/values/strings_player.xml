@@ -119,4 +119,22 @@
     <string name="player_pause">Pause</string>
     <string name="player_sub_dub">Sub / Dub: %1$s</string>
     <string name="player_more">More</string>
+    <string name="player_download">Download</string>
+    <string name="player_downloaded">Downloaded</string>
+    <string name="player_downloading">Downloading: %1$s</string>
+    <string name="player_download_live_unsupported">Live streams cannot be downloaded</string>
+    <string name="player_download_options">Download options</string>
+    <string name="player_download_delete">Delete download</string>
+    <string name="player_download_play_offline">Play offline</string>
+    <string name="player_download_pause">Pause download</string>
+    <string name="player_download_resume">Resume download</string>
+    <string name="player_download_cancel">Cancel download</string>
+    <string name="download_started">Downloading %1$s</string>
+    <string name="download_completed">Download complete</string>
+    <string name="download_failed">Download failed</string>
+    <string name="download_deleted">Download deleted</string>
+    <string name="download_channel_name">Downloads</string>
+    <string name="download_channel_desc">Video download progress</string>
+    <string name="download_best_quality">Best quality</string>
+    <string name="home_downloads">Downloads</string>
 </resources>

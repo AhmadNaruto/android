@@ -153,6 +153,13 @@ public class Home extends Activity {
         col.addView(header());
         if (!Update.available().isEmpty()) col.addView(updateLine(Update.available()));
 
+        List<Downloads.Entry> downloads = Downloads.list();
+        if (!downloads.isEmpty()) {
+            col.addView(heading(App.t(R.string.home_downloads)));
+            LinearLayout row = row();
+            for (Downloads.Entry d : downloads) row.addView(downloadCard(d));
+        }
+
         List<History.Entry> history = History.list();
         if (!history.isEmpty()) {
             col.addView(heading(App.t(R.string.home_continue_watching)));
@@ -1565,6 +1572,85 @@ public class Home extends Activity {
                 .setItems(new String[]{App.t(R.string.home_open_site_home, e.site), App.t(R.string.home_remove_continue)}, (d, i) -> {
                     if (i == 0) startActivity(WebActivity.open(this, e.site, e.siteUrl, e.siteUrl));
                     else { History.remove(e); build(); }
+                }).show();
+            return true;
+        });
+        if (firstCard == null) firstCard = card;
+        return card;
+    }
+
+    View downloadCard(Downloads.Entry d) {
+        FrameLayout card = new FrameLayout(this);
+        card.setLayoutParams(cardParams(App.tv ? 260 : 190, App.tv ? 146 : 108));
+        ImageView img = new ImageView(this);
+        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        card.addView(img, new FrameLayout.LayoutParams(-1, -1));
+        TextView letter = text(d.title.isEmpty() ? "?" : d.title.substring(0, 1).toUpperCase(Locale.ROOT), sp(44, 32), 0x55FFFFFF, true);
+        letter.setGravity(Gravity.CENTER);
+        card.addView(letter, new FrameLayout.LayoutParams(-1, -1));
+        if (!d.image.isEmpty()) loadImage(img, d.image, letter);
+
+        View shade = new View(this);
+        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0xE0000000}));
+        card.addView(shade, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setPadding(u(12, 9), 0, u(12, 9), u(10, 7));
+        TextView title = text(d.title, sp(16, 14), Color.WHITE, true);
+        title.setMaxLines(2);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        info.addView(title);
+
+        String sub;
+        if (d.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) {
+            String sizeStr = d.bytes > 0 ? android.text.format.Formatter.formatFileSize(this, d.bytes) : App.t(R.string.player_downloaded);
+            sub = (d.episode.isEmpty() ? "" : d.episode + "  \u00B7  ") + sizeStr;
+        } else if (d.state == androidx.media3.exoplayer.offline.Download.STATE_DOWNLOADING || d.state == androidx.media3.exoplayer.offline.Download.STATE_QUEUED) {
+            sub = String.format(Locale.ROOT, "%s (%.0f%%)", App.t(R.string.player_downloading, ""), d.percent);
+        } else {
+            sub = App.t(R.string.download_failed);
+        }
+        info.addView(text(sub, 12, 0xFFD8D0E2, false));
+        card.addView(info, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+
+        if (d.state == androidx.media3.exoplayer.offline.Download.STATE_DOWNLOADING || d.state == androidx.media3.exoplayer.offline.Download.STATE_QUEUED) {
+            info.setPadding(u(12, 9), 0, u(12, 9), u(15, 11));
+            float done = Math.max(0.02f, Math.min(1.0f, d.percent / 100f));
+            LinearLayout track = new LinearLayout(this);
+            track.setBackgroundColor(0x55FFFFFF);
+            View fill = new View(this);
+            fill.setBackgroundColor(ACCENT);
+            track.addView(fill, new LinearLayout.LayoutParams(0, -1, done));
+            track.addView(new View(this), new LinearLayout.LayoutParams(0, -1, 1f - done));
+            card.addView(track, new FrameLayout.LayoutParams(-1, dp(5), Gravity.BOTTOM));
+        }
+
+        card.setBackground(rounded(colorFor(d.title), 0));
+        card.setClipToOutline(true);
+        focusable(card, 0);
+        card.setOnClickListener(v -> {
+            if (d.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) {
+                startActivity(PlayerActivity.open(this, d.url, d.dash, Downloads.parseHeaders(d.headersJson), d.subs, d.title));
+            } else {
+                Downloads.prompt(this, d.url, d.title, d.headersJson, d.mime, d.dash, null, d.subs, null);
+            }
+        });
+        card.setOnLongClickListener(v -> {
+            new AlertDialog.Builder(this).setTitle(d.title)
+                .setItems(new String[]{
+                    d.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED ? App.t(R.string.player_download_play_offline) : App.t(R.string.player_download_options),
+                    App.t(R.string.player_download_delete)
+                }, (dia, i) -> {
+                    if (i == 0) {
+                        if (d.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) {
+                            startActivity(PlayerActivity.open(this, d.url, d.dash, Downloads.parseHeaders(d.headersJson), d.subs, d.title));
+                        } else {
+                            Downloads.prompt(this, d.url, d.title, d.headersJson, d.mime, d.dash, null, d.subs, null);
+                        }
+                    } else {
+                        Downloads.delete(this, d.url);
+                        build();
+                    }
                 }).show();
             return true;
         });

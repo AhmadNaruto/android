@@ -119,4 +119,22 @@
     <string name="player_pause">Jeda</string>
     <string name="player_sub_dub">Sub / Dub: %1$s</string>
     <string name="player_more">Lainnya</string>
+    <string name="player_download">Unduh</string>
+    <string name="player_downloaded">Terunduh</string>
+    <string name="player_downloading">Mengunduh: %1$s</string>
+    <string name="player_download_live_unsupported">Siaran langsung tidak dapat diunduh</string>
+    <string name="player_download_options">Opsi unduhan</string>
+    <string name="player_download_delete">Hapus unduhan</string>
+    <string name="player_download_play_offline">Putar offline</string>
+    <string name="player_download_pause">Jeda unduhan</string>
+    <string name="player_download_resume">Lanjutkan unduhan</string>
+    <string name="player_download_cancel">Batalkan unduhan</string>
+    <string name="download_started">Mengunduh %1$s</string>
+    <string name="download_completed">Unduhan selesai</string>
+    <string name="download_failed">Unduhan gagal</string>
+    <string name="download_deleted">Unduhan dihapus</string>
+    <string name="download_channel_name">Unduhan</string>
+    <string name="download_channel_desc">Progres unduhan video</string>
+    <string name="download_best_quality">Kualitas terbaik</string>
+    <string name="home_downloads">Unduhan</string>
 </resources>
