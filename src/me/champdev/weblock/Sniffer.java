@@ -99,8 +99,8 @@ final class Sniffer {
     /** Any WebView thread. */
     void request(String url, Map<String, String> headers) {
         String p = path(url);
-        boolean hls = p.endsWith(".m3u8"), dash = p.endsWith(".mpd");
-        if (hls || dash) manifest(url, dash, headers);
+        boolean hls = p.endsWith(".m3u8"), dash = p.endsWith(".mpd"), flv = p.endsWith(".flv");   // FLV: live sports pages (mpegts.js)
+        if (hls || dash || flv) manifest(url, dash, headers);
         else if ((p.endsWith(".vtt") || p.endsWith(".srt")) && subs.size() < 8 && !subs.contains(url)) subs.add(url);
     }
 

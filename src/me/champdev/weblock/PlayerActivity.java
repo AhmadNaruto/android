@@ -828,8 +828,9 @@ public class PlayerActivity extends Activity {
         });
         DataSource.Factory data = new androidx.media3.datasource.DefaultDataSource.Factory(this, web);   // downloaded subtitles are local files
 
-        // IPTV passes its own media type ("" = let ExoPlayer read it off the URL); pages only ever hand over HLS or DASH
-        String mime = getIntent().hasExtra("mime") ? getIntent().getStringExtra("mime") : getIntent().getBooleanExtra("dash", false) ? MimeTypes.APPLICATION_MPD : MimeTypes.APPLICATION_M3U8;
+        // IPTV passes its own media type ("" = let ExoPlayer read it off the URL); pages hand over HLS, DASH or a live FLV
+        String mime = getIntent().hasExtra("mime") ? getIntent().getStringExtra("mime") : getIntent().getBooleanExtra("dash", false) ? MimeTypes.APPLICATION_MPD
+            : Sniffer.path(url).endsWith(".flv") ? MimeTypes.VIDEO_FLV : MimeTypes.APPLICATION_M3U8;
         MediaItem.Builder item = mediaItem = new MediaItem.Builder().setUri(url);
         if (!mime.isEmpty()) item.setMimeType(mime);
         List<MediaItem.SubtitleConfiguration> subs = subList = new ArrayList<>();

@@ -18,6 +18,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
 
 ### 🐞 Fixed
+- **StreamCorner** showed a blank page (it refuses to start when the page's fetch is watched as it loads) and its live streams (FLV) never reached the player: both work now.
 - **Servers** on Cinejoy showed the player's two "10" skip buttons; it now finds the real server list (it opens a moment later).
 - **Sites that pass every stream through one proxy address** (NekoWatch and others): a new episode or the Dub version now goes to the native player instead of being taken for the old stream.
 - **App closed on start on Android 8 and 9** (many TV boxes, Fire OS 7, older Sony TVs) because of the cast service; some sites could also close the app there.
@@ -28,7 +29,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Settings, WARP DNS**: type your internet provider's DNS (from your router) if WARP can't connect; it is asked first.
 - **Movies, TV, Anime and the update alert no longer wait for WARP**: they go out directly first, and use WARP only if that fails.
 - **Player buttons**: one compact row of icons (Previous, Next, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More, Cast, Full screen); what is picked (quality, audio, subtitles, server) shows under the title. Speed, boosts, zoom and Restart moved into More. New icon set.
-- **Native player** button on a site's page is on the right, and shows as soon as a stream is found.
+- **FMHYPlayer**: the player has a name. Its button sits on the site's own player, with the app's icon, and shows as soon as a stream is found.
 - **Subtitles**: the style entry is called Settings.
 - **On a TV**, the player button the remote is on shows its name above it.
 

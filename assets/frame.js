@@ -286,9 +286,12 @@
     if (/^\s*#EXTM3U/.test(head)) report(url, false);
     else if (/^\s*(<\?xml[^>]*>\s*)?<MPD[\s>]/.test(head)) report(url, true);
   };
+  // Some sites check, as they start, that fetch and friends are the browser's own (StreamCorner, from a fresh frame) and
+  // refuse to run otherwise: so the watch goes in once the page's own start-up scripts have run (playlists load later, on Play)
+  const hook = () => {
   try {
     const xo = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function () {
+    XMLHttpRequest.prototype.open = function open() {
       this.addEventListener('load', () => {
         try {
           const t = this.responseType;
@@ -299,7 +302,7 @@
       return xo.apply(this, arguments);
     };
     const fo = window.fetch;
-    window.fetch = function () {
+    window.fetch = function fetch() {
       const p = fo.apply(this, arguments);
       p.then(r => {
         const ct = r.headers.get('content-type') || '', len = +(r.headers.get('content-length') || 0);
@@ -310,6 +313,8 @@
       return p;
     };
   } catch (e) { }
+  };
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', hook, { once: true }); else hook();
 
   // An episode in the page's own list: the season first (a <select>, tab or button that says "Season 2" / "S2"), then the entry
   // that says 3 / "Ep 3" / "Episode 3 - Name" (or carries data-episode / data-number 3) among 3+ such entries under one parent
