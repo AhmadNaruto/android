@@ -275,6 +275,7 @@ public class WebActivity extends Activity {
         siteUrl = getIntent().getStringExtra("siteUrl");
         pendingQuery = getIntent().getStringExtra("q");
         pendingPick = pendingQuery;
+        playAfterLoad = getIntent().getBooleanExtra("play", false);   // the title's own page, opened from the catalog
         String imdb = getIntent().getStringExtra("imdb");
         if (imdb != null && !imdb.isEmpty()) {
             show = new Catalog.Title();

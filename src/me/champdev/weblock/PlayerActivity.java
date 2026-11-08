@@ -385,14 +385,26 @@ public class PlayerActivity extends Activity {
 
         // Skip intro / Skip recap / Next episode: bottom right, over the picture, also while the controls are hidden
         skipBtn = new TextView(this);
-        skipBtn.setTextColor(0xFF111111);
-        skipBtn.setTextSize(16);
+        skipBtn.setTextColor(Color.WHITE);
+        skipBtn.setTextSize(15);
         skipBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        skipBtn.setPadding(dp(20), dp(11), dp(20), dp(11));
-        GradientDrawable sbg = new GradientDrawable();
-        sbg.setCornerRadius(dp(10));
-        sbg.setColor(0xF2FFFFFF);
-        skipBtn.setBackground(sbg);
+        skipBtn.setPadding(dp(18), dp(9), dp(18), dp(9));
+        skipBtn.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_p_next, 0, 0, 0);
+        skipBtn.setCompoundDrawablePadding(dp(6));
+        skipBtn.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+        GradientDrawable sbg = new GradientDrawable(), sfocus = new GradientDrawable();   // the same faint dark backdrop as the play buttons, with a thin edge
+        sbg.setCornerRadius(dp(22));
+        sbg.setColor(0x73000000);
+        sbg.setStroke(dp(1), 0x59FFFFFF);
+        sfocus.setCornerRadius(dp(22));
+        sfocus.setColor(0x73000000);
+        sfocus.setStroke(dp(2), Color.WHITE);   // the remote is on it
+        android.graphics.drawable.StateListDrawable sstates = new android.graphics.drawable.StateListDrawable();
+        sstates.addState(new int[]{android.R.attr.state_focused}, sfocus);
+        sstates.addState(new int[0], sbg);
+        skipBtn.setBackground(sstates);
+        skipBtn.setFocusable(true);
+        skipBtn.setDefaultFocusHighlightEnabled(false);
         skipBtn.setVisibility(View.GONE);
         skipBtn.setOnClickListener(v -> pressSkip());
         FrameLayout.LayoutParams skp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
@@ -1028,7 +1040,7 @@ public class PlayerActivity extends Activity {
         if (!down) return super.dispatchKeyEvent(e);
         switch (k) {
             case KeyEvent.KEYCODE_DPAD_CENTER: case KeyEvent.KEYCODE_ENTER: case KeyEvent.KEYCODE_NUMPAD_ENTER:
-                if (r == 0) { if (skipBtn.getVisibility() == View.VISIBLE && controls.getVisibility() != View.VISIBLE) pressSkip(); else toggle(); }
+                if (r == 0) { if (skipBtn.getVisibility() == View.VISIBLE) pressSkip(); else toggle(); }   // the row has its own keys (inRow above)
                 return true;
             case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: case KeyEvent.KEYCODE_SPACE:
                 if (r == 0) toggle();
@@ -1260,7 +1272,10 @@ public class PlayerActivity extends Activity {
             if (countdownMs <= 0) { skipDone.add(now); playEpisode(next[0], next[1]); return; }
             skipBtn.setText(App.t(R.string.player_next_in, (int) Math.ceil(countdownMs / 1000.0)));
         } else skipBtn.setText(App.t(now.kind.equals("recap") ? R.string.player_skip_recap : end ? R.string.player_skip_credits : R.string.player_skip_intro));
-        skipBtn.setVisibility(View.VISIBLE);
+        if (skipBtn.getVisibility() != View.VISIBLE) {
+            skipBtn.setVisibility(View.VISIBLE);
+            if (!inRow() && panel == null) skipBtn.requestFocus();   // OK presses it
+        }
     }
 
     void pressSkip() {

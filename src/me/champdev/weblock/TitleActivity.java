@@ -239,7 +239,7 @@ public class TitleActivity extends Home {
     android.content.Intent titleIntent(Sites.Site s) {
         String link = Sites.deeplink(s.url, t);
         android.content.Intent in = WebActivity.open(this, s.name, s.url, link != null ? link : s.url);
-        return link != null ? in : in.putExtra("q", t.name).putExtra("year", t.year);
+        return link != null ? in.putExtra("play", !t.series()) : in.putExtra("q", t.name).putExtra("year", t.year);
     }
 
     void watch(Catalog.Episode e) {

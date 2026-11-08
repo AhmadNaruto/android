@@ -7,11 +7,12 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 ### ✨ New
 - **Series and anime in the player**: Previous, Next and an Episodes list (seasons, pictures, names) right in the player; the next episode starts by itself at the end. Picking one opens it on the site and the player follows.
 - **Sub / Dub button** in the player for anime: one tap switches, and each site remembers your pick.
+- **Movies start by themselves**: a movie opened on its site's own page has its Play pressed for you.
 - **Episodes open directly** on 34 TV sites and 22 anime sites (no searching or clicking on the site); on other sites the app presses the episode in the site's own list.
 - **Sites without a known address open the title's page too**: the app searches the site, then opens the matching result (name, and year when shown) instead of leaving you on the results.
 - **Anime opens on anime sites only**, the ones that open episodes directly first; Watch starts Episode 1 there.
 - **Site nag pop-ups closed by themselves**: "Join our Discord", "What's new", donate, ad-block and new-domain notices.
-- **Skip intro, recap and credits**: a button over the picture during the intro or recap (OK on the remote presses it). At the credits it offers the next episode and plays it after 10 s; with no next one it skips the credits. Times come from TheIntroDB and AniSkip; without them the last 30 s of an episode offer the next one.
+- **Skip intro, recap and credits**, for series, anime and movies: a button over the picture during the intro or recap; it takes the remote's focus, so OK presses it. At the credits it offers the next episode and plays it after 10 s; with no next one it skips the credits. Times come from TheIntroDB and AniSkip; without them the last 30 s of an episode offer the next one.
 - **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
 
 ### 🐞 Fixed

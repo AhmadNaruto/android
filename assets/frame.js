@@ -355,6 +355,12 @@
       return /^play( video)?$/i.test((e.getAttribute('aria-label') || e.title || '').trim()) || playRe.test(String(e.className && e.className.baseVal === undefined ? e.className : ''));
     }).sort((x, y) => area(y) - area(x))[0];
     if (b) { click(b); return true; }
+    // a title's page with its own Play / Watch now button (it leads to the player)
+    const w = [...document.querySelectorAll('button,a,[role=button]')].filter(e => {
+      const r = e.getBoundingClientRect();
+      return r.width >= 40 && r.height >= 24 && r.bottom > 0 && r.top < innerHeight * 1.5 && /^(\u25B6\s*)?(play|play now|watch|watch now|watch movie|start watching|resume)$/i.test((e.innerText || '').trim());
+    }).sort((x, y) => area(y) - area(x))[0];
+    if (w) { click(w); return true; }
     const v = [...document.querySelectorAll('video')].find(x => x.paused && (x.currentSrc || x.src) && area(x) > 20000);
     if (v) { v.play().catch(() => { }); return true; }
     return false;
