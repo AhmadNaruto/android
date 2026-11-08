@@ -2,6 +2,11 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## Unreleased
+
+### 🐞 Fixed
+- **Resuming an anime** could leave you on the site with "No video found" from the FMHYPlayer button: when the site remembered Dub (or Sub) and that episode didn't have it, the stream already playing was ignored. It now goes to the player, and the FMHYPlayer button always plays what the page plays.
+
 ## 2.18.1
 
 ### 🔧 Changed

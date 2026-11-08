@@ -112,6 +112,7 @@ final class Sniffer {
         if (PROMO.matcher(path(url)).find()) return;
         String host = Uri.parse(url).getHost();
         if (host == null || AdBlock.blocked(host) || manifests.size() >= 20) return;
+        last = new Hit(url, dash, headers);
         if (isStale(url)) return;
         for (Hit h : manifests) if (h.url.equals(url)) return;
         // After Back, a stream from somewhere else (the user picked another server on the page) goes native again
@@ -130,6 +131,22 @@ final class Sniffer {
 
     boolean has() {
         return !manifests.isEmpty();
+    }
+
+    private volatile Hit last;   // the newest stream the page asked for, even one held back as the old one
+
+    /** What the page plays right now, also when it was held back (a switch that did not happen): for the FMHYPlayer button. */
+    Hit lastSeen() {
+        Hit b = best();
+        return b != null ? b : last;
+    }
+
+    /** A switch that did not happen: the stream the page still plays is the one to hand over again. */
+    void unswitch() {
+        stale.clear();
+        Hit h = last;
+        fresh();
+        if (h != null) manifest(h.url, h.dash, h.headers);
     }
 
     /** HLS before DASH; among HLS the newest master playlist, else the first one asked for. */

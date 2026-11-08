@@ -91,6 +91,18 @@ public class SnifferTest {
         Rig promo = new Rig().play(SITE1, "https://cdn.e/promo/site-4k/v2/master.m3u8");
         check("a site's promo clip is not a stream", promo.found, 0);
 
+        // A Sub / Dub press that did not switch: the stream held back as the old one is handed over again, and the button finds it
+        String ep = "https://cdn.f/hls/ep7/master.m3u8";
+        Rig sw = new Rig().play(SITE1, ep);
+        sw.s.switching();
+        sw.s.request(ep, null);
+        Handler.drain();
+        check("held back after a switch", sw.s.best() == null, true);
+        check("but the button still finds it", sw.s.lastSeen().url, ep);
+        sw.s.unswitch();
+        Handler.drain();
+        check("a switch that did not happen hands it over", sw.found, 2);
+
         System.out.println(fails == 0 ? "all passed" : fails + " failed");
         if (fails > 0) System.exit(1);
     }

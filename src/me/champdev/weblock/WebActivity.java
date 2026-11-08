@@ -503,7 +503,7 @@ public class WebActivity extends Activity {
     final Runnable waitedHandoff = () -> { handoffWaiting = false; if (resumed && !isFinishing() && !holdForEpisode && sniffer.best() != null) playNative(); };
 
     void playNative() {
-        Sniffer.Hit h = sniffer.best();
+        Sniffer.Hit h = sniffer.lastSeen();   // also the stream held back by a switch that did not happen
         if (h == null) { toast(App.t(R.string.web_no_video)); return; }
         sniffer.handedOff(h);
         if (fullscreen != null) chrome.onHideCustomView();
@@ -550,8 +550,9 @@ public class WebActivity extends Activity {
         final String back = nowKey;
         App.main.postDelayed(() -> {
             if (!resumed || isFinishing() || sniffer.has() || back == null) return;
-            sniffer.fresh();
+            // no new stream: the episode has no such audio, or the press missed. Go back, and hand over what plays
             web.evaluateJavascript(clickJs(back), null);
+            sniffer.unswitch();
         }, 9000);
         return true;
     }
