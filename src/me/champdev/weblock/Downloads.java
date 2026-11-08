@@ -59,6 +59,10 @@ public final class Downloads {
     private static DownloadManager downloadManager;
     private static DownloadNotificationHelper notificationHelper;
     private static final Map<String, Map<String, String>> headersMap = new ConcurrentHashMap<>();
+    private static final List<Runnable> listeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void addListener(Runnable r) { listeners.add(r); }
+    public static void removeListener(Runnable r) { listeners.remove(r); }
 
     public static final class Entry {
         public String id = "";
@@ -281,6 +285,9 @@ public final class Downloads {
             } else if (oldState != Download.STATE_FAILED && d.state == Download.STATE_FAILED) {
                 notifyFailed(context, match);
             }
+            if (oldState != d.state) {
+                for (Runnable r : listeners) App.main.post(r);
+            }
         }
     }
 
@@ -294,6 +301,7 @@ public final class Downloads {
         }
         saveList(entries);
         headersMap.remove(id);
+        for (Runnable r : listeners) App.main.post(r);
     }
 
     private static void notifyCompleted(Context context, Entry e) {
@@ -330,7 +338,7 @@ public final class Downloads {
     // ---- User Actions ----
 
     public static void prompt(Activity activity, String url, String title, String headersJson, String mime, boolean dash, Catalog.Title series, List<String> subs, ExoPlayer player) {
-        if (url == null || activity == null) return;
+        if (url == null || activity == null || activity.isFinishing()) return;
         if (isDownloaded(url)) {
             new AlertDialog.Builder(activity)
                 .setTitle(title != null && !title.isEmpty() ? title : App.t(R.string.player_downloaded))
@@ -343,7 +351,9 @@ public final class Downloads {
                             player.seekTo(0);
                             player.play();
                         } else {
-                            activity.startActivity(PlayerActivity.open(activity, url, dash, parseHeaders(headersJson), subs != null ? subs : Collections.emptyList(), title));
+                            Intent it = PlayerActivity.open(activity, url, dash, parseHeaders(headersJson), subs != null ? subs : Collections.emptyList(), title);
+                            if (mime != null && !mime.isEmpty()) it.putExtra("mime", mime);
+                            activity.startActivity(it);
                         }
                     } else if (i == 1) {
                         delete(activity, url);
@@ -414,8 +424,15 @@ public final class Downloads {
         e.state = Download.STATE_QUEUED;
 
         List<Entry> all = list();
+        for (int i = 0; i < all.size(); i++) {
+            if (url.equals(all.get(i).url) || url.equals(all.get(i).id)) {
+                all.remove(i);
+                break;
+            }
+        }
         all.add(0, e);
         saveList(all);
+        for (Runnable r : listeners) App.main.post(r);
 
         // Wake up WARP if enabled so download traffic routes seamlessly
         if (App.prefs.getBoolean("warp", true) && Warp.state == Warp.State.OFF) {

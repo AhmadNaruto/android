@@ -57,6 +57,7 @@ public class Home extends Activity {
     TextView warpChip, adChip;
     View firstCard;
     final Runnable warpChanged = this::updateChips;
+    final Runnable downloadsChanged = () -> { if (tab == 0 && tabs()) build(); };
 
     static int dp(Context c, float v) {
         return Math.round(v * c.getResources().getDisplayMetrics().density);
@@ -98,6 +99,7 @@ public class Home extends Activity {
             setContentView(root);
         } else setContentView(sv);
         Warp.listeners.add(warpChanged);
+        Downloads.addListener(downloadsChanged);
 
         // Site lists and IPTV channels refresh whenever the app starts and they are older than 12 hours
         if (Sites.stale() || Iptv.stale()) Warp.whenSettled(() -> App.io.execute(() -> {
@@ -126,6 +128,7 @@ public class Home extends Activity {
 
     @Override protected void onDestroy() {
         Warp.listeners.remove(warpChanged);
+        Downloads.removeListener(downloadsChanged);
         super.onDestroy();
     }
 

@@ -723,6 +723,8 @@ public class PlayerActivity extends Activity {
                 dlTip = de != null ? String.format(Locale.ROOT, "%s (%.0f%%)", App.t(R.string.player_download), de.percent) : App.t(R.string.player_download);
             }
         }
+        boolean dlDone = dlUrl != null && Downloads.isDownloaded(dlUrl);
+        ((ImageView) chipDownload.getChildAt(0)).setImageResource(dlDone ? R.drawable.ic_p_check : R.drawable.ic_p_download);
         show(chipDownload, !player.isCurrentMediaItemLive(), dlTip);
         float sp = player.getPlaybackParameters().speed;
         show(chipMore, true, App.t(R.string.player_more));
@@ -1330,8 +1332,10 @@ public class PlayerActivity extends Activity {
             say(App.t(R.string.player_download_live_unsupported));
             return;
         }
+        String mime = getIntent().hasExtra("mime") ? getIntent().getStringExtra("mime") : getIntent().getBooleanExtra("dash", false) ? MimeTypes.APPLICATION_MPD
+            : Sniffer.path(url).endsWith(".flv") ? MimeTypes.VIDEO_FLV : MimeTypes.APPLICATION_M3U8;
         Downloads.prompt(this, url, getIntent().getStringExtra("title"), getIntent().getStringExtra("headers"),
-            getIntent().getStringExtra("mime"), getIntent().getBooleanExtra("dash", false),
+            mime, getIntent().getBooleanExtra("dash", false),
             seriesInfo != null ? seriesInfo : (WebActivity.active != null ? WebActivity.active.show : null),
             getIntent().getStringArrayListExtra("subs"),
             player);
