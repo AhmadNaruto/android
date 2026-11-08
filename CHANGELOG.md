@@ -2,10 +2,38 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
-## Unreleased
+## 2.18.2
+
+Everything new since 2.17.1 (2.18.0, 2.18.1 and 2.18.2 together).
+
+### ✨ New
+- **Series and anime in the player**: Episodes list (seasons, pictures, names), Previous and Next, and the next episode starts by itself.
+- **Skip intro, recap and credits**, with a Next episode countdown at the credits (OK on the remote presses it). Settings, Skip intros skips them without asking.
+- **Sub / Dub button** for anime: one press switches, each site remembers your pick.
+- **Episodes open directly** on 34 TV sites and 22 anime sites. Elsewhere the app presses the episode on the site for you, also behind a player's Episodes menu (Cinefork, Aether, Basement).
+- **A title's own page** opens on about 70 sites; the others are searched and the match opened. Anime opens on anime sites only, wherever you open it from.
+- **Title page**: the sites in one row with the episodes right below, plus cast, director, seasons and episodes, still running or ended, country and awards.
+- **Subtitles in any language** (Arabic and others that never showed), converted so every script shows right, and lined up with the speech by themselves when a file is off.
+- **Picture in picture** on phones, and **hold for 2x**: right side forward, left side back.
+- **Site pop-ups** like "Join our Discord" and "What's new" close by themselves; movies opened from the catalog start playing by themselves.
+
+### 🔧 Changed
+- **New player look**: one row of icons (Previous, Next, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More, Cast, Full screen) and what is picked under the title. Speed, boosts, zoom and From the start are in More. On a TV the button the remote is on shows its name.
+- **FMHYPlayer**: the player has a name; its button sits on the site's own player.
+- **Anime tab**: its big grid is Popular anime (real anime only) and keeps loading more.
+- **WARP connects on more networks**, says why when it can't, and stops at once when Cloudflare limits sign-ups (HTTP 429). **Settings, WARP DNS** takes your provider's DNS.
+- **Movies, TV, Anime and the update alert** no longer wait for WARP; new site addresses arrive within the hour.
+- **Phone top bar**: the logo alone, so Search gets the room.
 
 ### 🐞 Fixed
-- **Resuming an anime** could leave you on the site with "No video found" from the FMHYPlayer button: when the site remembered Dub (or Sub) and that episode didn't have it, the stream already playing was ignored. It now goes to the player, and the FMHYPlayer button always plays what the page plays.
+- **Resuming an anime** could leave you on the site with "No video found" when the site remembered Dub (or Sub) and the episode didn't have it.
+- **Anime opened from the general catalog** (Death Note and others) listed movie and TV sites.
+- **App closed on start on Android 8 and 9** (many TV boxes, Fire OS 7, older Sony TVs).
+- **StreamCorner** showed a blank page and its live streams never reached the player.
+- **NekoWatch and other sites behind one proxy address**: a new episode or the Dub version now reaches the player.
+- **Servers on Cinejoy** listed the player's skip buttons.
+- **IPTV on a TV**: a channel tile kept its ring after the remote moved to the chips.
+- **Subtitle settings in landscape**: Reset and Done stay on screen.
 
 ## 2.18.1
 
