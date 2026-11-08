@@ -4,7 +4,14 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 
 ## Unreleased
 
+### ✨ New
+- **Series and anime in the player**: Previous, Next and an Episodes list (seasons, pictures, names) right in the player; the next episode starts by itself at the end. Picking one opens it on the site and the player follows.
+- **Sub / Dub button** in the player for anime: one tap switches, and each site remembers your pick.
+- **Episodes open directly** on 34 TV sites and 22 anime sites (no searching or clicking on the site); on other sites the app presses the episode in the site's own list.
+- **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
+
 ### 🐞 Fixed
+- **Sites that pass every stream through one proxy address** (NekoWatch and others): a new episode or the Dub version now goes to the native player instead of being taken for the old stream.
 - **App closed on start on Android 8 and 9** (many TV boxes, Fire OS 7, older Sony TVs) because of the cast service; some sites could also close the app there.
 - **Subtitle settings in landscape**: the panel scrolls and Reset / Done stay on screen.
 
@@ -12,6 +19,8 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **WARP connects on more networks**: it looks for Cloudflare's sign-up address in several places at once (built-in, your network's DNS, public DNS, DNS over HTTPS), tries three times, and says why it failed. If Cloudflare is limiting sign-ups from your network (HTTP 429) it stops at once instead of retrying.
 - **Settings, WARP DNS**: type your internet provider's DNS (from your router) if WARP can't connect; it is asked first.
 - **Movies, TV, Anime and the update alert no longer wait for WARP**: they go out directly first, and use WARP only if that fails.
+- **Player buttons**: one compact row of icons (Previous, Next, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More, Cast, Full screen); what is picked (quality, audio, subtitles, server) shows under the title. Speed, boosts, zoom and Restart moved into More. New icon set.
+- **Native player** button on a site's page is on the right, and shows as soon as a stream is found.
 
 ## 2.17.1
 

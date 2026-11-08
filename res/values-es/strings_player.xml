@@ -107,7 +107,7 @@
     <string name="cast_dlna_refused">La TV rechazó este video</string>
     <string name="player_episodes">Episodios</string>
     <string name="player_next_episode">Siguiente: T%1$d E%2$d</string>
-    <string name="player_next_short">E%1$d</string>
+    <string name="player_prev_episode">Anterior: T%1$d E%2$d</string>
     <string name="player_sub_dub">Subtitulado / Doblado: %1$s</string>
     <string name="player_more">Más</string>
 </resources>

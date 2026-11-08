@@ -72,7 +72,7 @@ public class WebActivity extends Activity {
     static final int REQ_FILE = 1, REQ_STORAGE = 5, REQ_PLAY = 6;
     // The chip that takes you back to the native player after Back
     static final String CHIP = "(()=>{if(document.getElementById('fp-native'))return;const b=document.createElement('button');b.id='fp-native';b.textContent='\u25B6 Native player';"
-        + "b.style.cssText='position:fixed;top:8px;left:8px;z-index:2147483647;padding:5px 10px;font:600 13px sans-serif;color:#fff;background:#ff3b5c;border:0;border-radius:8px;opacity:.92';"
+        + "b.style.cssText='position:fixed;top:8px;right:8px;z-index:2147483647;padding:5px 10px;font:600 13px sans-serif;color:#fff;background:#ff3b5c;border:0;border-radius:8px;opacity:.92';"
         + "b.onclick=e=>{e.stopPropagation();FMHY.openNative()};document.documentElement.appendChild(b)})()";
     // Remember <a download="name"> so blob downloads keep the page's filename
     static final String DL_HOOK = "if(!window.__wl){window.__wl=1;const c=HTMLAnchorElement.prototype.click;"
@@ -118,6 +118,7 @@ public class WebActivity extends Activity {
     String pendingServer;
     int[] pendingEpisode;      // {season, episode} picked in the player's Episodes list, opened when the page is back
     int[] episodeAfterLoad;    // the episode to press on the page once it has loaded (a site without an episode address)
+    boolean playAfterLoad;     // an episode page opened from the app: press its Play once it has loaded
     volatile boolean episodeFound;
     Catalog.Title show;        // the series or anime being watched (from the catalog, or found by the player from the page's title)
     volatile boolean scanDone;
@@ -399,6 +400,11 @@ public class WebActivity extends Activity {
                 if (pointer != null && pointer.on) v.evaluateJavascript("window.__fpClear&&__fpClear()", null);
                 String q = pendingQuery;
                 if (q != null && searchTries++ < 4) autosearch(v, q);
+                if (playAfterLoad) {
+                    playAfterLoad = false;
+                    // twice: single-page players set themselves up a few seconds after the load; never once a stream is found
+                    for (long at : new long[]{2500, 6000}) App.main.postDelayed(() -> { if (!sniffer.has() && !isFinishing()) v.evaluateJavascript("postMessage({fp:'play'},'*')", null); }, at);
+                }
                 if (episodeAfterLoad != null) {
                     int[] ep = episodeAfterLoad;
                     episodeAfterLoad = null;
@@ -459,6 +465,7 @@ public class WebActivity extends Activity {
         qualities.clear();
         audios.clear();
         scanDone = false;
+        web.evaluateJavascript(CHIP, null);   // a stream is here: the button stays until the player takes it, or for you to press
         web.evaluateJavascript("postMessage({fp:'servers'},'*')", null);
     }
 
@@ -555,7 +562,7 @@ public class WebActivity extends Activity {
             runOnUiThread(() -> {
                 if (isFinishing()) return;
                 sniffer.switching();
-                if (go != null) web.loadUrl(go);
+                if (go != null) { playAfterLoad = true; web.loadUrl(go); }
                 else if (fallback != null) { episodeAfterLoad = new int[]{season, episode}; web.loadUrl(fallback); }
                 else pressEpisode(season, episode);
             });

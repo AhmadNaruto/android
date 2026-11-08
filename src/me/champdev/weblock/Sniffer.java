@@ -143,7 +143,17 @@ final class Sniffer {
         return subs;
     }
 
+    // A proxy carries the real address in its query (/proxy/hls?url=https%3A%2F%2Fcdn/.../master.m3u8): that address is the stream
+    static final java.util.regex.Pattern CARRIED = java.util.regex.Pattern.compile("[?&][^=&]+=(https?(?::|%3A)[^&]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+
     static String path(String url) {
+        java.util.regex.Matcher m = CARRIED.matcher(url);
+        if (m.find()) {
+            try {
+                String inner = java.net.URLDecoder.decode(m.group(1), "UTF-8");
+                if (inner.startsWith("http")) url = inner;
+            } catch (Exception ignored) { }
+        }
         int q = url.length();
         for (char c : new char[]{'?', '#'}) {
             int i = url.indexOf(c);

@@ -75,6 +75,19 @@ public class SnifferTest {
         Handler.drain();
         check("host root: another file there is offered", root.found, 2);
 
+        // A site's proxy (/proxy/hls?url=...): the address inside it tells streams apart (Sub, then Dub of the same episode)
+        String sub = "https://site.example/proxy/hls?url=https%3A%2F%2Fcdn.d%2Fv8%2Fsub123%2Fmaster.m3u8&exp=1";
+        String dub = "https://site.example/proxy/hls?url=https%3A%2F%2Fcdn.d%2Fv8%2Fdub456%2Fmaster.m3u8&exp=1";
+        Rig px = new Rig().play(SITE1, sub);
+        px.s.handedOff(px.s.best());
+        px.s.switching();
+        px.s.request(sub, null);
+        Handler.drain();
+        check("proxy: the old stream is ignored", px.found, 1);
+        px.s.request(dub, null);
+        Handler.drain();
+        check("proxy: the other one behind the same proxy is offered", px.found, 2);
+
         System.out.println(fails == 0 ? "all passed" : fails + " failed");
         if (fails > 0) System.exit(1);
     }

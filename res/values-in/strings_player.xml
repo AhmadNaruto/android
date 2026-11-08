@@ -107,7 +107,7 @@
     <string name="cast_dlna_refused">TV menolak video ini</string>
     <string name="player_episodes">Episode</string>
     <string name="player_next_episode">Berikutnya: S%1$d E%2$d</string>
-    <string name="player_next_short">E%1$d</string>
+    <string name="player_prev_episode">Sebelumnya: S%1$d E%2$d</string>
     <string name="player_sub_dub">Sub / Dub: %1$s</string>
     <string name="player_more">Lainnya</string>
 </resources>

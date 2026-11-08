@@ -3,6 +3,7 @@
 //   servers = list the page's server / source choices (buttons on screen, or the menu behind a "Servers" button)
 //   click   = press one of the choices that were listed
 //   episode = press an episode (and its season) in the page's own episode list
+//   play    = start the page's player
 (() => {
   if (window.__fpf) return;
   window.__fpf = 1;
@@ -119,9 +120,9 @@
   // 1d) ARIA comboboxes (the phone layout of the same players): a button that says what it picks (aria-label "Language", "Server")
   //     and opens a listbox only when pressed: open it, read the options, close it again
   const shown = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const visibleOptions = () => [...document.querySelectorAll('[role=option]')].filter(shown);
+  const visibleOptions = () => [...document.querySelectorAll('[role=option],[role=menuitem],[role=menuitemradio]')].filter(shown);
   const picked = e => e.getAttribute('aria-selected') === 'true' || e.getAttribute('aria-checked') === 'true' || e.getAttribute('data-state') === 'checked' || e.hasAttribute('data-selected') || /\b(selected|active|current)\b/i.test(String(e.className));
-  const comboBtn = kind => [...document.querySelectorAll('[role=combobox],button[aria-haspopup=listbox]')].find(b => shown(b) && kindOf(b.getAttribute('aria-label') || '') === kind);
+  const comboBtn = kind => [...document.querySelectorAll('[role=combobox],button[aria-haspopup=listbox],button[aria-haspopup=menu],button[aria-haspopup=true]')].find(b => shown(b) && kindOf(b.getAttribute('aria-label') || '') === kind);
   const closeList = async b => {
     for (const t of [document.activeElement, document, document.body]) if (t) t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
     await wait(120);
@@ -142,6 +143,15 @@
       await closeList(b);
     }
     return out;
+  };
+
+  // 1e) Sub / Dub as buttons or tabs side by side (SUB | DUB)
+  const audioToggles = () => {
+    const all = [...document.querySelectorAll('button,[role=tab],[role=radio],a,li')].filter(e => leaf(e) && shown(e) && audioWords.test(label(e).replace(/\s*\(.*\)$/, '')));
+    const g = new Map();
+    for (const e of all) { const p = e.parentElement; if (!g.has(p)) g.set(p, []); g.get(p).push(e); }
+    for (const v of g.values()) if (v.length >= 2) return v.map(e => ({ label: label(e), on: isOn(e) || e.getAttribute('aria-pressed') === 'true', el: e }));
+    return [];
   };
 
   // 2) a button called Servers / Sources that opens a menu: open it, read the entries, close it again
@@ -226,7 +236,7 @@
     if (it.el && document.contains(it.el)) { click(it.el); return; }
     // The page re-drew its list while it was paused: find the entry again by its name
     if (it.el) {
-      const fresh = headed()[it.kind === 'q' ? 'q' : 's'].find(x => x.label === it.label);
+      const fresh = (it.kind === 'a' ? audioToggles() : headed()[it.kind === 'q' ? 'q' : 's']).find(x => x.label === it.label);
       if (fresh) { click(fresh.el); return; }
     }
     if (it.settings) {
@@ -327,6 +337,22 @@
     return false;
   };
 
+  // Start the page's player, as a tap on its Play would (after an episode or Sub / Dub was opened from the app)
+  const playRe = /\b(vjs-big-play-button|jw-icon-display|plyr__control--overlaid|play-?(btn|button)|big-?play)\b/i;
+  const startPlayer = () => {
+    try { if (window.jwplayer && jwplayer().getState && jwplayer().getState() !== 'playing') { jwplayer().play(); return true; } } catch (x) { }
+    const area = e => { const r = e.getBoundingClientRect(); return r.width * r.height; };
+    const b = [...document.querySelectorAll('button,[role=button],div,span,a')].filter(e => {
+      const r = e.getBoundingClientRect();
+      if (r.width < 24 || r.height < 24 || r.bottom < 0 || r.top > innerHeight) return false;
+      return /^play( video)?$/i.test((e.getAttribute('aria-label') || e.title || '').trim()) || playRe.test(String(e.className && e.className.baseVal === undefined ? e.className : ''));
+    }).sort((x, y) => area(y) - area(x))[0];
+    if (b) { click(b); return true; }
+    const v = [...document.querySelectorAll('video')].find(x => x.paused && (x.currentSrc || x.src) && area(x) > 20000);
+    if (v) { v.play().catch(() => { }); return true; }
+    return false;
+  };
+
   const up = m => window === top ? (window.FMHY && FMHY.servers(JSON.stringify(m.items))) : parent.postMessage(m, '*');
   const down = m => { for (let i = 0; i < frames.length; i++) try { frames[i].postMessage(m, '*'); } catch (x) { } };
   addEventListener('message', async e => {
@@ -341,6 +367,7 @@
         const c = await combos();
         ns = { s: ns.s.length >= 2 ? ns.s : c.s, a: ns.a.length >= 2 ? ns.a : c.a, q: ns.q.length ? ns.q : c.q };
       }
+      if (ns.a.length < 2) ns.a = audioToggles();
       // a dropdown that is labelled Server / Source is the most reliable list; guessing from the look of buttons comes after it
       let sv = ns.s.length >= 2 ? ns.s : markOdd(onScreen());
       if (sv.length < 2) sv = h.s;
@@ -354,6 +381,9 @@
     } else if (d.fp === 'episode') {
       down(d);
       if (await pickEpisode(d.s, d.e) && window.FMHY) FMHY.episodeFound();
+    } else if (d.fp === 'play') {
+      down(d);
+      startPlayer();
     } else if (d.fp === 'reply') up(d);
     else if (d.fp === 'click') {
       const i = items.findIndex((_, j) => fid + ':' + j === d.k);

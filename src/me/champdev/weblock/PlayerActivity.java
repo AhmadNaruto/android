@@ -87,7 +87,7 @@ public class PlayerActivity extends Activity {
     long hideAt;
     LinearLayout chipRow;
     final List<LinearLayout> chips = new ArrayList<>();
-    LinearLayout chipCast, chipRotate, chipEpisodes, chipNext, chipDub, chipServers, chipQuality, chipAudio, chipSubs, chipMore;
+    LinearLayout chipCast, chipRotate, chipEpisodes, chipPrev, chipNext, chipDub, chipServers, chipQuality, chipAudio, chipSubs, chipMore;
     Catalog.Title seriesInfo;   // the series playing, with its episodes (for Episodes and Next)
     View panel;                 // the Episodes list, over the video
     int cutTop, cutRight;       // the camera cutout's room at the top and right (the Episodes list keeps clear of it)
@@ -153,11 +153,11 @@ public class PlayerActivity extends Activity {
         ImageView b = new ImageView(this);
         b.setImageResource(icon);
         b.setColorFilter(Color.WHITE);
-        int pad = dp(sizeDp / 4f);
+        int pad = dp(sizeDp / 6f);   // a big icon in a tight, faint disc
         b.setPadding(pad, pad, pad, pad);
         GradientDrawable bg = new GradientDrawable();
         bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(0x66000000);
+        bg.setColor(0x40000000);
         b.setBackground(bg);
         b.setFocusable(false);
         b.setOnClickListener(v -> click.run());
@@ -165,24 +165,13 @@ public class PlayerActivity extends Activity {
         return b;
     }
 
-    /** -10 / +10: the round arrow with the number inside. */
+    /** -10 / +10 (the icon carries the number). */
     View skip(int icon, long ms) {
-        FrameLayout f = new FrameLayout(this);
-        ImageView b = circle(icon, 64, () -> seekBy(ms));
-        f.addView(b, new FrameLayout.LayoutParams(dp(64), dp(64)));
-        TextView n = new TextView(this);
-        n.setText("10");
-        n.setTextColor(Color.WHITE);
-        n.setTextSize(12);
-        n.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        n.setGravity(Gravity.CENTER);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(64), dp(64), Gravity.CENTER);
-        lp.topMargin = dp(2);
-        f.addView(n, lp);
-        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(dp(64), dp(64));
-        ll.setMargins(dp(24), 0, dp(24), 0);
-        f.setLayoutParams(ll);
-        return f;
+        ImageView b = circle(icon, 52, () -> seekBy(ms));
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(dp(52), dp(52));
+        ll.setMargins(dp(20), 0, dp(20), 0);
+        b.setLayoutParams(ll);
+        return b;
     }
 
     void showCues(CueGroup group) {
@@ -218,6 +207,7 @@ public class PlayerActivity extends Activity {
     void buildUi() {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
+        root.setDefaultFocusHighlightEnabled(false);   // a remote key would grey out the whole picture
         surface = new SurfaceView(this);
         root.addView(surface, new FrameLayout.LayoutParams(-1, -1));
         root.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -283,15 +273,15 @@ public class PlayerActivity extends Activity {
 
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dp(24);
-        top.setPadding(pad, dp(10), pad, dp(26));
+        int pad = dp(16);
+        top.setPadding(dp(4), dp(10), pad, dp(26));
         topBar = top;
         top.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xCC000000, 0x00000000}));
         ImageView back = circle(R.drawable.ic_p_back, 48, this::finish);
         top.addView(back);
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
-        titles.setPadding(dp(14), 0, 0, 0);
+        titles.setPadding(dp(4), 0, 0, 0);
         title = new TextView(this);
         title.setTextColor(Color.WHITE);
         title.setTextSize(18);
@@ -302,6 +292,9 @@ public class PlayerActivity extends Activity {
         if (getIntent().hasExtra("pageTitle")) {
             String clean = History.cleanTitle(String.valueOf(getIntent().getStringExtra("pageTitle")), String.valueOf(getIntent().getStringExtra("site")));
             if (!clean.isEmpty()) shown = clean;
+            // The show's own name when the page came from the catalog (a page title may be just the site's name)
+            WebActivity pg = WebActivity.active;
+            if (pg != null && pg.show != null && !pg.show.name.isEmpty() && !pg.show.name.equals("null")) shown = pg.show.name;
         }
         title.setText(shown);
         titles.addView(title);
@@ -319,7 +312,7 @@ public class PlayerActivity extends Activity {
         LinearLayout cluster = new LinearLayout(this);
         cluster.setGravity(Gravity.CENTER);
         rew = skip(R.drawable.ic_p_replay, -10000);
-        playPause = circle(R.drawable.ic_p_play, 88, this::toggle);
+        playPause = circle(R.drawable.ic_p_play, 68, this::toggle);
         playPause.setColorFilter(Color.WHITE);
         fwd = skip(R.drawable.ic_p_forward, 10000);
         cluster.addView(rew);
@@ -360,33 +353,24 @@ public class PlayerActivity extends Activity {
         timeTotal.setPadding(dp(10), 0, 0, 0);
         row.addView(timeTotal);
         bar.addView(row);
-        // The actions, most used first: what to watch (Episodes, Next, Sub / Dub, Servers), then how it plays (Subtitles, Audio,
-        // Quality), the rest (speed, boosts, zoom, from the start) behind More. Spread evenly, never wider than the screen:
-        // Down puts the remote on them, Left/Right moves, OK opens the choice. Cast and Full screen sit in the top bar (phone).
+        // One row of icon buttons: Previous / Next episode, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More (speed,
+        // boosts, zoom, from the start), Cast, Full screen. What each is set to shows under the title. Down puts the remote on them.
         chipRow = new LinearLayout(this);
-        chipRow.setOrientation(LinearLayout.VERTICAL);
-        chipRow.setGravity(Gravity.CENTER_HORIZONTAL);
-        chipRow.setPadding(0, dp(6), 0, 0);
-        chipEpisodes = chip(R.drawable.ic_p_episodes, this::episodesPanel);
-        chipNext = chip(R.drawable.ic_p_next, () -> { int[] n = nextEpisode(); if (n != null) playEpisode(n[0], n[1]); });
+        chipRow.setGravity(Gravity.CENTER);
+        chipRow.setPadding(0, dp(4), 0, 0);
+        chipPrev = chip(R.drawable.ic_p_prev, () -> { int[] n = episodeStep(-1); if (n != null) playEpisode(n[0], n[1]); });
+        chipNext = chip(R.drawable.ic_p_next, () -> { int[] n = episodeStep(1); if (n != null) playEpisode(n[0], n[1]); });
+        chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
+        chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, App.t(R.string.player_audio), false));
         chipDub = chip(R.drawable.ic_p_dub, this::pickSubDub);
+        chipEpisodes = chip(R.drawable.ic_p_episodes, this::episodesPanel);
         chipServers = chip(R.drawable.ic_p_servers, () -> pickServer());
         chipSubs = chip(R.drawable.ic_p_subs, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_TEXT, App.t(R.string.player_subtitles), true));
-        chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, App.t(R.string.player_audio), false));
-        chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
         chipMore = chip(R.drawable.ic_p_tune, this::more);
         chipCast = chip(R.drawable.ic_p_cast, () -> { if (casting != null) openRemote(); else pickTv(); });
         chipRotate = chip(R.drawable.ic_p_fullscreen, () -> setRequestedOrientation(landscape()
             ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE));
-        for (LinearLayout c : new LinearLayout[]{chipCast, chipRotate}) {
-            chips.remove(c);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(44));
-            lp.leftMargin = dp(8);
-            top.addView(c, lp);
-        }
-        int screenW = getResources().getDisplayMetrics().widthPixels;
-        bar.addView(chipRow, new LinearLayout.LayoutParams(screenW - 2 * pad, -2));
-        ((LinearLayout.LayoutParams) chipRow.getLayoutParams()).gravity = Gravity.CENTER_HORIZONTAL;
+        bar.addView(chipRow, new LinearLayout.LayoutParams(-1, -2));
         overlay.addView(bar, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         controls = overlay;
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
@@ -402,8 +386,8 @@ public class PlayerActivity extends Activity {
             }
             cutTop = t;
             cutRight = r;
-            int pad2 = dp(24);
-            topBar.setPadding(pad2 + l, dp(10) + t, pad2 + r, dp(26));
+            int pad2 = dp(16);
+            topBar.setPadding(dp(4) + l, dp(10) + t, pad2 + r, dp(26));
             bottomBar.setPadding(pad2 + l, dp(30), pad2 + r, dp(10) + bt);
             return in;
         });
@@ -436,9 +420,54 @@ public class PlayerActivity extends Activity {
 
     private android.view.GestureDetector taps;
 
+    int holding;          // 1 = 2x forward, -1 = 2x back, 0 = not held
+    float heldSpeed;
+    long backTo;
+
+    final Runnable backStep = new Runnable() {
+        @Override public void run() {
+            if (holding != -1 || player == null) return;
+            backTo = Math.max(0, backTo - 500);   // half a second back every quarter second: 2x
+            player.seekTo(backTo);
+            if (backTo > 0) App.main.postDelayed(this, 250);
+        }
+    };
+
+    void holdStart(boolean forward) {
+        holding = forward ? 1 : -1;
+        hideControls();   // just the picture and the 2x label while held
+        notice.setText(forward ? "2x  \u25B6\u25B6" : "\u25C0\u25C0  2x");
+        notice.setVisibility(View.VISIBLE);
+        App.main.removeCallbacks(hideNotice);
+        if (forward) {
+            heldSpeed = player.getPlaybackParameters().speed;
+            player.setPlaybackSpeed(2f);
+        } else {
+            backTo = player.getCurrentPosition();
+            App.main.post(backStep);
+        }
+    }
+
+    void holdEnd() {
+        if (holding == 1) player.setPlaybackSpeed(heldSpeed);
+        App.main.removeCallbacks(backStep);
+        holding = 0;
+        notice.setVisibility(View.GONE);
+    }
+
     boolean swipe(View v, MotionEvent ev) {
         if (taps == null) taps = new android.view.GestureDetector(this, new android.view.GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent e) { return true; }
+
+            // Hold: the right half plays at 2x, the left half goes back at 2x, until you let go
+            @Override public void onLongPress(MotionEvent e) {
+                if (swipeKind != 0 || player == null || player.isCurrentMediaItemLive()) return;
+                MotionEvent c = MotionEvent.obtain(e);   // not a tap any more: the controls stay as they are
+                c.setAction(MotionEvent.ACTION_CANCEL);
+                v.onTouchEvent(c);
+                c.recycle();
+                holdStart(e.getX() > v.getWidth() / 2f);
+            }
 
             @Override public boolean onDoubleTap(MotionEvent e) {
                 float third = v.getWidth() / 3f;
@@ -449,6 +478,10 @@ public class PlayerActivity extends Activity {
             }
         });
         taps.onTouchEvent(ev);
+        if (holding != 0) {
+            if (ev.getActionMasked() == MotionEvent.ACTION_UP || ev.getActionMasked() == MotionEvent.ACTION_CANCEL) holdEnd();
+            return true;
+        }
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downX = ev.getX();
@@ -502,32 +535,22 @@ public class PlayerActivity extends Activity {
         }
     }
 
-    /** A pill button: its icon and, beside it, its current value ("720p", "1x", "EN", "Fit"). Only the icon when it has no value. */
+    /** A round icon button. Its name shows on a long press (phone) and is read out by TalkBack. */
     LinearLayout chip(int icon, Runnable action) {
         LinearLayout t = new LinearLayout(this);
         t.setGravity(Gravity.CENTER);
-        t.setPadding(dp(10), 0, dp(10), 0);
         ImageView img = new ImageView(this);
         img.setImageResource(icon);
         img.setColorFilter(Color.WHITE);
-        t.addView(img, new LinearLayout.LayoutParams(dp(22), dp(22)));
-        TextView val = new TextView(this);
-        val.setTextColor(Color.WHITE);
-        val.setTextSize(14);
-        val.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        val.setSingleLine();
-        val.setPadding(dp(6), 0, 0, 0);
-        val.setVisibility(View.GONE);
-        t.addView(val);
+        t.addView(img, new LinearLayout.LayoutParams(dp(24), dp(24)));
         android.graphics.drawable.StateListDrawable bg = new android.graphics.drawable.StateListDrawable();
-        GradientDrawable on = new GradientDrawable(), off = new GradientDrawable();
-        on.setCornerRadius(dp(22));
-        off.setCornerRadius(dp(22));
-        on.setColor(Home.ACCENT);
-        off.setColor(0x44FFFFFF);
-        bg.addState(new int[]{android.R.attr.state_focused}, on);
-        bg.addState(new int[]{android.R.attr.state_pressed}, on);
-        bg.addState(new int[0], off);
+        GradientDrawable focused = new GradientDrawable(), pressed = new GradientDrawable();
+        focused.setShape(GradientDrawable.OVAL);
+        pressed.setShape(GradientDrawable.OVAL);
+        focused.setColor(Home.ACCENT);   // the remote's place, clear on a TV
+        pressed.setColor(0x33FFFFFF);
+        bg.addState(new int[]{android.R.attr.state_focused}, focused);
+        bg.addState(new int[]{android.R.attr.state_pressed}, pressed);
         t.setBackground(bg);
         t.setClickable(true);
         t.setFocusable(false);
@@ -536,24 +559,11 @@ public class PlayerActivity extends Activity {
         return t;
     }
 
-    /**
-     * Show or hide a button, give it its pop-up label, and put its current value beside the icon.
-     * changed = the setting is not the default, so it is tinted.
-     */
-    void show(LinearLayout t, boolean visible, String label, boolean changed, String value) {
+    /** Show or hide a button and give it its name (long press, TalkBack). What it is set to shows in the line under the title. */
+    void show(LinearLayout t, boolean visible, String label) {
         t.setVisibility(visible ? View.VISIBLE : View.GONE);
         t.setContentDescription(label);
-        t.setTooltipText(label);   // long press (phone) says what an icon-only button does
-        int color = changed ? 0xFFFF6B86 : Color.WHITE;
-        ImageView img = (ImageView) t.getChildAt(0);
-        TextView val = (TextView) t.getChildAt(1);
-        img.setColorFilter(color);
-        val.setTextColor(color);
-        boolean text = value != null && !value.isEmpty();
-        val.setVisibility(text ? View.VISIBLE : View.GONE);
-        val.setText(text ? value : "");
-        int side = 12;
-        t.setPadding(dp(text ? side : side - 2), 0, dp(text ? side + 2 : side - 2), 0);
+        t.setTooltipText(label);
     }
 
     static void show(TextView t, boolean visible, String text) {
@@ -599,12 +609,6 @@ public class PlayerActivity extends Activity {
         fpsFrames = 0;
     };
 
-    /** A two or three letter code for a track: its language ("EN"), else the start of its label. */
-    static String codeOf(androidx.media3.common.Format f) {
-        if (f.language != null && !f.language.equals("und")) return f.language.substring(0, Math.min(2, f.language.length())).toUpperCase(Locale.ROOT);
-        return f.label == null ? "" : f.label.substring(0, Math.min(3, f.label.length())).toUpperCase(Locale.ROOT);
-    }
-
     // What each button shows right now: the actual quality, audio, subtitles, speed, zoom, server and episode
     void refreshChips() {
         if (player == null) return;
@@ -612,16 +616,15 @@ public class PlayerActivity extends Activity {
         WebActivity page = WebActivity.active;
         String cur = "";
         if (page != null) for (String[] v : page.servers.values()) if (!v[1].isEmpty()) cur = v[0];
-        show(chipServers, page != null && !page.servers.isEmpty(), cur.isEmpty() ? App.t(R.string.player_servers) : App.t(R.string.player_servers_now, cur), false,
-            cur.length() > 6 ? cur.substring(0, 6) : cur);
+        show(chipServers, page != null && !page.servers.isEmpty(), cur.isEmpty() ? App.t(R.string.player_servers) : App.t(R.string.player_servers_now, cur));
         int video = 0, audio = 0, text = 0;
-        String audioNow = "", textNow = null, audioCode = "", textCode = "";
+        String audioNow = "", textNow = null;
         for (Tracks.Group g : t.getGroups()) {
             for (int i = 0; i < g.length; i++) {
                 if (!g.isTrackSupported(i)) continue;
                 if (g.getType() == C.TRACK_TYPE_VIDEO) video++;
-                else if (g.getType() == C.TRACK_TYPE_AUDIO) { audio++; if (g.isTrackSelected(i)) { audioNow = labelOf(g.getTrackFormat(i), R.string.player_audio_n, audio); audioCode = codeOf(g.getTrackFormat(i)); } }
-                else if (g.getType() == C.TRACK_TYPE_TEXT) { text++; if (g.isTrackSelected(i)) { textNow = labelOf(g.getTrackFormat(i), R.string.player_subs_n, text); textCode = codeOf(g.getTrackFormat(i)); } }
+                else if (g.getType() == C.TRACK_TYPE_AUDIO) { audio++; if (g.isTrackSelected(i)) audioNow = labelOf(g.getTrackFormat(i), R.string.player_audio_n, audio); }
+                else if (g.getType() == C.TRACK_TYPE_TEXT) { text++; if (g.isTrackSelected(i)) textNow = labelOf(g.getTrackFormat(i), R.string.player_subs_n, text); }
             }
         }
         boolean manual = false;
@@ -632,58 +635,55 @@ public class PlayerActivity extends Activity {
         String pq = "";
         if (page != null) for (String[] v : page.qualities.values()) if (!v[1].isEmpty()) pq = v[0];
         if (video <= 1 && page != null && !page.qualities.isEmpty()) {
-            // The page's own quality list: its label ("1080p Full HD") shortened to the number
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)\\b(\\d{3,4}p|4k|8k)\\b").matcher(pq);
-            String shown = m.find() ? m.group(1).toLowerCase(Locale.ROOT).replace("k", "K") : h;
-            show(chipQuality, true, App.t(R.string.player_quality_now, pq.isEmpty() ? (h.isEmpty() ? App.t(R.string.player_auto) : h) : pq), !pq.isEmpty(), shown);
-        } else show(chipQuality, video > 1, App.t(R.string.player_quality_now, manual ? h : h.isEmpty() ? App.t(R.string.player_auto) : App.t(R.string.player_auto_quality, h)),
-            manual, h.isEmpty() ? App.t(R.string.player_auto) : h);
-        show(chipAudio, audio > 1, App.t(R.string.player_audio_now, audioNow), false, audioCode);
+            // The page's own quality list
+            show(chipQuality, true, App.t(R.string.player_quality_now, pq.isEmpty() ? (h.isEmpty() ? App.t(R.string.player_auto) : h) : pq));
+        } else show(chipQuality, video > 1, App.t(R.string.player_quality_now, manual ? h : h.isEmpty() ? App.t(R.string.player_auto) : App.t(R.string.player_auto_quality, h)));
+        show(chipAudio, audio > 1, App.t(R.string.player_audio_now, audioNow));
         boolean subsOn = textNow != null;
         String off = App.t(R.string.player_off);
-        show(chipSubs, text > 0 || canSearchSubs(), App.t(R.string.player_subs_now, subsOn ? textNow : off), subsOn, subsOn ? (textCode.isEmpty() ? "CC" : textCode) : off);
+        show(chipSubs, text > 0 || canSearchSubs(), App.t(R.string.player_subs_now, subsOn ? textNow : off));
         float sp = player.getPlaybackParameters().speed;
-        // More is tinted, with the speed if that is what changed, when any of its settings is not the default
-        show(chipMore, true, App.t(R.string.player_more), sp != 1f || boost > 0 || voice || zoom != 0, sp != 1f ? speedLabel(sp) : "");
-        int[] next = nextEpisode();
-        show(chipEpisodes, seriesInfo != null, App.t(R.string.player_episodes), false, App.t(R.string.player_episodes));
-        show(chipNext, next != null, next == null ? "" : App.t(R.string.player_next_episode, next[0], next[1]), false, next == null ? "" : App.t(R.string.player_next_short, next[1]));
+        show(chipMore, true, App.t(R.string.player_more));
+        int[] next = episodeStep(1), prev = episodeStep(-1);
+        show(chipPrev, prev != null, prev == null ? "" : App.t(R.string.player_prev_episode, prev[0], prev[1]));
+        show(chipEpisodes, seriesInfo != null, App.t(R.string.player_episodes));
+        show(chipNext, next != null, next == null ? "" : App.t(R.string.player_next_episode, next[0], next[1]));
         String sd = subDubNow();
-        show(chipDub, subDub().size() >= 2, App.t(R.string.player_sub_dub, sd), false, sd.length() > 6 ? sd.substring(0, 6) : sd);
-        show(chipCast, !App.tv && (casting != null || Cast.any()), casting != null ? App.t(R.string.cast_playing_on, casting) : App.t(R.string.cast_to_tv), casting != null, casting != null ? casting : "");
+        show(chipDub, subDub().size() >= 2, App.t(R.string.player_sub_dub, sd));
+        show(chipCast, !App.tv && (casting != null || Cast.any()), casting != null ? App.t(R.string.cast_playing_on, casting) : App.t(R.string.cast_to_tv));
+        // Under the title: the episode, then what is picked (quality, audio, Sub / Dub, subtitles, server)
+        List<String> info = new ArrayList<>();
+        if (!epText.isEmpty()) info.add(epText);
+        String q = !pq.isEmpty() ? pq : h;
+        if (!q.isEmpty()) info.add(q);
+        if (audio > 1 && !audioNow.isEmpty()) info.add(audioNow);   // only when there is a choice ("Audio 1" says nothing)
+        if (subDub().size() >= 2) info.add(sd);
+        if (subsOn) info.add("CC " + textNow);
+        if (!cur.isEmpty()) info.add(cur);
+        if (sp != 1f) info.add(speedLabel(sp));
+        epLine.setText(String.join("  \u00B7  ", info));
+        epLine.setVisibility(info.isEmpty() ? View.GONE : View.VISIBLE);
         ((ImageView) chipRotate.getChildAt(0)).setImageResource(landscape() ? R.drawable.ic_p_fullscreen_exit : R.drawable.ic_p_fullscreen);
-        show(chipRotate, !App.tv, App.t(landscape() ? R.string.player_portrait : R.string.player_full_screen), false, "");
+        show(chipRotate, !App.tv, App.t(landscape() ? R.string.player_portrait : R.string.player_full_screen));
         fitChips();
     }
 
-    // Pills in as many centred rows as it takes to fit the width (one row on a TV, two on a phone), never overflowing.
+    // One compact centred row of icon buttons; on a narrow screen they shrink to fit, never wrapping.
     // Rebuilt only when what is shown changes, so the remote keeps its place.
     void fitChips() {
-        StringBuilder key = new StringBuilder();
-        for (LinearLayout c : chips) key.append(c.getVisibility() == View.VISIBLE ? ((TextView) c.getChildAt(1)).getText() + "|" : "-|");
+        StringBuilder key = new StringBuilder(landscape() ? "L" : "P");
+        for (LinearLayout c : chips) key.append(c.getVisibility() == View.VISIBLE ? '1' : '0');
         if (key.toString().equals(chipLayoutKey)) return;
         chipLayoutKey = key.toString();
         View had = getCurrentFocus();
         chipRow.removeAllViews();
-        for (LinearLayout c : chips) if (c.getParent() instanceof android.view.ViewGroup) ((android.view.ViewGroup) c.getParent()).removeView(c);
-        int max = ((LinearLayout.LayoutParams) chipRow.getLayoutParams()).width, gap = dp(8), used = 0;
-        LinearLayout row = null;
+        int n = 0;
+        for (LinearLayout c : chips) if (c.getVisibility() == View.VISIBLE) n++;
+        int max = getResources().getDisplayMetrics().widthPixels - 2 * dp(24);
+        int size = n == 0 ? dp(48) : Math.min(dp(48), max / n);
         for (LinearLayout c : chips) {
-            if (c.getVisibility() != View.VISIBLE) continue;
-            c.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            int w = c.getMeasuredWidth();
-            if (row == null || used + w + gap > max) {
-                row = new LinearLayout(this);
-                row.setGravity(Gravity.CENTER);
-                LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-2, -2);
-                if (chipRow.getChildCount() > 0) rp.topMargin = dp(6);
-                chipRow.addView(row, rp);
-                used = 0;
-            }
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(44));
-            lp.setMargins(gap / 2, 0, gap / 2, 0);
-            row.addView(c, lp);
-            used += w + gap;
+            if (c.getParent() instanceof android.view.ViewGroup) ((android.view.ViewGroup) c.getParent()).removeView(c);
+            if (c.getVisibility() == View.VISIBLE) chipRow.addView(c, new LinearLayout.LayoutParams(size, size));
         }
         if (had != null && chips.contains(had)) had.requestFocus();
     }
@@ -785,7 +785,7 @@ public class PlayerActivity extends Activity {
                 if (s == Player.STATE_ENDED) {
                     resume.remove(base);
                     scrobble("stop");
-                    int[] n = nextEpisode();
+                    int[] n = episodeStep(1);
                     if (n != null) playEpisode(n[0], n[1]); else finish();   // a series goes on with the next episode
                 }
                 update();
@@ -991,7 +991,7 @@ public class PlayerActivity extends Activity {
             if (down) showControls();
             if (k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_DPAD_RIGHT || k == KeyEvent.KEYCODE_DPAD_CENTER
                 || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER) return super.dispatchKeyEvent(e);
-            // Two rows on a phone: Up/Down move between them, Up from the top row hands the remote back to play/seek
+            // Up hands the remote back to play/seek
             if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_DOWN) {
                 if (down) {
                     View n = getCurrentFocus().focusSearch(k == KeyEvent.KEYCODE_DPAD_UP ? View.FOCUS_UP : View.FOCUS_DOWN);
@@ -1155,13 +1155,12 @@ public class PlayerActivity extends Activity {
         return s > 0 || e > 0 ? new int[]{s, e} : null;
     }
 
-    // "Season 1 · Episode 3" under the title
+    String epText = "";   // "Season 1 · Episode 3", first on the line under the title
+
     void episodeLine() {
         int[] pe = pageEpisode();
-        if (pe == null) { epLine.setVisibility(View.GONE); return; }
-        String label = pe[0] > 0 ? App.t(R.string.player_season_episode, pe[0], pe[1]) : App.t(R.string.player_episode, pe[1]);
-        epLine.setText(label);
-        epLine.setVisibility(View.VISIBLE);
+        epText = pe == null ? "" : pe[0] > 0 ? App.t(R.string.player_season_episode, pe[0], pe[1]) : App.t(R.string.player_episode, pe[1]);
+        refreshChips();
     }
 
     /** More: the settings changed less often, each with its value now. */
@@ -1220,17 +1219,16 @@ public class PlayerActivity extends Activity {
         });
     }
 
-    /** The episode after the one playing (by season, then number); null at the end or when unknown. */
-    int[] nextEpisode() {
+    /** The episode after (dir 1) or before (dir -1) the one playing, by season then number; null at either end or when unknown. */
+    int[] episodeStep(int dir) {
         int[] pe = pageEpisode();
         if (seriesInfo == null || pe == null) return null;
-        int s = pe[0] > 0 ? pe[0] : 1;
-        Catalog.Episode best = null;
+        long now = Math.max(1, pe[0]) * 100000L + pe[1], best = 0;
         for (Catalog.Episode e : seriesInfo.episodes) {
-            boolean after = e.season > s || (e.season == s && e.number > pe[1]);
-            if (after && (best == null || e.season < best.season || (e.season == best.season && e.number < best.number))) best = e;
+            long k = e.season * 100000L + e.number;
+            if ((k - now) * dir > 0 && (best == 0 || (k - best) * dir < 0)) best = k;
         }
-        return best == null ? null : new int[]{best.season, best.number};
+        return best == 0 ? null : new int[]{(int) (best / 100000), (int) (best % 100000)};
     }
 
     /** Leave the player and let the page open that episode (WebActivity.openEpisode); its stream comes back here. */
