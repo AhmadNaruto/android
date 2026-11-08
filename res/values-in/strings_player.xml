@@ -107,6 +107,10 @@
     <string name="player_episodes">Episode</string>
     <string name="player_next_episode">Berikutnya: S%1$d E%2$d</string>
     <string name="player_prev_episode">Sebelumnya: S%1$d E%2$d</string>
+    <string name="player_skip_intro">Lewati intro</string>
+    <string name="player_skip_recap">Lewati rekap</string>
+    <string name="player_skip_credits">Lewati kredit</string>
+    <string name="player_next_in">Episode berikutnya · %1$d</string>
     <string name="player_sub_dub">Sub / Dub: %1$s</string>
     <string name="player_more">Lainnya</string>
 </resources>

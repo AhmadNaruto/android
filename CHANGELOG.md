@@ -11,6 +11,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Sites without a known address open the title's page too**: the app searches the site, then opens the matching result (name, and year when shown) instead of leaving you on the results.
 - **Anime opens on anime sites only**, the ones that open episodes directly first; Watch starts Episode 1 there.
 - **Site nag pop-ups closed by themselves**: "Join our Discord", "What's new", donate, ad-block and new-domain notices.
+- **Skip intro, recap and credits**: a button over the picture during the intro or recap (OK on the remote presses it). At the credits it offers the next episode and plays it after 10 s; with no next one it skips the credits. Times come from TheIntroDB and AniSkip; without them the last 30 s of an episode offer the next one.
 - **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
 
 ### 🐞 Fixed

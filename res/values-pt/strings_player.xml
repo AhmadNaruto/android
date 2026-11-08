@@ -107,6 +107,10 @@
     <string name="player_episodes">Episódios</string>
     <string name="player_next_episode">Próximo: T%1$d E%2$d</string>
     <string name="player_prev_episode">Anterior: T%1$d E%2$d</string>
+    <string name="player_skip_intro">Pular abertura</string>
+    <string name="player_skip_recap">Pular resumo</string>
+    <string name="player_skip_credits">Pular créditos</string>
+    <string name="player_next_in">Próximo episódio · %1$d</string>
     <string name="player_sub_dub">Legendado / Dublado: %1$s</string>
     <string name="player_more">Mais</string>
 </resources>

@@ -107,6 +107,10 @@
     <string name="player_episodes">الحلقات</string>
     <string name="player_next_episode">التالي: S%1$d E%2$d</string>
     <string name="player_prev_episode">السابق: S%1$d E%2$d</string>
+    <string name="player_skip_intro">تخطي المقدمة</string>
+    <string name="player_skip_recap">تخطي الملخص</string>
+    <string name="player_skip_credits">تخطي الشارة</string>
+    <string name="player_next_in">الحلقة التالية · %1$d</string>
     <string name="player_sub_dub">مترجم / مدبلج: %1$s</string>
     <string name="player_more">المزيد</string>
 </resources>

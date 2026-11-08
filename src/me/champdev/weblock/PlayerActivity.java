@@ -90,6 +90,13 @@ public class PlayerActivity extends Activity {
     LinearLayout chipCast, chipRotate, chipEpisodes, chipPrev, chipNext, chipDub, chipServers, chipQuality, chipAudio, chipSubs, chipMore;
     Catalog.Title seriesInfo;   // the series playing, with its episodes (for Episodes and Next)
     View panel;                 // the Episodes list, over the video
+    TextView skipBtn;           // Skip intro / Skip recap / Next episode, over the picture
+    List<Skips.Part> skips = new ArrayList<>();
+    final java.util.Set<Skips.Part> skipDone = new java.util.HashSet<>();   // skipped, or the next episode was refused by seeking back
+    Skips.Part skipShown;
+    long countdownMs;           // the Next episode countdown left, while the credits play
+    boolean skipsAsked;
+    Skips.Part tail;            // the last 30 s, when no credits are known for this copy
     int cutTop, cutRight;       // the camera cutout's room at the top and right (the Episodes list keeps clear of it)
     String chipLayoutKey = "";
     LinearLayout topBar, bottomBar;      // padded for notches; the centre buttons stay centred
@@ -115,6 +122,7 @@ public class PlayerActivity extends Activity {
     final Runnable tick = new Runnable() {
         @Override public void run() {
             update();
+            checkSkip();
             if (Math.round(measuredFps) != Math.round(shownFps)) { shownFps = measuredFps; refreshChips(); }
             App.main.postDelayed(this, 500);
         }
@@ -374,6 +382,22 @@ public class PlayerActivity extends Activity {
         overlay.addView(bar, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         controls = overlay;
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
+
+        // Skip intro / Skip recap / Next episode: bottom right, over the picture, also while the controls are hidden
+        skipBtn = new TextView(this);
+        skipBtn.setTextColor(0xFF111111);
+        skipBtn.setTextSize(16);
+        skipBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        skipBtn.setPadding(dp(20), dp(11), dp(20), dp(11));
+        GradientDrawable sbg = new GradientDrawable();
+        sbg.setCornerRadius(dp(10));
+        sbg.setColor(0xF2FFFFFF);
+        skipBtn.setBackground(sbg);
+        skipBtn.setVisibility(View.GONE);
+        skipBtn.setOnClickListener(v -> pressSkip());
+        FrameLayout.LayoutParams skp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
+        skp.setMargins(0, 0, dp(24), dp(150));
+        root.addView(skipBtn, skp);
 
         if (android.os.Build.VERSION.SDK_INT >= 28) getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         root.setOnApplyWindowInsetsListener((v, in) -> {
@@ -781,7 +805,7 @@ public class PlayerActivity extends Activity {
                 spinner.setVisibility(s == Player.STATE_BUFFERING ? View.VISIBLE : View.GONE);
                 if (s == Player.STATE_READY && getIntent().hasExtra("mime")) Iptv.played(channel());
                 if (s == Player.STATE_READY && !scrobbled && player.getPlayWhenReady()) { scrobbled = true; scrobble("start"); }
-                if (s == Player.STATE_READY && !subsTried) { subsTried = true; autoSubs(); }
+                if (s == Player.STATE_READY && !subsTried) { subsTried = true; autoSubs(); loadSkips(); }
                 if (s == Player.STATE_ENDED) {
                     resume.remove(base);
                     scrobble("stop");
@@ -1004,6 +1028,8 @@ public class PlayerActivity extends Activity {
         if (!down) return super.dispatchKeyEvent(e);
         switch (k) {
             case KeyEvent.KEYCODE_DPAD_CENTER: case KeyEvent.KEYCODE_ENTER: case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                if (r == 0) { if (skipBtn.getVisibility() == View.VISIBLE && controls.getVisibility() != View.VISIBLE) pressSkip(); else toggle(); }
+                return true;
             case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: case KeyEvent.KEYCODE_SPACE:
                 if (r == 0) toggle();
                 return true;
@@ -1188,6 +1214,68 @@ public class PlayerActivity extends Activity {
             .setItems(labels.toArray(new String[0]), (d, i) -> acts.get(i).run()).show();
     }
 
+    // ---- Skip intro, recap and credits ----
+
+    /** Where the intro, recap and credits are (TheIntroDB, AniSkip), once the title is known. */
+    void loadSkips() {
+        WebActivity page = WebActivity.active;
+        Catalog.Title t = seriesInfo != null ? seriesInfo : page != null ? page.show : null;
+        if (t == null || skipsAsked || !getIntent().hasExtra("pageTitle")) return;
+        int[] pe = pageEpisode();
+        if (t.series() && pe == null) return;
+        skipsAsked = true;
+        App.io.execute(() -> {
+            if (t.tmdb.isEmpty() && t.id.startsWith("tt")) Catalog.fill(t);   // the catalog's detail page has the TMDB id
+            List<Skips.Part> found = Skips.find(t, pe == null ? 0 : pe[0], pe == null ? 0 : pe[1]);
+            runOnUiThread(() -> skips = found);
+        });
+    }
+
+    /**
+     * Every half second: in an intro or recap, offer to skip it; in the credits (or the next-episode preview), offer the next
+     * episode with a 10 s countdown (it plays by itself at 0), or to skip the credits when they don't run to the end.
+     */
+    void checkSkip() {
+        if (player == null) return;
+        long pos = player.getCurrentPosition(), dur = player.getDuration();
+        Skips.Part now = null;
+        int[] next = episodeStep(1);
+        if (dur > 0 && dur != C.TIME_UNSET && panel == null) {
+            for (Skips.Part p : skips) if (p.has(pos, dur) && !skipDone.contains(p)) { now = p; break; }
+            // No credits known inside this copy (none timed, or the site's cut is shorter): the last 30 s of an episode count
+            if (now == null && next != null && dur - pos < 30000) {
+                boolean known = false;
+                for (Skips.Part p : skips) if ((p.kind.equals("credits") || p.kind.equals("preview")) && p.start < dur) known = true;
+                if (!known) {
+                    if (tail == null || tail.start != dur - 30000) tail = new Skips.Part("credits", dur - 30000, -1);
+                    if (!skipDone.contains(tail)) now = tail;
+                }
+            }
+        }
+        boolean end = now != null && (now.kind.equals("credits") || now.kind.equals("preview"));
+        if (now == null || (end && next == null && now.end < 0)) { skipShown = null; skipBtn.setVisibility(View.GONE); return; }
+        if (now != skipShown) { skipShown = now; countdownMs = 10000; }
+        if (end && next != null) {
+            if (player.isPlaying()) countdownMs -= 500;
+            if (countdownMs <= 0) { skipDone.add(now); playEpisode(next[0], next[1]); return; }
+            skipBtn.setText(App.t(R.string.player_next_in, (int) Math.ceil(countdownMs / 1000.0)));
+        } else skipBtn.setText(App.t(now.kind.equals("recap") ? R.string.player_skip_recap : end ? R.string.player_skip_credits : R.string.player_skip_intro));
+        skipBtn.setVisibility(View.VISIBLE);
+    }
+
+    void pressSkip() {
+        Skips.Part p = skipShown;
+        if (p == null || player == null) return;
+        skipDone.add(p);
+        skipBtn.setVisibility(View.GONE);
+        int[] next = episodeStep(1);
+        if ((p.kind.equals("credits") || p.kind.equals("preview")) && next != null) { playEpisode(next[0], next[1]); return; }
+        // land after the intro, never a few seconds back in it (the usual seek snaps to the nearest key frame)
+        player.setSeekParameters(androidx.media3.exoplayer.SeekParameters.NEXT_SYNC);
+        player.seekTo(p.end < 0 ? player.getDuration() : p.end);
+        player.setSeekParameters(androidx.media3.exoplayer.SeekParameters.CLOSEST_SYNC);
+    }
+
     // ---- Episodes, Next, Sub / Dub ----
 
     /** The series playing, with its episodes: the page's (opened from the catalog), else looked up by the page's title. Once, in the background. */
@@ -1215,6 +1303,7 @@ public class PlayerActivity extends Activity {
                 seriesInfo = done;
                 if (page.show == null) page.show = done;
                 refreshChips();
+                loadSkips();
             });
         });
     }

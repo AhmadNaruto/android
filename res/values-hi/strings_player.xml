@@ -107,6 +107,10 @@
     <string name="player_episodes">एपिसोड</string>
     <string name="player_next_episode">अगला: S%1$d E%2$d</string>
     <string name="player_prev_episode">पिछला: S%1$d E%2$d</string>
+    <string name="player_skip_intro">इंट्रो छोड़ें</string>
+    <string name="player_skip_recap">रीकैप छोड़ें</string>
+    <string name="player_skip_credits">क्रेडिट्स छोड़ें</string>
+    <string name="player_next_in">अगला एपिसोड · %1$d</string>
     <string name="player_sub_dub">सब / डब: %1$s</string>
     <string name="player_more">और</string>
 </resources>
