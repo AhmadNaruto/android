@@ -2,39 +2,32 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
-## Unreleased
+## 2.18.0
 
 ### ✨ New
-- **Series and anime in the player**: Previous, Next and an Episodes list (seasons, pictures, names) right in the player; the next episode starts by itself at the end. Picking one opens it on the site and the player follows.
-- **Sub / Dub button** in the player for anime: one tap switches, and each site remembers your pick.
-- **Movies start by themselves**: a movie opened on its site's own page has its Play pressed for you.
-- **Episodes open directly** on 34 TV sites and 22 anime sites (no searching or clicking on the site); on other sites the app presses the episode in the site's own list, also when it sits behind the player's Episodes and Season menus (P-Stream sites like Cinefork, Aether, Basement), and the first episode such a site starts by itself is not handed over meanwhile. A site's own promo clip is never taken for the video.
-- **Sites without a known address open the title's page too**: the app searches the site, then opens the matching result (name, and year when shown) instead of leaving you on the results.
-- **Anime opens on anime sites only**, the ones that open episodes directly first; Watch starts Episode 1 there.
-- **Site nag pop-ups closed by themselves**: "Join our Discord", "What's new", donate, ad-block and new-domain notices.
-- **Skip intro, recap and credits**, for series, anime and movies: a button over the picture during the intro or recap; it takes the remote's focus, so OK presses it. At the credits it offers the next episode and plays it after 10 s; with no next one it skips the credits. Times come from TheIntroDB and AniSkip; without them the last 30 s of an episode offer the next one.
-- **Settings, Skip intros**: intros and recaps go by themselves when their times are known.
-- **Subtitles in any language**: pick a language first (Arabic and others that never showed now do), then a file; files are converted so every script shows right. They also line up with the speech by themselves when a file is off (a release with a recap can be minutes off).
-- **Picture in picture** (phone): Home while a video plays keeps it playing in a small window, with play / pause; tap it for full screen, close it to stop.
-- **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
-
-### 🐞 Fixed
-- **IPTV lists on a TV**: the last channel tile kept its pink ring after the remote moved up to the chips, so two things looked selected.
-- **StreamCorner** showed a blank page (it refuses to start when the page's fetch is watched as it loads) and its live streams (FLV) never reached the player: both work now.
-- **Servers** on Cinejoy showed the player's two "10" skip buttons; it now finds the real server list (it opens a moment later).
-- **Sites that pass every stream through one proxy address** (NekoWatch and others): a new episode or the Dub version now goes to the native player instead of being taken for the old stream.
-- **App closed on start on Android 8 and 9** (many TV boxes, Fire OS 7, older Sony TVs) because of the cast service; some sites could also close the app there.
-- **Subtitle settings in landscape**: the panel scrolls and Reset / Done stay on screen.
+- **Series and anime in the player**: Episodes list (seasons, pictures, names), Previous and Next, and the next episode starts by itself.
+- **Skip intro, recap and credits**, with a Next episode countdown at the credits (OK on the remote presses it). Settings, Skip intros skips them without asking.
+- **Sub / Dub button** for anime: one press switches, each site remembers your pick.
+- **Episodes open directly** on 34 TV sites and 22 anime sites. Elsewhere the app presses the episode on the site for you, also behind a player's Episodes menu (Cinefork, Aether, Basement).
+- **A title's own page** opens on about 70 sites; the others are searched and the match opened. Anime opens on anime sites only.
+- **Subtitles in any language** (Arabic and others that never showed), converted so every script shows right, and lined up with the speech by themselves when a file is off.
+- **Picture in picture** on phones, and **hold for 2x**: right side forward, left side back.
+- **Site pop-ups** like "Join our Discord" and "What's new" close by themselves; movies opened from the catalog start playing by themselves.
 
 ### 🔧 Changed
-- **WARP connects on more networks**: it looks for Cloudflare's sign-up address in several places at once (built-in, your network's DNS, public DNS, DNS over HTTPS), tries three times, and says why it failed. If Cloudflare is limiting sign-ups from your network (HTTP 429) it stops at once instead of retrying.
-- **Settings, WARP DNS**: type your internet provider's DNS (from your router) if WARP can't connect; it is asked first.
-- **Movies, TV, Anime and the update alert no longer wait for WARP**: they go out directly first, and use WARP only if that fails.
-- **Player buttons**: one compact row of icons (Previous, Next, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More, Cast, Full screen); what is picked (quality, audio, subtitles, server) shows under the title. Speed, boosts, zoom and Restart moved into More. New icon set.
-- **FMHYPlayer**: the player has a name. Its button sits on the site's own player, with the app's icon, and shows as soon as a stream is found.
-- **Subtitles**: the style entry is called Settings.
-- **On a TV**, the player button the remote is on shows its name above it.
+- **New player look**: one row of icons (Previous, Next, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More, Cast, Full screen) and what is picked under the title. Speed, boosts, zoom and From the start are in More. On a TV the button the remote is on shows its name.
+- **FMHYPlayer**: the player has a name; its button sits on the site's own player.
+- **WARP connects on more networks**, says why when it can't, and stops at once when Cloudflare limits sign-ups (HTTP 429). **Settings, WARP DNS** takes your provider's DNS.
+- **Movies, TV, Anime and the update alert** no longer wait for WARP.
 - **Phone top bar**: the logo alone, so Search gets the room.
+
+### 🐞 Fixed
+- **App closed on start on Android 8 and 9** (many TV boxes, Fire OS 7, older Sony TVs).
+- **StreamCorner** showed a blank page and its live streams never reached the player.
+- **NekoWatch and other sites behind one proxy address**: a new episode or the Dub version now reaches the player.
+- **Servers on Cinejoy** listed the player's skip buttons.
+- **IPTV on a TV**: a channel tile kept its ring after the remote moved to the chips.
+- **Subtitle settings in landscape**: Reset and Done stay on screen.
 
 ## 2.17.1
 

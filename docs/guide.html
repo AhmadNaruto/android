@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>User guide - FMHYPlay</title>
-<meta name="description" content="How to install and use FMHYPlay: the TV remote, touch controls, the native player, IPTV, WARP, ad blocking, your own playlists and Simkl.">
-<meta property="og:title" content="User guide - FMHYPlay"><meta property="og:description" content="How to install and use FMHYPlay: the TV remote, touch controls, the native player, IPTV, WARP, ad blocking, your own playlists and Simkl."><meta property="og:image" content="banner.png">
+<meta name="description" content="How to install and use FMHYPlay: the TV remote, touch controls, FMHYPlayer, IPTV, WARP, ad blocking, your own playlists and Simkl.">
+<meta property="og:title" content="User guide - FMHYPlay"><meta property="og:description" content="How to install and use FMHYPlay: the TV remote, touch controls, FMHYPlayer, IPTV, WARP, ad blocking, your own playlists and Simkl."><meta property="og:image" content="banner.png">
 <meta name="theme-color" content="#120e1a"><link rel="icon" href="icon.png"><link rel="stylesheet" href="style.css">
 </head><body>
 <header class="nav"><div class="in">
@@ -11,7 +11,7 @@
 </div></header>
 
 <main><div class="layout">
-<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">The player</a><a href="#episodes">Episodes and servers</a><a href="#cast">Cast to TV</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#punchplay">PunchPlay</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
+<aside class="toc"><a href="#install">Install</a><a href="#browse">Browse and play</a><a href="#favorites">Favorites and My list</a><a href="#addsite">Add your own site</a><a href="#remote">TV remote</a><a href="#touch">Phone and tablet</a><a href="#player">FMHYPlayer</a><a href="#episodes">Episodes and skipping</a><a href="#cast">Cast to TV</a><a href="#subtitles">Subtitles</a><a href="#simkl">Simkl</a><a href="#punchplay">PunchPlay</a><a href="#iptv">IPTV</a><a href="#addstream">Add a stream or playlist</a><a href="#sources">Your own sources</a><a href="#network">WARP and ad blocking</a><a href="#troubleshooting">Troubleshooting</a></aside>
 <article>
 <h1>User guide</h1>
 <p class="sub">Everything you need to use FMHYPlay on a TV or a phone.</p>
@@ -42,11 +42,11 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <p>The tabs along the top (bottom on a phone) are <b>Home</b>, <b>Movies</b>, <b>TV</b>, <b>Sports</b>, <b>Anime</b>, <b>IPTV</b> and <b>Settings</b>.</p>
 <ul>
 <li><b>Sites</b> are the streaming sites from the FMHY lists, grouped by what they carry. Pick one to open it.</li>
-<li><b>Catalog rows</b> show what is popular. Pick a title, then <i>Watch on</i> a site: on many sites it opens the title's own page, on the others it searches for the name.</li>
+<li><b>Catalog rows</b> show what is popular. Pick a title, then <i>Watch on</i> a site: on about 70 sites it opens the title's own page (or the episode you picked), on the others it searches for the name and opens the match. Anime titles list anime sites only, and the sites that open episodes directly come first.</li>
 <li><b>Continue watching</b> on Home brings back the last titles you opened.</li>
 <li>Hold <kbd>OK</kbd> (long-press on a phone) on a site for favorites and mirrors.</li>
 </ul>
-<p>When a site starts a video, FMHYPlay takes it over and opens the native player. <kbd>Back</kbd> returns to the site, and a small <b>Native player</b> button in the corner brings the player back.</p>
+<p>When a site starts a video, FMHYPlay takes it over and opens it in <b>FMHYPlayer</b>. <kbd>Back</kbd> returns to the site, and the <b>FMHYPlayer</b> button on the site's own player brings it back. Sites' "Join our Discord", "What's new" and donate pop-ups are closed for you.</p>
 
 <h2 id="favorites">Favorites and My list</h2>
 <p>Mark what you use most so it is one press away.</p>
@@ -61,7 +61,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <ol>
 <li>On <b>Home</b>, find the <b>Favorites</b> row and press the <b>+ Add a site</b> card.</li>
 <li>Type or paste the address (for example <code>example.com</code>; <code>https://</code> is added for you) and press <i>Add</i>.</li>
-<li>The site appears in Favorites. Open it like any other: the native player, ad blocking, the remote cursor and the Servers and Quality buttons all work on it.</li>
+<li>The site appears in Favorites. Open it like any other: FMHYPlayer, ad blocking, the remote cursor and the Servers and Quality buttons all work on it.</li>
 </ol>
 <p>Hold <kbd>OK</kbd> on it to remove it from your favorites.</p>
 
@@ -72,9 +72,9 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <tr><td rowspan="2">Sites</td><td>Arrows</td><td>Move a round cursor over the page (or the focus, in focus mode)</td></tr>
 <tr><td>Hold <kbd>OK</kbd> 5 s</td><td>Switch between cursor and focus mode for that site</td></tr>
 <tr><td rowspan="5">Player</td><td><kbd>Left</kbd> <kbd>Right</kbd></td><td>Seek 10 s; hold to go faster (30 s, then 60 s)</td></tr>
-<tr><td><kbd>OK</kbd> / Play</td><td>Pause and play</td></tr>
+<tr><td><kbd>OK</kbd> / Play</td><td>Pause and play; when <i>Skip intro</i> or <i>Next episode</i> shows, it presses that</td></tr>
 <tr><td><kbd>Up</kbd></td><td>Show the controls</td></tr>
-<tr><td><kbd>Down</kbd> / <kbd>Menu</kbd></td><td>Move to the buttons (Servers, Quality, Audio, Subtitles, Speed, Zoom)</td></tr>
+<tr><td><kbd>Down</kbd> / <kbd>Menu</kbd></td><td>Move to the buttons; the one the remote is on shows its name above it</td></tr>
 <tr><td><kbd>Back</kbd></td><td>Close the player and return to the site</td></tr></table>
 <p>Seeking waits until you stop pressing, then jumps once, so holding the key does not make the stream reload on every step.</p>
 
@@ -83,25 +83,31 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <tr><td>Tap the video</td><td>Show or hide the controls</td></tr>
 <tr><td>Double-tap the left or right third</td><td>Back or forward 10 seconds</td></tr>
 <tr><td>Double-tap the middle</td><td>Pause and play</td></tr>
+<tr><td>Hold the right half</td><td>Play at 2x until you let go</td></tr>
+<tr><td>Hold the left half</td><td>Go back at 2x until you let go</td></tr>
 <tr><td>Swipe up or down on the left half</td><td>Brightness</td></tr>
 <tr><td>Swipe up or down on the right half</td><td>Volume</td></tr>
 <tr><td>Drag the progress bar</td><td>Seek (it jumps once, when you let go)</td></tr></table>
-<p>The player is landscape on phones, whichever way up you hold it, and it keeps clear of camera cut-outs.</p>
+<p>The player follows the rotation lock (the Full screen button turns it), and it keeps clear of camera cut-outs. <b>Picture in picture:</b> press Home while a video plays and it keeps playing in a small window, with play and pause; tap it for full screen, close it to stop.</p>
 
-<h2 id="player">The player</h2>
-<p>The row of buttons shows each setting's current value. A pink value means it is not the default.</p>
-<table><tr><th>Button</th><th>Shows</th><th>Opens</th></tr>
-<tr><td>Quality</td><td>Height and frame rate, for example <code>1080p60</code></td><td>The qualities the stream offers, or the site's own quality list for sites that serve one playlist per quality. The frame rate comes from the stream when it declares one, otherwise it is measured from the frames being shown.</td></tr>
-<tr><td>Audio</td><td>Language code</td><td>The stream's audio tracks by language (only when there is more than one). The language you pick here is remembered: the next videos start in it when they have it, otherwise in your device's language.</td></tr>
-<tr><td>Volume boost, Dialog boost</td><td><code>+6</code>, <code>On</code></td><td>Louder sound (up to +12 dB) and clearer voices for this video; the defaults are in <i>Settings, Player</i></td></tr>
-<tr><td>Subtitles</td><td><code>Off</code> or a language</td><td>The stream's subtitles, a search in OpenSubtitles, and the size, position and timing panel</td></tr>
-<tr><td>Speed</td><td><code>1x</code></td><td>0.5x to 2x</td></tr>
-<tr><td>Zoom</td><td><code>Fit</code></td><td>Cycles Fit, Fill (crops to cover the screen), Stretch, 16:9 and 4:3. Every playback starts on Fit.</td></tr></table>
+<h2 id="player">FMHYPlayer</h2>
+<p>One row of buttons at the bottom; the line under the title says what is playing and what is picked (for example <i>Season 2 · Episode 3 · 1080p · English · Dub</i>). A button only shows when it has something to offer.</p>
+<table><tr><th>Button</th><th>What it does</th></tr>
+<tr><td>Previous, Next</td><td>The episode before or after this one (series and anime).</td></tr>
+<tr><td>Quality</td><td>The qualities the stream offers (with frame rate, for example <code>1080p60</code>), or the site's own quality list for sites that serve one playlist per quality.</td></tr>
+<tr><td>Audio</td><td>The stream's audio tracks by language. The language you pick is remembered: the next videos start in it when they have it, otherwise in your device's language.</td></tr>
+<tr><td>SUB / DUB</td><td>Anime: switches between subtitled and dubbed in one press. The badge says which is playing, and each site remembers your pick.</td></tr>
+<tr><td>Episodes</td><td>The list of episodes: seasons across the top, each episode with its picture and name. The one playing is marked; pick another and it opens.</td></tr>
+<tr><td>Servers</td><td>The site's own servers (see below).</td></tr>
+<tr><td>Subtitles</td><td>The stream's subtitles, <i>Search subtitles</i>, and <i>Settings</i> (size, position, color, background, timing).</td></tr>
+<tr><td>More</td><td>Speed (0.5x to 2x), Volume boost (up to +12 dB), Dialog boost (clearer voices), Zoom (Fit, Fill, Stretch, 16:9, 4:3) and From the start.</td></tr>
+<tr><td>Cast, Full screen</td><td>Send the video to a TV (phone), and turn the phone.</td></tr></table>
 <div class="note">For live channels the −10 and +10 buttons and the progress bar are hidden, since there is nothing to seek in.</div>
 
-<h2 id="episodes">Episodes and servers</h2>
-<p>To switch episode, press <b>Back</b> to return to the site's own player and choose the episode there. FMHYPlay ignores the stream you just left and waits for a different one, then opens it in the native player by itself.</p>
-<p>The <b>Servers</b> button lists the site's own servers (the buttons named Server, Source or Mirror, including ones behind a menu). Choose one: the player closes, FMHYPlay presses it on the site, and the new stream opens by itself.</p>
+<h2 id="episodes">Episodes, skipping and servers</h2>
+<p><b>Episodes:</b> pick a series or anime episode from the catalog, or from the player's <b>Episodes</b>, <b>Previous</b> and <b>Next</b>. On sites whose episode addresses FMHYPlay knows (34 TV and 22 anime sites) the episode opens directly; on the others FMHYPlay opens the show's page and presses the episode in the site's own list, also when it sits behind the player's Episodes and Season menus. The new stream opens in FMHYPlayer by itself.</p>
+<p><b>Skip intro, recap and credits:</b> during an intro or a "Previously on" a <i>Skip intro</i> button shows over the picture; tap it or press <kbd>OK</kbd>. At the credits it becomes <i>Next episode</i> with a 10 second countdown, and the next episode starts by itself. <i>Settings, Skip intros</i> skips intros and recaps without asking. The times come from TheIntroDB and AniSkip, so they are there for most popular shows, anime and many movies.</p>
+<p><b>Servers</b> lists the site's own servers (the buttons named Server, Source or Mirror, including ones behind a menu). Choose one: the player closes, FMHYPlay presses it on the site, and the new stream opens by itself.</p>
 
 <h2 id="cast">Cast to TV</h2>
 <p>Play something on the phone, tap the screen, then tap <b>Cast</b> (the first button in the player) and pick a TV. The TV carries on from the same spot, and the phone becomes the remote: play and pause, the seek bar, −10 s and +10 s, and the TV's volume (the phone's volume keys work too). <b>Stop casting</b> brings the video back to the phone where the TV was. <b>Re-scan</b>, at the end of the list, looks for TVs again.</p>
@@ -114,12 +120,14 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <div class="note">TCL and some other TVs do not let apps start by themselves after the TV restarts. On those, open FMHYPlay once after a restart and the TV shows up on the phone again.</div>
 
 <h2 id="subtitles">Subtitles</h2>
-<p>Open <b>Subtitles</b>, choose <i>Search OpenSubtitles</i>, then a language and a release. The file is added to the stream and playback continues from the same spot. Pick a release that matches your video (for example the same source and resolution) so the timing lines up. Search needs to know which title is playing: it comes from the catalog when you started from there, otherwise from the page's title and address.</p>
-<p>The last entry in <b>Subtitles</b>, <i>Size, position, timing</i>, opens a panel with − and + buttons:</p>
+<p>Open <b>Subtitles</b>, choose <i>Search subtitles</i>, then a language (the one you picked last, your device's and English are on top, then every language by name) and a file. FMHYPlay downloads the file, converts it so every script shows right (Arabic, Hindi, Chinese and the rest), and playback continues from the same spot. Search needs to know which title is playing: it comes from the catalog when you started from there, otherwise from the page's title and address.</p>
+<p><b>Auto-sync:</b> a file made for another release is often off, sometimes by minutes (a release with a recap). FMHYPlay listens to the speech for a minute or two and lines the file up by itself; a message says when it did. Change the timing yourself and it leaves it alone.</p>
+<p>The last entry in <b>Subtitles</b>, <i>Settings</i>, opens a panel with − and + buttons:</p>
 <ul>
 <li><b>Size</b> and <b>Position</b> (+ moves them up, for TVs that show them too low or too high). Both are remembered, and <i>Settings, Subtitles</i> changes them too.</li>
+<li><b>Color</b> and <b>Background</b>.</li>
 <li><b>Timing</b>: + shows subtitles later, − earlier, 0.1 s a press. It applies to the video you are watching.</li>
-<li><i>Reset</i> puts all three back.</li>
+<li><i>Reset</i> puts them back.</li>
 </ul>
 
 <h2 id="simkl">Simkl</h2>
@@ -129,7 +137,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <li>On your phone or computer open <code>simkl.com/pin</code>, sign in (or make a free account) and enter the code.</li>
 <li>The TV says <i>Connected</i> by itself.</li>
 </ol>
-<p>Only titles opened from Movies, TV or Anime count, since they carry the title's IMDb id. A title is marked watched once you pass 80% in the native player. Press <i>Settings, Simkl</i> again to disconnect.</p>
+<p>Only titles opened from Movies, TV or Anime count, since they carry the title's IMDb id. A title is marked watched once you pass 80% in FMHYPlayer. Press <i>Settings, Simkl</i> again to disconnect.</p>
 
 <h2 id="punchplay">PunchPlay</h2>
 <p><a href="https://punchplay.tv">PunchPlay</a> is another free tracker, and works the same way. You can connect both.</p>
@@ -156,7 +164,7 @@ adb install -r FMHYPlay-TV-vX.Y.Z.apk</code></pre>
 <p>Press <b>+ Playlist</b> on the IPTV tab (or <i>Settings, Add a playlist or stream</i>), paste a link and press <i>Add</i>. Give it a name: that is its row on the IPTV tab. Two kinds of link work:</p>
 <table><tr><th>You paste</th><th>You get</th></tr>
 <tr><td>A <b>playlist</b>: an M3U file that lists channels (<code>#EXTINF</code> lines)</td><td>Every channel in it, with its name, logo and group, in its own row at the top of the IPTV tab</td></tr>
-<tr><td>A single <b>stream</b>: an <code>.m3u8</code> (HLS) link, for example a camera, a live feed or a channel your provider gave you</td><td>One channel in <b>My streams</b>, under the name you gave it or named after the address (for example <code>cdn.example.com · news</code>). It plays in the native player like any other.</td></tr></table>
+<tr><td>A single <b>stream</b>: an <code>.m3u8</code> (HLS) link, for example a camera, a live feed or a channel your provider gave you</td><td>One channel in <b>My streams</b>, under the name you gave it or named after the address (for example <code>cdn.example.com · news</code>). It plays in FMHYPlayer like any other.</td></tr></table>
 <ul>
 <li><b>Xtream Codes</b>: if your provider gave you a server, username and password instead of a link, press <i>Xtream login</i> in the same dialog. The provider's live channels show in their categories. The background channel check never tests them, so the account's connection limit is not used up.</li>
 <li><b>Stalker portal (MAC)</b>: if your provider gave you a portal address (often ending in <code>/c/</code>) and a MAC address for a MAG box, press <i>Stalker portal (MAC)</i> in the same dialog and enter both. The channels get their own row; each one asks the portal for a fresh link when you play it, and the background check never tests them.</li>
@@ -187,8 +195,8 @@ My channels|https://example.com/my-channels.m3u
 <h2 id="troubleshooting">Troubleshooting</h2>
 <table><tr><th>Problem</th><th>Try</th></tr>
 <tr><td>A site does not open</td><td>Turn WARP on, or try a mirror (hold <kbd>OK</kbd> on the site).</td></tr>
-<tr><td>The player does not start</td><td>Press Play on the page first. Some sites start the stream only after a click. Then use the <b>Native player</b> button.</td></tr>
-<tr><td>"Native player could not play this"</td><td>It goes back to the page, which still plays the video itself. Try another server from the page.</td></tr>
+<tr><td>The player does not start</td><td>Press Play on the page first. Some sites start the stream only after a click. Then use the <b>FMHYPlayer</b> button on the site's player.</td></tr>
+<tr><td>"FMHYPlayer could not play this"</td><td>It goes back to the page, which still plays the video itself. Try another server from the page.</td></tr>
 <tr><td>No Servers button</td><td>It appears only when the site's own buttons were found. Use the page's own controls for that site.</td></tr>
 <tr><td>Picture looks zoomed after a quality change</td><td>Seen only on the Android emulator's software decoder; FMHYPlay restarts the decoder there. On a device, set Zoom back to Fit.</td></tr>
 <tr><td>IPTV channels disappear</td><td>They failed the check. Turn off <i>Hide offline channels</i>, or run <i>Check channels now</i> later.</td></tr></table>

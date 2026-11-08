@@ -23,15 +23,15 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/player.jpg" alt="The native player" width="760">
+  <img src="docs/screenshots/player.jpg" alt="FMHYPlayer" width="760">
 </p>
 
 ## Why
 
 Streaming sites are built for a desktop browser with a mouse. On a TV remote they are painful, they are full of pop-ups, and their embedded players stutter on weak hardware. FMHYPlay keeps the site (so you keep every title and server it offers) but takes over the part that goes wrong:
 
-- It **finds the video stream** the page starts and plays it in ExoPlayer with the hardware decoder, with nothing painted over the picture.
-- It **drives the site for you**: the player's Servers and Quality buttons press the site's own buttons, so you do not go back to the page to switch.
+- It **finds the video stream** the page starts and plays it in **FMHYPlayer** (ExoPlayer with the hardware decoder), with nothing painted over the picture.
+- It **drives the site for you**: pick a title and it opens that title's page (or the exact episode); the player's Episodes, Sub / Dub, Servers and Quality buttons press the site's own buttons, so you do not go back to the page.
 - It **blocks ads and pop-ups**, **tunnels the app's own traffic** through Cloudflare WARP when you want it, and works with a **TV remote** and with **touch**.
 
 ## Features
@@ -44,23 +44,31 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 
 <p align="center"><img src="docs/cast.svg" alt="Cast from the phone to a TV on the same Wi-Fi" width="760"></p>
 
-**Native player**
-- Hands off automatically when a page starts an HLS or DASH stream; falls back to the page if the stream cannot be played
+**Series and anime**
+- **Episodes** list in the player (seasons, stills, names), **Previous** and **Next**, and the next episode starts by itself
+- **Skip intro, recap and credits** (times from TheIntroDB and AniSkip), with a Next episode countdown at the credits; *Settings, Skip intros* skips them for you
+- **Sub / Dub** button for anime, remembered per site
+- Opens the exact episode directly on 34 TV sites and 22 anime sites; elsewhere it presses the episode in the site's own list or menus
+
+**FMHYPlayer**
+- Hands off automatically when a page starts an HLS, DASH or live FLV stream; falls back to the page if the stream cannot be played
+- One row of icon buttons: Previous, Next, Quality, Audio, Sub / Dub, Episodes, Servers, Subtitles, More, Cast, Full screen; what is picked shows under the title, and on a TV the button the remote is on shows its name
 - Replays the page's Referer, Origin and cookies, so streams that check them still play
 - **Resumes where you stopped on any site or server**, with a Restart button
 - Quality list with frame rate (for example 1080p60), audio and subtitle tracks, speed and zoom modes
 - **Servers and Quality buttons that control the site's own player**, including players inside cross-origin iframes
 - **Volume boost** (up to +12 dB) and **Dialog boost** (clearer voices, on by default)
-- **OpenSubtitles** built in, remembered per title, optional auto subtitles in your language; size, position, color, background and timing
+- **Subtitles in any language** from OpenSubtitles, converted so every script shows right, remembered per title, optional auto subtitles in your language, and **auto-sync** that lines a file up with the speech; size, position, color, background and timing
 - **Simkl** and **PunchPlay** tracking (optional): what you watch is tracked there, titles you finish are marked watched
-- Phone: follows the rotation lock with a Full screen button; swipe for brightness and volume, double-tap to skip 10 seconds
+- Phone: **picture in picture**, hold the right or left side for **2x**, follows the rotation lock with a Full screen button; swipe for brightness and volume, double-tap to skip 10 seconds
 
 **Browsing**
 - Home with Continue watching, Favorites, and **New and Popular** for Movies, TV and Anime (from Cinemeta and Kitsu)
 - **One search** for movies, series, IPTV channels and sites, by typing or by voice
-- A directory of streaming sites that tracks the [FMHY](https://github.com/fmhy/edit) lists; opens a title's own page on many sites
+- A directory of streaming sites that tracks the [FMHY](https://github.com/fmhy/edit) lists; opens a title's own page on about 70 sites and searches the rest for you, then opens the match
+- Anime opens on anime sites only
 - **Add your own site**, an optional address bar, dark pages, a cursor for the TV remote (with funny and useful looks)
-- Pop-ups that are real links open in the same tab (Back returns); pop-up ads are dropped
+- Pop-ups that are real links open in the same tab (Back returns); pop-up ads are dropped, and "Join our Discord" style nag dialogs close by themselves
 
 **Your language**
 - English, Hindi, Spanish, Portuguese, Indonesian, Arabic (right to left) and German, picked from the phone's or TV's language
@@ -104,6 +112,10 @@ Streaming sites are built for a desktop browser with a mouse. On a TV remote the
 
 <p align="center">
   <img src="docs/screenshots/phone-player.jpg" alt="Phone player" width="760">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/phone-episodes.jpg" alt="Episodes list in the player" height="420">
 </p>
 
 ## Install

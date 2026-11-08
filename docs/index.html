@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FMHYPlay: any streaming site, a real player</title>
-<meta name="description" content="A TV-first Android app that finds the video a streaming site plays and plays it in a native player, with ad blocking, an in-app WARP tunnel, IPTV and a remote-friendly interface.">
-<meta property="og:title" content="FMHYPlay: any streaming site, a real player"><meta property="og:description" content="A TV-first Android app that finds the video a streaming site plays and plays it in a native player, with ad blocking, an in-app WARP tunnel, IPTV and a remote-friendly interface."><meta property="og:image" content="banner.png">
+<meta name="description" content="A TV-first Android app that finds the video a streaming site plays and plays it in its own player, FMHYPlayer, with ad blocking, an in-app WARP tunnel, IPTV and a remote-friendly interface.">
+<meta property="og:title" content="FMHYPlay: any streaming site, a real player"><meta property="og:description" content="A TV-first Android app that finds the video a streaming site plays and plays it in its own player, FMHYPlayer, with ad blocking, an in-app WARP tunnel, IPTV and a remote-friendly interface."><meta property="og:image" content="banner.png">
 <meta name="theme-color" content="#120e1a"><link rel="icon" href="icon.png"><link rel="stylesheet" href="style.css">
 </head><body>
 <header class="nav"><div class="in">
@@ -15,16 +15,17 @@
 <h1>Any streaming site,<br>a <b>real player</b>.</h1>
 <p class="lead">FMHYPlay opens the sites you choose, finds the video they play and plays it natively: hardware decoding, nothing painted over the picture, and a remote-friendly interface.</p>
 <a class="btn p" href="https://github.com/fmhyplay/android/releases/latest">Download</a><a class="btn s" href="guide.html">User guide</a><a class="btn s" href="build.html">Build from source</a>
-<img class="shot" src="screenshots/player.jpg" alt="The native player">
+<img class="shot" src="screenshots/player.jpg" alt="FMHYPlayer">
 </section>
 
 <h2>What it does</h2>
 <p class="sub">Streaming sites are built for a mouse. FMHYPlay keeps the site and replaces the part that does not work on a TV.</p>
 <div class="grid">
-<div class="card"><h3>Native player</h3><p>Finds the stream the page starts and plays it in ExoPlayer with the hardware decoder. Quality with frame rate, audio, subtitles, speed and zoom.</p></div>
-<div class="card"><h3>Drives the site for you</h3><p>The player's Servers, Quality and Episodes buttons press the site's own buttons, even inside cross-origin iframes. You never go back to the page.</p></div>
+<div class="card"><h3>FMHYPlayer</h3><p>Finds the stream the page starts and plays it in ExoPlayer with the hardware decoder. One row of icons for quality, audio, subtitles and more; picture in picture and hold for 2x on a phone.</p></div>
+<div class="card"><h3>Series and anime</h3><p>Episodes, Previous and Next in the player, Skip intro and credits, a Next episode countdown, and Sub / Dub for anime. Episodes open directly on dozens of sites.</p></div>
+<div class="card"><h3>Drives the site for you</h3><p>Pick a title and the site opens on its page. The player's Episodes, Servers and Quality buttons press the site's own buttons, even inside cross-origin iframes. You never go back to the page.</p></div>
 <div class="card"><h3>Cast to your TV</h3><p>Like YouTube: tap Cast in the phone's player and the TV carries on from the same spot, with the phone as the remote. Works with FMHYPlay on the TV, any Chromecast, or DLNA smart TVs.</p></div>
-<div class="card"><h3>Subtitles and sound</h3><p>OpenSubtitles built in and remembered per title, with size, position, color and background. Volume boost and Dialog boost for quiet voices.</p></div>
+<div class="card"><h3>Subtitles and sound</h3><p>Subtitles in any language from OpenSubtitles, lined up with the speech by themselves and remembered per title. Volume boost and Dialog boost for quiet voices.</p></div>
 <div class="card"><h3>Resume anywhere</h3><p>Continue watching remembers your spot on any site or server, with New and Popular for Movies, TV and Anime on Home and one search for everything.</p></div>
 <div class="card"><h3>Your language</h3><p>English, Hindi, Spanish, Portuguese, Indonesian, Arabic and German, picked from the device's language.</p></div>
 <div class="card"><h3>Built for the remote</h3><p>Focus navigation designed for D-pads, a cursor mode for stubborn pages, and a TV launcher. On a phone: brightness and volume swipes, double-tap to skip.</p></div>
@@ -46,6 +47,7 @@
 <p class="sub">The same app and the same player, on a touch screen.</p>
 <div class="phones"><img src="screenshots/phone-home.jpg" alt="Phone home"><img src="screenshots/phone-cast.jpg" alt="The phone as the remote"><img src="screenshots/phone-hindi.jpg" alt="Home in Hindi"></div>
 <img class="shot" src="screenshots/phone-player.jpg" alt="Phone player" style="max-width:760px;margin:18px auto 0">
+<div class="phones" style="margin-top:18px"><img src="screenshots/phone-episodes.jpg" alt="Episodes list in the player"></div>
 
 <h2>Under the hood</h2>
 <div class="grid">
