@@ -73,8 +73,15 @@ public class WebActivity extends Activity {
     // The chip that takes you back to the native player after Back
     // The Native player button: on the site's own player (the biggest video, else the biggest frame), top left, scrolling with it;
     // a tab on the right edge when there is no player to sit on
-    static final String CHIP = "(()=>{if(document.getElementById('fp-native'))return;const b=document.createElement('button');b.id='fp-native';b.textContent='\u25B6 Native player';"
-        + "b.style.cssText='z-index:2147483647;padding:6px 11px;font:600 13px sans-serif;color:#fff;background:#ff3b5c;border:0;border-radius:8px;opacity:.92;box-shadow:0 2px 8px rgba(0,0,0,.4)';"
+    // It carries the app's icon (drawn inline, so a site's image rules can't block it) and the name FMHYPlayer.
+    static final String ICON_SVG = "<svg width=\"20\" height=\"20\" viewBox=\"0 0 108 108\" style=\"display:block\"><defs>"
+        + "<linearGradient id=\"fpbg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2E1A44\"/><stop offset=\"1\" stop-color=\"#110D18\"/></linearGradient>"
+        + "<linearGradient id=\"fppl\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FF6A85\"/><stop offset=\"1\" stop-color=\"#FF2E58\"/></linearGradient></defs>"
+        + "<rect width=\"108\" height=\"108\" rx=\"26\" fill=\"url(#fpbg)\"/><circle cx=\"54\" cy=\"54\" r=\"30\" fill=\"none\" stroke=\"#FF3B5C\" stroke-opacity=\".4\" stroke-width=\"2.5\"/>"
+        + "<path d=\"M46 38V70L72 54Z\" fill=\"url(#fppl)\" stroke=\"#FF3B5C\" stroke-width=\"6\" stroke-linejoin=\"round\"/></svg>";
+    static final String CHIP = "(()=>{if(document.getElementById('fp-native'))return;const b=document.createElement('button');b.id='fp-native';b.title='FMHYPlayer';"
+        + "try{b.innerHTML=" + JSONObject.quote(ICON_SVG) + "+'<span>FMHYPlayer</span>'}catch(x){b.textContent='\\u25B6 FMHYPlayer'}"
+        + "b.style.cssText='z-index:2147483647;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;font:600 13px sans-serif;color:#fff;background:rgba(22,15,32,.92);border:1px solid #ff3b5c;border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,.45)';"
         + "const big=sel=>{let best=null,area=0;for(const e of document.querySelectorAll(sel)){const r=e.getBoundingClientRect();if(r.width>=160&&r.height>=90&&r.width*r.height>area){area=r.width*r.height;best=r}}return best};"
         + "const place=()=>{const r=big('video')||big('iframe');const s=b.style;"
         + "if(r){s.position='absolute';s.top=(r.top+scrollY+8)+'px';s.left=(r.left+scrollX+8)+'px';s.right='';s.transform='';s.borderRadius='8px'}"
