@@ -82,6 +82,7 @@ public final class Downloads {
             File dir = app.getExternalFilesDir(null);
             if (dir == null) dir = app.getFilesDir();
             File downloadDir = new File(dir, "downloads");
+            if (!downloadDir.exists()) downloadDir.mkdirs();
             StandaloneDatabaseProvider db = getDatabaseProvider(app);
             cache = new SimpleCache(downloadDir, new NoOpCacheEvictor(), db);
         }
@@ -269,14 +270,15 @@ public final class Downloads {
             }
         }
         if (match != null) {
+            int oldState = match.state;
             match.state = d.state;
             match.bytes = d.getBytesDownloaded();
             match.percent = d.getPercentDownloaded();
             saveList(entries);
 
-            if (d.state == Download.STATE_COMPLETED) {
+            if (oldState != Download.STATE_COMPLETED && d.state == Download.STATE_COMPLETED) {
                 notifyCompleted(context, match);
-            } else if (d.state == Download.STATE_FAILED) {
+            } else if (oldState != Download.STATE_FAILED && d.state == Download.STATE_FAILED) {
                 notifyFailed(context, match);
             }
         }
@@ -298,6 +300,7 @@ public final class Downloads {
         try {
             Map<String, String> headers = parseHeaders(e.headersJson);
             Intent intent = PlayerActivity.open(context, e.url, e.dash, headers, e.subs, e.title);
+            if (e.mime != null && !e.mime.isEmpty()) intent.putExtra("mime", e.mime);
             PendingIntent pi = PendingIntent.getActivity(context, e.id.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
             Notification n = getNotificationHelper(context).buildDownloadCompletedNotification(context, R.drawable.ic_p_download, pi, e.title);
             ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).notify(e.id.hashCode(), n);

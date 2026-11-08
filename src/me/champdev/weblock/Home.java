@@ -1630,7 +1630,9 @@ public class Home extends Activity {
         focusable(card, 0);
         card.setOnClickListener(v -> {
             if (d.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) {
-                startActivity(PlayerActivity.open(this, d.url, d.dash, Downloads.parseHeaders(d.headersJson), d.subs, d.title));
+                Intent it = PlayerActivity.open(this, d.url, d.dash, Downloads.parseHeaders(d.headersJson), d.subs, d.title);
+                if (d.mime != null && !d.mime.isEmpty()) it.putExtra("mime", d.mime);
+                startActivity(it);
             } else {
                 Downloads.prompt(this, d.url, d.title, d.headersJson, d.mime, d.dash, null, d.subs, null);
             }
@@ -1643,7 +1645,9 @@ public class Home extends Activity {
                 }, (dia, i) -> {
                     if (i == 0) {
                         if (d.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) {
-                            startActivity(PlayerActivity.open(this, d.url, d.dash, Downloads.parseHeaders(d.headersJson), d.subs, d.title));
+                            Intent it = PlayerActivity.open(this, d.url, d.dash, Downloads.parseHeaders(d.headersJson), d.subs, d.title);
+                            if (d.mime != null && !d.mime.isEmpty()) it.putExtra("mime", d.mime);
+                            startActivity(it);
                         } else {
                             Downloads.prompt(this, d.url, d.title, d.headersJson, d.mime, d.dash, null, d.subs, null);
                         }

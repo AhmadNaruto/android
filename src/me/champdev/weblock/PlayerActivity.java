@@ -839,10 +839,18 @@ public class PlayerActivity extends Activity {
         });
         DataSource.Factory data = new androidx.media3.datasource.DefaultDataSource.Factory(this, web);   // downloaded subtitles are local files
         Downloads.rememberHeaders(url, getIntent().getStringExtra("headers"));
-        DataSource.Factory cachedData = new androidx.media3.datasource.cache.CacheDataSource.Factory()
-            .setCache(Downloads.getCache(this))
-            .setUpstreamDataSourceFactory(data)
-            .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
+        DataSource.Factory mediaSourceData = data;
+        try {
+            Cache c = Downloads.getCache(this);
+            if (c != null) {
+                mediaSourceData = new androidx.media3.datasource.cache.CacheDataSource.Factory()
+                    .setCache(c)
+                    .setUpstreamDataSourceFactory(data)
+                    .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "CacheDataSource init failed", e);
+        }
 
         // IPTV passes its own media type ("" = let ExoPlayer read it off the URL); pages hand over HLS, DASH or a live FLV
         String mime = getIntent().hasExtra("mime") ? getIntent().getStringExtra("mime") : getIntent().getBooleanExtra("dash", false) ? MimeTypes.APPLICATION_MPD
@@ -879,7 +887,7 @@ public class PlayerActivity extends Activity {
             }
         };
         player = new ExoPlayer.Builder(this, renderers.setEnableDecoderFallback(true).setMediaCodecSelector(PlayerActivity::decoders))
-            .setMediaSourceFactory(new DefaultMediaSourceFactory(cachedData)).setHandleAudioBecomingNoisy(true).build();
+            .setMediaSourceFactory(new DefaultMediaSourceFactory(mediaSourceData)).setHandleAudioBecomingNoisy(true).build();
         player.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true);
         player.setVideoSurfaceView(surface);
