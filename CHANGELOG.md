@@ -2,7 +2,7 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
-## Unreleased
+## 2.18.1
 
 ### 🔧 Changed
 - **Title page**: the sites sit in one row, so the episodes are right below; more about the title (cast, director, seasons and episodes, still running or ended, country, awards).
