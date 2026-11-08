@@ -448,7 +448,14 @@ public final class Downloads {
                 DownloadHelper helper = DownloadHelper.forMediaItem(context, mediaItem, createUpstreamFactory(context));
                 helper.prepare(new DownloadHelper.Callback() {
                     @Override
-                    public void onPrepared(DownloadHelper h) {
+                    public void onPrepared(DownloadHelper h, boolean failed) {
+                        if (failed) {
+                            DownloadRequest.Builder b = new DownloadRequest.Builder(url, Uri.parse(url));
+                            if (e.mime != null && !e.mime.isEmpty()) b.setMimeType(e.mime);
+                            DownloadService.sendAddDownload(context, VideoDownloadService.class, b.build(), false);
+                            h.release();
+                            return;
+                        }
                         if (maxHeight > 0) {
                             TrackSelectionParameters params = TrackSelectionParameters.DEFAULT_WITHOUT_CONTEXT.buildUpon()
                                 .setMaxVideoSize(Integer.MAX_VALUE, maxHeight)

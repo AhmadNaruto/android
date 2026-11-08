@@ -37,6 +37,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** Start screen: Continue watching, then FMHY's streaming sites by category, then the user's own sites. */
