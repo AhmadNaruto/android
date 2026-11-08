@@ -130,7 +130,7 @@
   };
   const combos = async () => {
     const out = { s: [], a: [], q: [] };
-    for (const kind of ['a', 's', 'q']) {
+    for (const kind of ['a', 's']) {   // not quality: FMHYPlayer picks it, and opening that menu shows on screen
       const b = comboBtn(kind);
       if (!b) continue;
       const before = new Set(visibleOptions());
@@ -286,8 +286,11 @@
     if (/^\s*#EXTM3U/.test(head)) report(url, false);
     else if (/^\s*(<\?xml[^>]*>\s*)?<MPD[\s>]/.test(head)) report(url, true);
   };
-  // Some sites check, as they start, that fetch and friends are the browser's own (StreamCorner, from a fresh frame) and
-  // refuse to run otherwise: so the watch goes in once the page's own start-up scripts have run (playlists load later, on Play)
+  // The watch goes in before the page's scripts run: players often keep their own copy of fetch from the start (AnimeX's).
+  // A few sites check, as they start, that fetch and friends are the browser's own and refuse to run otherwise
+  // (StreamCorner, from a fresh frame): there it goes in once the start-up scripts have run.
+  // ponytail: a list of such sites; add a host here when a site shows a blank page and "Uncaught Error" in its console
+  const strict = /(^|\.)(streamcorner|streamninja)\./i.test(location.hostname);
   const hook = () => {
   try {
     const xo = XMLHttpRequest.prototype.open;
@@ -314,7 +317,7 @@
     };
   } catch (e) { }
   };
-  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', hook, { once: true }); else hook();
+  if (strict && document.readyState === 'loading') addEventListener('DOMContentLoaded', hook, { once: true }); else hook();
 
   // An episode in the page's own list: the season first (a <select>, tab or button that says "Season 2" / "S2"), then the entry
   // that says 3 / "Ep 3" / "Episode 3 - Name" (or carries data-episode / data-number 3) among 3+ such entries under one parent
@@ -427,10 +430,12 @@
     if (!d || typeof d !== 'object' || !d.fp) return;
     if (d.fp === 'pause') { document.querySelectorAll('video,audio').forEach(m => m.pause()); down(d); }
     else if (d.fp === 'servers') {
-      down(d);
+      // the top frame looks first, then tells its frames whether to open menus (it found no server list itself) or not
+      if (window !== top) down(d);
+      const deep = window === top || d.deep !== false;
       const h = headed();
       let ns = selects();
-      if (ns.a.length < 2 && ns.s.length < 2) {   // no <select>s: the phone layout's comboboxes
+      if (ns.a.length < 2 && ns.s.length < 2 && deep) {   // no <select>s: the phone layout's comboboxes
         const c = await combos();
         ns = { s: ns.s.length >= 2 ? ns.s : c.s, a: ns.a.length >= 2 ? ns.a : c.a, q: ns.q.length ? ns.q : c.q };
       }
@@ -438,13 +443,14 @@
       // a dropdown that is labelled Server / Source is the most reliable list; guessing from the look of buttons comes after it
       let sv = ns.s.length >= 2 ? ns.s : markOdd(onScreen());
       if (!distinct(sv)) sv = h.s;
-      if (!distinct(sv)) sv = await viaMenu();
-      if (!distinct(sv)) sv = await viaSettings();
+      if (!distinct(sv) && deep) sv = await viaMenu();
+      if (!distinct(sv) && deep) sv = await viaSettings();
       if (!distinct(sv)) sv = [];
       const qs = h.q.length ? h.q : ns.q;
       items = sv.map(x => Object.assign(x, { kind: 's' })).concat(qs.map(x => Object.assign(x, { kind: 'q' })))
         .concat(ns.a.length >= 2 ? ns.a.map(x => Object.assign(x, { kind: 'a' })) : []);
       if (items.length) up({ fp: 'reply', items: items.map((it, i) => ({ k: fid + ':' + i, label: it.label, on: it.on, kind: it.kind })) });
+      if (window === top) down({ fp: 'servers', deep: sv.length < 2 });
       if (window === top && window.FMHY) FMHY.scanDone();
     } else if (d.fp === 'episode') {
       down(d);

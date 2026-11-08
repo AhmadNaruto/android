@@ -549,11 +549,12 @@ public class WebActivity extends Activity {
         web.evaluateJavascript(clickJs(wantKey), null);
         final String back = nowKey;
         App.main.postDelayed(() -> {
-            if (!resumed || isFinishing() || sniffer.has() || back == null) return;
-            // no new stream: the episode has no such audio, or the press missed. Go back, and hand over what plays
-            web.evaluateJavascript(clickJs(back), null);
+            if (!resumed || isFinishing() || sniffer.has()) return;
+            // no new stream: it was playing already (a site whose buttons don't say which is on), the episode has no such
+            // audio, or the press missed. Go back when we know where back is, and hand over what plays
+            if (back != null) web.evaluateJavascript(clickJs(back), null);
             sniffer.unswitch();
-        }, 9000);
+        }, 6000);
         return true;
     }
 

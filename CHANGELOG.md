@@ -2,6 +2,12 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## Unreleased
+
+### 🐞 Fixed
+- **Resuming an anime on AnimeX** (and other players that load their playlist under an address without ".m3u8") stayed on the site: the playlist is noticed again, and a remembered Sub / Dub that was already playing no longer holds the video back.
+- **The site's own Settings / quality menu** no longer opens by itself while FMHYPlay looks for servers, when the page already lists them.
+
 ## 2.18.2
 
 Everything new since 2.17.1 (2.18.0, 2.18.1 and 2.18.2 together).
