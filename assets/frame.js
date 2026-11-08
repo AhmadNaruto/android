@@ -322,29 +322,78 @@
   const epAny = /^(e|ep|eps|episode)?\.?\s*\d{1,4}(?![0-9])/i;
   const epRe = n => new RegExp('^(e|ep|eps|episode)?\\.?\\s*0*' + n + '(?![0-9])(?!\\s*(min|mins|h|sec|views?|st|nd|rd|th)\\b)', 'i');
   const epNum = e => e.getAttribute('data-episode') || e.getAttribute('data-number') || e.getAttribute('data-ep');
-  const pickEpisode = async (s, n) => {
-    if (s > 0) {
-      const sel = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => seasonRe(s).test(o.text.trim())));
-      if (sel) {
-        const i = [...sel.options].findIndex(o => seasonRe(s).test(o.text.trim()));
-        if (sel.selectedIndex !== i) { choose(sel, i); await wait(1200); }
-      } else {
-        const b = [...document.querySelectorAll('button,a,li,[role=tab],[role=option],[role=button]')].find(x => leaf(x) && label(x).length < 20 && seasonRe(s).test(label(x)));
-        if (b && !isOn(b)) { click(b); await wait(1200); }
-      }
+  // A list that sits behind a button (a player's own Episodes menu, P-Stream): press "Episodes", and when the season shown is not
+  // the one wanted, press the season's own button too (it opens the list of seasons)
+  const shownBtn = re => [...document.querySelectorAll('button,[role=button],a')].find(b => {
+    const r = b.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && re.test((label(b) || b.getAttribute('aria-label') || '').trim());
+  });
+  // a "Choose a season" dropdown (its label says the season shown: "Season 2 3 / 9")
+  const seasonMenu = () => [...document.querySelectorAll('button[aria-haspopup],[role=combobox]')].find(b => {
+    const r = b.getBoundingClientRect();
+    return r.width > 0 && /season/i.test((b.getAttribute('aria-label') || '') + ' ' + label(b));
+  });
+  const seasonPick = async s => {
+    const sel = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => seasonRe(s).test(o.text.trim())));
+    if (sel) {
+      const i = [...sel.options].findIndex(o => seasonRe(s).test(o.text.trim()));
+      if (sel.selectedIndex !== i) { choose(sel, i); await wait(1200); }
+      return true;
     }
+    const m = seasonMenu();
+    if (m && seasonRe(s).test(label(m))) return true;   // already showing that season
+    const b = [...document.querySelectorAll('button,a,li,[role=tab],[role=option],[role=button]')].find(x => leaf(x) && !x.matches('[aria-haspopup],[role=combobox]') && label(x).length < 20 && seasonRe(s).test(label(x)));
+    if (b) { if (!isOn(b)) { click(b); await wait(1200); } return true; }
+    return false;
+  };
+  const episodeHit = n => {
     // its own text, or a piece of it: "E3 · 53 min" under the episode's name
     const pieces = x => [label(x)].concat([...x.querySelectorAll('*')].filter(c => !c.children.length).map(c => (c.textContent || '').trim()).filter(t => t && t.length < 40));
     const all = [...document.querySelectorAll('a,button,li,article,[role=button],[role=option],[data-episode],[data-number],[data-ep]')].filter(x => {
       const t = label(x);
       return epNum(x) !== null || (t && t.length < 400 && pieces(x).some(p => epAny.test(p)));
     });
-    const g = new Map();
-    for (const x of all) { const p = x.parentElement; if (!g.has(p)) g.set(p, []); g.get(p).push(x); }
-    for (const v of g.values()) {
-      if (v.length < 3) continue;
-      const hit = v.find(x => +epNum(x) === n) || v.find(x => pieces(x).some(p => epRe(n).test(p)));
+    // 3+ entries under one parent; a row that wraps each entry with its own icons (P-Stream) puts them a level or two further apart
+    for (let depth = 1; depth <= 6; depth++) {   // the closest grouping wins
+      const g = new Map();
+      for (const x of all) {
+        let p = x;
+        for (let i = 0; i < depth && p; i++) p = p.parentElement;
+        if (!g.has(p)) g.set(p, []);
+        g.get(p).push(x);
+      }
+      for (const v of g.values()) {
+        if (v.length < 3) continue;
+        const hit = v.find(x => +epNum(x) === n) || v.find(x => pieces(x).some(p => epRe(n).test(p)));
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+  const pickEpisode = async (s, n) => {
+    let opened = false, seasonDone = s <= 0;   // the season is chosen once; after that only its episodes are waited for
+    // a player draws its Episodes button once it has found a source, and its menu a moment after that: keep looking (~15 s)
+    for (let misses = 0, tries = 0; misses < 36 && tries < 45; tries++) {
+      let seasonOk = seasonDone || await seasonPick(s);
+      if (!seasonOk) {
+        // the season dropdown: its options may be bare numbers (1, 2, 3) once it is open
+        const menu = seasonMenu() || shownBtn(/^season\s*\d+/i);
+        if (menu) {
+          click(menu);
+          await wait(900);
+          const o = visibleOptions().find(x => { const t = textOf(x).trim(); return t === String(s) || seasonRe(s).test(t); });
+          if (o) { click(o); await wait(1200); seasonOk = true; } else seasonOk = await seasonPick(s);
+        }
+      }
+      if (seasonOk) seasonDone = true;
+      const hit = seasonOk ? episodeHit(n) : null;
       if (hit) { hit.scrollIntoView({ block: 'center' }); click(hit); return true; }
+      if (opened) { await wait(700); continue; }
+      const menu = shownBtn(/^(episodes?|episode list|all episodes|seasons?)$/i);
+      if (!menu) { misses++; await wait(700); continue; }   // the player may not have drawn its controls yet
+      click(menu);
+      opened = true;
+      await wait(1000);
     }
     return false;
   };
@@ -470,6 +519,9 @@
     return r.width * r.height > innerWidth * innerHeight * 0.12 && nag.test((d.innerText || '').slice(0, 2000));
   });
   const sweep = () => {
+    // a first-visit picker that only wants a confirmation (P-Stream's language choice): "Continue to Cinecat"
+    const go = [...document.querySelectorAll('button')].find(b => /^continue to \S+$/i.test((b.innerText || '').trim()) && visible(b));
+    if (go) go.click();
     for (const d of dialogs()) {
       const b = [...d.querySelectorAll('button,[role=button],a')].find(x => closeWord.test(((x.innerText || '').trim() || x.getAttribute('aria-label') || x.title || '').trim()) && !/discord|telegram|reddit/i.test(x.href || ''));
       if (b) { b.click(); continue; }

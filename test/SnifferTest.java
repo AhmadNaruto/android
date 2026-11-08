@@ -88,6 +88,9 @@ public class SnifferTest {
         Handler.drain();
         check("proxy: the other one behind the same proxy is offered", px.found, 2);
 
+        Rig promo = new Rig().play(SITE1, "https://cdn.e/promo/site-4k/v2/master.m3u8");
+        check("a site's promo clip is not a stream", promo.found, 0);
+
         System.out.println(fails == 0 ? "all passed" : fails + " failed");
         if (fails > 0) System.exit(1);
     }

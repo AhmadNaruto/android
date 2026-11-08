@@ -8,7 +8,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Series and anime in the player**: Previous, Next and an Episodes list (seasons, pictures, names) right in the player; the next episode starts by itself at the end. Picking one opens it on the site and the player follows.
 - **Sub / Dub button** in the player for anime: one tap switches, and each site remembers your pick.
 - **Movies start by themselves**: a movie opened on its site's own page has its Play pressed for you.
-- **Episodes open directly** on 34 TV sites and 22 anime sites (no searching or clicking on the site); on other sites the app presses the episode in the site's own list.
+- **Episodes open directly** on 34 TV sites and 22 anime sites (no searching or clicking on the site); on other sites the app presses the episode in the site's own list, also when it sits behind the player's Episodes and Season menus (P-Stream sites like Cinefork, Aether, Basement), and the first episode such a site starts by itself is not handed over meanwhile. A site's own promo clip is never taken for the video.
 - **Sites without a known address open the title's page too**: the app searches the site, then opens the matching result (name, and year when shown) instead of leaving you on the results.
 - **Anime opens on anime sites only**, the ones that open episodes directly first; Watch starts Episode 1 there.
 - **Site nag pop-ups closed by themselves**: "Join our Discord", "What's new", donate, ad-block and new-domain notices.

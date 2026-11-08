@@ -135,6 +135,7 @@ public class WebActivity extends Activity {
     int[] episodeAfterLoad;    // the episode to press on the page once it has loaded (a site without an episode address)
     boolean playAfterLoad;     // an episode page opened from the app: press its Play once it has loaded
     volatile boolean episodeFound;
+    boolean holdForEpisode;    // the page plays its first episode by itself while ours is being picked: don't hand that one over
     Catalog.Title show;        // the series or anime being watched (from the catalog, or found by the player from the page's title)
     volatile boolean scanDone;
     // Title to type into the site's own search box (set when you tap Watch on a movie or episode); cleared once typed
@@ -493,12 +494,13 @@ public class WebActivity extends Activity {
     void onStream() {
         if (!resumed || isFinishing()) return;
         if (!App.prefs.getBoolean("native", true)) { web.evaluateJavascript(CHIP, null); return; }
+        if (holdForEpisode) return;   // picking the episode on the page: its stream comes next
         if (scanDone) playNative(); else { handoffWaiting = true; App.main.postDelayed(waitedHandoff, 3000); }
     }
 
     // (not Handler.hasCallbacks: it needs Android 10 and the app runs on 8 and 9)
     volatile boolean handoffWaiting;
-    final Runnable waitedHandoff = () -> { handoffWaiting = false; if (resumed && !isFinishing() && sniffer.best() != null) playNative(); };
+    final Runnable waitedHandoff = () -> { handoffWaiting = false; if (resumed && !isFinishing() && !holdForEpisode && sniffer.best() != null) playNative(); };
 
     void playNative() {
         Sniffer.Hit h = sniffer.best();
@@ -587,8 +589,8 @@ public class WebActivity extends Activity {
                     playAfterLoad = true;
                     web.loadUrl(go);
                 }
-                else if (fallback != null) { episodeAfterLoad = new int[]{season, episode}; web.loadUrl(fallback); }
-                else pressEpisode(season, episode);
+                else if (fallback != null) { holdForEpisode = true; episodeAfterLoad = new int[]{season, episode}; web.loadUrl(fallback); }
+                else { holdForEpisode = true; pressEpisode(season, episode); }
             });
         });
     }
@@ -598,7 +600,12 @@ public class WebActivity extends Activity {
         if (isFinishing()) return;
         episodeFound = false;
         web.evaluateJavascript("postMessage({fp:'episode',s:" + season + ",e:" + episode + "},'*')", null);
-        App.main.postDelayed(() -> { if (!episodeFound && !isFinishing()) toast(App.t(R.string.web_pick_episode, season, episode)); }, 4000);
+        App.main.postDelayed(() -> {
+            if (episodeFound || isFinishing()) return;
+            toast(App.t(R.string.web_pick_episode, season, episode));
+            holdForEpisode = false;
+            if (sniffer.has()) onStream();   // hand over what plays now
+        }, 30000);   // a player that first looks for a source (P-Stream) shows its Episodes button late
     }
 
     /** Press a listed choice on the page; its name and kind go along, so frame.js can find it again if the page was redrawn. */
@@ -763,6 +770,11 @@ public class WebActivity extends Activity {
         // The page's own frame has finished looking for servers
         @JavascriptInterface public void episodeFound() {
             episodeFound = true;
+            runOnUiThread(() -> {
+                if (!holdForEpisode) return;
+                holdForEpisode = false;
+                sniffer.switching();   // the first episode's stream is not the one: wait for the picked one's
+            });
         }
 
         @JavascriptInterface public void scanDone() {

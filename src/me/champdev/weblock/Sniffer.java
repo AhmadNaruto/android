@@ -97,6 +97,9 @@ final class Sniffer {
     }
 
     /** Any WebView thread. */
+    // A site's own clip before the video (Cinecat's 12 s "/promo/" bumper): never the stream to hand over
+    static final java.util.regex.Pattern PROMO = java.util.regex.Pattern.compile("/(promo|promos|preroll|pre-roll|bumper|bumpers)/");
+
     void request(String url, Map<String, String> headers) {
         String p = path(url);
         boolean hls = p.endsWith(".m3u8"), dash = p.endsWith(".mpd"), flv = p.endsWith(".flv");   // FLV: live sports pages (mpegts.js)
@@ -106,6 +109,7 @@ final class Sniffer {
 
     /** A playlist the page downloaded under a URL with no .m3u8 in it (found by its first bytes). Any thread. */
     void manifest(String url, boolean dash, Map<String, String> headers) {
+        if (PROMO.matcher(path(url)).find()) return;
         String host = Uri.parse(url).getHost();
         if (host == null || AdBlock.blocked(host) || manifests.size() >= 20) return;
         if (isStale(url)) return;
