@@ -75,6 +75,14 @@
     <string name="title_added">Zu Meiner Liste hinzugefügt</string>
     <string name="title_removed">Aus Meiner Liste entfernt</string>
     <string name="title_watch_heading">"Ansehen auf  ·  tippe auf eine Seite, um „%1$s“ zu öffnen"</string>
+    <string name="title_cast">Besetzung</string>
+    <string name="title_director">Regie</string>
+    <string name="title_writer">Drehbuch</string>
+    <string name="title_show">Serie</string>
+    <string name="title_size">%1$d Staffeln, %2$d Folgen</string>
+    <string name="title_size_one">1 Staffel, %2$d Folgen</string>
+    <string name="title_country">Land</string>
+    <string name="title_awards">Preise</string>
     <string name="title_episodes">Folgen</string>
     <string name="title_season">Staffel %1$d</string>
     <string name="title_episode">Folge %1$d</string>

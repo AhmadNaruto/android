@@ -2,6 +2,16 @@
 
 Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes the release notes.
 
+## Unreleased
+
+### 🔧 Changed
+- **Title page**: the sites sit in one row, so the episodes are right below; more about the title (cast, director, seasons and episodes, still running or ended, country, awards).
+- **Anime tab**: its big grid is now Popular anime (real anime only), and keeps loading more.
+
+### 🐞 Fixed
+- **Anime opened from the general catalog** (Death Note and others) listed movie and TV sites: animated titles the anime databases know now get the anime sites.
+- **New site addresses** reach the app within the hour, not only with the 12-hour channel refresh.
+
 ## 2.18.0
 
 ### ✨ New

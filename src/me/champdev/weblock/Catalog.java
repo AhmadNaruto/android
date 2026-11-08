@@ -22,6 +22,15 @@ final class Catalog {
     static final String NEW = "New";
     /** A row's `extra` for New anime (see newAnime). */
     static final String NEW_ANIME = "anime=new", TRENDING_ANIME = "anime=trending";
+    /** The Anime tab's grid: Kitsu's most popular anime (paged), every title marked as anime. Used as the tab's genre. */
+    static final String POPULAR_ANIME = "anime-popular";
+
+    /** Kitsu's page for the grid's skip: Kitsu repeats page one at skip=20, so later pages start at 40 (20 per page). */
+    static List<Title> popularAnime(String extra, boolean diskOnly) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("skip=(\\d+)").matcher(extra);
+        int skip = m.find() ? Integer.parseInt(m.group(1)) : 0;
+        return kitsu("kitsu-anime-popular", new int[]{skip == 0 ? 0 : skip + 20}, 0, diskOnly);
+    }
     static final String KITSU = "https://anime-kitsu.strem.fun";
 
     static final class Episode {
@@ -32,6 +41,7 @@ final class Catalog {
     static final class Title {
         String tmdb = "";   // TheMovieDB id (Cinemeta meta only): many sites key their pages by it
         String id = "", type = "movie", name = "", year = "", rating = "", poster = "", background = "", overview = "", runtime = "", genres = "";
+        String cast = "", director = "", writer = "", country = "", awards = "", status = "";   // from the detail page
         String released = "";   // "2026-10-02T00:00:00.000Z": cinema release for a movie, first episode for a series
         boolean anime;   // set by search, from Kitsu's anime list
         final List<Episode> episodes = new ArrayList<>();
@@ -45,6 +55,7 @@ final class Catalog {
     static List<Title> list(String type, String extra) {
         if (extra.equals(NEW_ANIME)) return newAnime(false);
         if (extra.equals(TRENDING_ANIME)) return kitsu("kitsu-anime-trending", new int[]{0}, 0, false);
+        if (extra.startsWith("genre=" + POPULAR_ANIME)) return popularAnime(extra, false);
         if (extra.startsWith("genre=" + NEW)) return extra.contains("skip=") ? new ArrayList<>() : fresh(type, false);   // one page only
         String text = get(path(type, extra), !extra.startsWith("search="));
         return text == null ? null : parseList(text, type);
@@ -158,6 +169,7 @@ final class Catalog {
     static List<Title> cached(String type, String extra) {
         if (extra.equals(NEW_ANIME)) return newAnime(true);
         if (extra.equals(TRENDING_ANIME)) return kitsu("kitsu-anime-trending", new int[]{0}, 0, true);
+        if (extra.startsWith("genre=" + POPULAR_ANIME)) return popularAnime(extra, true);
         if (extra.startsWith("genre=" + NEW)) return extra.contains("skip=") ? new ArrayList<>() : fresh(type, true);
         File f = file(path(type, extra));
         if (!f.exists() || System.currentTimeMillis() - f.lastModified() > TTL) return null;
@@ -173,6 +185,12 @@ final class Catalog {
      * they have one entry per season, or one entry for the whole run (One Piece), counted from its first episode.
      * From arm.haglund.dev (by IMDb id); empty when unknown. Call off the main thread.
      */
+    /** Whether an IMDb title is an anime (the anime databases know it): for an animated title that came from Cinemeta. Off the main thread. */
+    static boolean isAnime(String imdb) {
+        String text = imdb != null && imdb.startsWith("tt") ? get("https://arm.haglund.dev/api/v2/imdb?id=" + imdb, true) : null;
+        return text != null && text.trim().startsWith("[{");
+    }
+
     static java.util.Map<String, String> animeEntry(Title t, int season, int episode) {
         java.util.Map<String, String> out = new java.util.HashMap<>();
         String text = t.id.startsWith("tt") ? get("https://arm.haglund.dev/api/v2/imdb?id=" + t.id, true) : null;
@@ -206,12 +224,25 @@ final class Catalog {
             t.runtime = full.runtime;
             t.background = full.background;
             t.genres = full.genres;
+            t.cast = full.cast;
+            t.director = full.director;
+            t.writer = full.writer;
+            t.country = full.country;
+            t.awards = full.awards;
+            t.status = full.status;
             if (!full.tmdb.isEmpty()) t.tmdb = full.tmdb;
             if (!full.year.isEmpty()) t.year = full.year;
             if (!full.rating.isEmpty()) t.rating = full.rating;
             t.episodes.clear();
             t.episodes.addAll(full.episodes);
         } catch (JSONException ignored) { }
+    }
+
+    /** The first `max` names of a list, comma separated ("" when there is none). */
+    static String joined(JSONArray a, int max) {
+        List<String> out = new ArrayList<>();
+        for (int i = 0; a != null && i < a.length() && out.size() < max; i++) if (!a.optString(i).isEmpty()) out.add(a.optString(i));
+        return String.join(", ", out);
     }
 
     static List<Title> parseList(String json, String type) {
@@ -245,6 +276,12 @@ final class Catalog {
         List<String> names = new ArrayList<>();
         for (int i = 0; g != null && i < g.length(); i++) names.add(g.getString(i));
         t.genres = String.join(" · ", names);
+        t.cast = joined(o.optJSONArray("cast"), 6);
+        t.director = joined(o.optJSONArray("director"), 3);
+        t.writer = joined(o.optJSONArray("writer"), 3);
+        t.country = o.optString("country");
+        t.awards = o.optString("awards");
+        t.status = o.optString("status");
         JSONArray videos = o.optJSONArray("videos");
         for (int i = 0; videos != null && i < videos.length(); i++) {
             JSONObject v = videos.getJSONObject(i);

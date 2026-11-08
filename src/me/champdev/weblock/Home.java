@@ -105,6 +105,7 @@ public class Home extends Activity {
             boolean iptv = Iptv.stale() && Iptv.refresh();
             if (sites || iptv) runOnUiThread(this::build);
         }));
+        Warp.whenSettled(() -> App.io.execute(Iptv::refreshLinks));
         // Test the channels that were not checked lately (a few at a time, in the background)
         Warp.whenSettled(() -> App.io.execute(Iptv::sweep));
         // A newer release on GitHub shows as a line on Home
@@ -140,7 +141,7 @@ public class Home extends Activity {
             case 1: catalogTab("movie", Cats.MOVIES, ""); break;
             case 2: catalogTab("series", Cats.TV, ""); break;
             case 3: sportsTab(); break;
-            case 4: catalogTab("series", Cats.ANIME, "Animation"); break;
+            case 4: catalogTab("series", Cats.ANIME, Catalog.POPULAR_ANIME); break;
             case 5: iptvTab(); break;
             default: settingsTab();
         }
@@ -530,14 +531,18 @@ public class Home extends Activity {
     }
 
     void showPage(String type, String genre, int skip, LinearLayout holder, Grid grid, int id, List<Catalog.Title> list) {
-        for (Catalog.Title t : list) grid.add(posterCard(t, grid.cell));
-        if (list.size() < 20 || genre.equals(Catalog.NEW)) return;   // New is one list
+        // Kitsu lists each season on its own under one IMDb id: a page of 20 can come back shorter, and a show can come again
+        boolean anime = genre.equals(Catalog.POPULAR_ANIME);
+        @SuppressWarnings("unchecked") java.util.Set<String> seen = holder.getTag() instanceof java.util.Set ? (java.util.Set<String>) holder.getTag() : new java.util.HashSet<>();
+        holder.setTag(seen);
+        for (Catalog.Title t : list) if (seen.add(t.id)) grid.add(posterCard(t, grid.cell));
+        if (list.isEmpty() || (!anime && list.size() < 20) || genre.equals(Catalog.NEW)) return;   // New is one list
         TextView more = text(App.t(R.string.home_load_more), sp(16, 14), TEXT, true);
         more.setGravity(Gravity.CENTER);
         more.setPadding(0, dp(14), 0, dp(14));
         more.setBackground(rounded(0xFF2A2236, dp(14)));
         focusable(more, dp(14));
-        more.setOnClickListener(v -> { holder.removeView(more); loadPage(type, genre, skip + list.size(), holder, grid, id); });
+        more.setOnClickListener(v -> { holder.removeView(more); loadPage(type, genre, skip + (anime ? 20 : list.size()), holder, grid, id); });
         holder.addView(more);
     }
 

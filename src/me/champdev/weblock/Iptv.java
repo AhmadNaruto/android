@@ -338,6 +338,18 @@ final class Iptv {
         }).start();
     }
 
+    /**
+     * The site address table on its own (small; sites change their addresses often): at app start when older than an hour,
+     * apart from the playlists' 12 hours. Call off the main thread.
+     */
+    static void refreshLinks() {
+        if (System.currentTimeMillis() - file("deeplinks.json").lastModified() < 3600_000L) return;
+        if (!extrasUrl().isEmpty()) saveText(extrasUrl(), "iptv-extras.txt");
+        reloadExtras();
+        String links = special("deeplinks");
+        if (!links.isEmpty() && saveText(links, "deeplinks.json")) Sites.reloadDeeplinks();
+    }
+
     /** Every channel including the offline ones (for the checker itself). */
     static synchronized List<Channel> all(boolean everything) {
         if (!everything) return all();

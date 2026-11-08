@@ -75,6 +75,14 @@
     <string name="title_added">تمت الإضافة إلى قائمتي</string>
     <string name="title_removed">تمت الإزالة من قائمتي</string>
     <string name="title_watch_heading">"شاهد على  ·  انقر على موقع لفتح «%1$s»"</string>
+    <string name="title_cast">طاقم التمثيل</string>
+    <string name="title_director">المخرج</string>
+    <string name="title_writer">الكاتب</string>
+    <string name="title_show">المسلسل</string>
+    <string name="title_size">%1$d مواسم، %2$d حلقة</string>
+    <string name="title_size_one">موسم واحد، %2$d حلقة</string>
+    <string name="title_country">البلد</string>
+    <string name="title_awards">الجوائز</string>
     <string name="title_episodes">الحلقات</string>
     <string name="title_season">الموسم %1$d</string>
     <string name="title_episode">الحلقة %1$d</string>

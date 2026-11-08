@@ -75,6 +75,14 @@
     <string name="title_added">Added to My list</string>
     <string name="title_removed">Removed from My list</string>
     <string name="title_watch_heading">"Watch on  ·  tap a site to open “%1$s”"</string>
+    <string name="title_cast">Cast</string>
+    <string name="title_director">Director</string>
+    <string name="title_writer">Writer</string>
+    <string name="title_show">Series</string>
+    <string name="title_size">%1$d seasons, %2$d episodes</string>
+    <string name="title_size_one">1 season, %2$d episodes</string>
+    <string name="title_country">From</string>
+    <string name="title_awards">Awards</string>
     <string name="title_episodes">Episodes</string>
     <string name="title_season">Season %1$d</string>
     <string name="title_episode">Episode %1$d</string>

@@ -31,7 +31,7 @@
     <string name="home_sites">المواقع</string>
     <string name="home_new_anime">أنمي جديد</string>
     <string name="home_newly_released">أُصدر حديثًا</string>
-    <string name="home_popular_animation">الرسوم المتحركة الأكثر شعبية</string>
+    <string name="home_popular_animation">الأنمي الأكثر شعبية</string>
     <string name="home_catalog_retry">تعذّر الوصول إلى الفهرس. انقر لإعادة المحاولة</string>
     <string name="home_nothing_here">لا يوجد شيء هنا</string>
     <string name="home_load_more">تحميل المزيد</string>

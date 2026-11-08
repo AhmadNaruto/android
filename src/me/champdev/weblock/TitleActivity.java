@@ -30,6 +30,8 @@ public class TitleActivity extends Home {
         super.onCreate(state);
         App.io.execute(() -> {
             Catalog.fill(t);
+            // An animated title from the movie / TV catalog (or search, My list) that the anime databases know: show anime sites
+            if (!t.anime && t.genres.contains("Animation") && Catalog.isAnime(t.id)) t.anime = true;
             runOnUiThread(() -> {
                 if (t.series() && Catalog.seasons(t) > 0 && season > Catalog.seasons(t)) season = 1;
                 refocus = true;
@@ -95,6 +97,35 @@ public class TitleActivity extends Home {
             overview.setPadding(0, dp(12), 0, 0);
             col.addView(overview);
         }
+        // Who made it and who is in it, where it is from, awards, and for a series whether it still runs and how much there is
+        List<String[]> facts = new ArrayList<>();
+        if (!t.cast.isEmpty()) facts.add(new String[]{App.t(R.string.title_cast), t.cast});
+        if (!t.director.isEmpty()) facts.add(new String[]{App.t(R.string.title_director), t.director});
+        else if (!t.writer.isEmpty()) facts.add(new String[]{App.t(R.string.title_writer), t.writer});
+        if (t.series() && !t.episodes.isEmpty()) {
+            int n = Catalog.seasons(t);
+            String size = App.t(n == 1 ? R.string.title_size_one : R.string.title_size, n, t.episodes.size());
+            facts.add(new String[]{App.t(R.string.title_show), t.status.isEmpty() ? size : size + "  ·  " + t.status});
+        }
+        if (!t.country.isEmpty()) facts.add(new String[]{App.t(R.string.title_country), t.country});
+        if (!t.awards.isEmpty()) facts.add(new String[]{App.t(R.string.title_awards), t.awards});
+        if (!facts.isEmpty()) {
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setPadding(0, u(14, 10), 0, 0);
+            for (String[] f : facts) {
+                android.text.SpannableStringBuilder fact = new android.text.SpannableStringBuilder(f[0] + "   ");
+                fact.setSpan(new android.text.style.ForegroundColorSpan(MUTED), 0, f[0].length(), 0);
+                fact.append(f[1]);
+                TextView v = text("", sp(15, 13), TEXT, false);
+                v.setText(fact);
+                v.setMaxLines(2);
+                v.setEllipsize(TextUtils.TruncateAt.END);
+                v.setPadding(0, dp(3), 0, dp(3));
+                box.addView(v);
+            }
+            col.addView(box);
+        }
 
         LinearLayout buttons = new LinearLayout(this);
         buttons.setPadding(0, u(18, 12), 0, u(4, 2));
@@ -125,9 +156,10 @@ public class TitleActivity extends Home {
         // The sites that carry this kind of title: tap one and its own search box is filled in with the title
         List<Sites.Site> sites = options();
         if (!sites.isEmpty()) {
+            // one row that scrolls sideways, so the episodes below are a short move away
             col.addView(heading(App.t(R.string.title_watch_heading, t.name)));
-            Grid grid = new Grid(col);
-            for (Sites.Site s : sites) grid.add(s);
+            LinearLayout row = row();
+            for (Sites.Site s : sites) row.addView(siteCard(s, true));
         }
         if (t.series() && !t.episodes.isEmpty()) episodes();
         if (App.tv && refocus) col.postDelayed(watch::requestFocus, 60);

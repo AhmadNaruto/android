@@ -75,6 +75,14 @@
     <string name="title_added">मेरी लिस्ट में जोड़ा गया</string>
     <string name="title_removed">मेरी लिस्ट से हटाया गया</string>
     <string name="title_watch_heading">"यहाँ देखें  ·  “%1$s” खोलने के लिए कोई साइट टैप करें"</string>
+    <string name="title_cast">कलाकार</string>
+    <string name="title_director">निर्देशक</string>
+    <string name="title_writer">लेखक</string>
+    <string name="title_show">सीरीज़</string>
+    <string name="title_size">%1$d सीज़न, %2$d एपिसोड</string>
+    <string name="title_size_one">1 सीज़न, %2$d एपिसोड</string>
+    <string name="title_country">देश</string>
+    <string name="title_awards">पुरस्कार</string>
     <string name="title_episodes">एपिसोड</string>
     <string name="title_season">सीज़न %1$d</string>
     <string name="title_episode">एपिसोड %1$d</string>

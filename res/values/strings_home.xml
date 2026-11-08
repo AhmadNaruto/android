@@ -31,7 +31,7 @@
     <string name="home_sites">Sites</string>
     <string name="home_new_anime">New anime</string>
     <string name="home_newly_released">Newly released</string>
-    <string name="home_popular_animation">Popular animation</string>
+    <string name="home_popular_animation">Popular anime</string>
     <string name="home_catalog_retry">Can\'t reach the catalog. Tap to retry</string>
     <string name="home_nothing_here">Nothing here</string>
     <string name="home_load_more">Load more</string>

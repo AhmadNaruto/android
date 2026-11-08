@@ -75,6 +75,14 @@
     <string name="title_added">Ditambahkan ke Daftar saya</string>
     <string name="title_removed">Dihapus dari Daftar saya</string>
     <string name="title_watch_heading">"Tonton di  ·  ketuk situs untuk membuka “%1$s”"</string>
+    <string name="title_cast">Pemeran</string>
+    <string name="title_director">Sutradara</string>
+    <string name="title_writer">Penulis</string>
+    <string name="title_show">Serial</string>
+    <string name="title_size">%1$d musim, %2$d episode</string>
+    <string name="title_size_one">1 musim, %2$d episode</string>
+    <string name="title_country">Negara</string>
+    <string name="title_awards">Penghargaan</string>
     <string name="title_episodes">Episode</string>
     <string name="title_season">Musim %1$d</string>
     <string name="title_episode">Episode %1$d</string>
