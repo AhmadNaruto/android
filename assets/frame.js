@@ -400,8 +400,13 @@
       startPlayer();
     } else if (d.fp === 'reply') up(d);
     else if (d.fp === 'click') {
-      const i = items.findIndex((_, j) => fid + ':' + j === d.k);
-      if (i >= 0) press(items[i]);
+      let it = items.find((_, j) => fid + ':' + j === d.k);
+      // a Sub / Dub kept from an earlier look at this page: the list was read again since, so find it by its name
+      if (String(d.k).startsWith(fid + ':') && d.kind === 'a' && (!it || it.label !== d.label)) {
+        const b = comboBtn('a');
+        it = selects().a.find(x => x.label === d.label) || audioToggles().find(x => x.label === d.label) || (b ? { combo: b, kind: 'a', label: d.label } : null);
+      }
+      if (it) press(it);
       down(d);
     }
   });

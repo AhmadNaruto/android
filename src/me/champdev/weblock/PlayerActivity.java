@@ -374,8 +374,8 @@ public class PlayerActivity extends Activity {
         chipPrev = chip(R.drawable.ic_p_prev, () -> { int[] n = episodeStep(-1); if (n != null) playEpisode(n[0], n[1]); });
         chipNext = chip(R.drawable.ic_p_next, () -> { int[] n = episodeStep(1); if (n != null) playEpisode(n[0], n[1]); });
         chipQuality = chip(R.drawable.ic_p_quality, this::pickQuality);
-        chipAudio = chip(R.drawable.ic_p_audio, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, App.t(R.string.player_audio), false));
-        chipDub = chip(R.drawable.ic_p_dub, this::pickSubDub);
+        chipAudio = chip(R.drawable.ic_p_language, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_AUDIO, App.t(R.string.player_audio), false));
+        chipDub = chip(R.drawable.ic_p_language, this::pickSubDub);
         chipEpisodes = chip(R.drawable.ic_p_episodes, this::episodesPanel);
         chipServers = chip(R.drawable.ic_p_servers, () -> pickServer());
         chipSubs = chip(R.drawable.ic_p_subs, () -> pickTrack(player.getCurrentTracks(), C.TRACK_TYPE_TEXT, App.t(R.string.player_subtitles), true));
@@ -612,6 +612,24 @@ public class PlayerActivity extends Activity {
         return t;
     }
 
+    /** A white rounded badge with the letters cut out of it, like the CC icon: "SUB", "DUB". */
+    android.graphics.drawable.Drawable badge(String text) {
+        int w = dp(30), h = dp(20);
+        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas c = new android.graphics.Canvas(b);
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        p.setColor(Color.WHITE);
+        c.drawRoundRect(0, 0, w, h, dp(4), dp(4), p);
+        p.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR));
+        p.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD));
+        p.setTextSize(dp(11));
+        p.setTextAlign(android.graphics.Paint.Align.CENTER);
+        p.setLetterSpacing(0.04f);
+        android.graphics.Paint.FontMetrics fm = p.getFontMetrics();
+        c.drawText(text, w / 2f, h / 2f - (fm.ascent + fm.descent) / 2, p);
+        return new android.graphics.drawable.BitmapDrawable(getResources(), b);
+    }
+
     /** Show or hide a button and give it its name (long press, TalkBack). What it is set to shows in the line under the title. */
     void show(LinearLayout t, boolean visible, String label) {
         t.setVisibility(visible ? View.VISIBLE : View.GONE);
@@ -703,6 +721,13 @@ public class PlayerActivity extends Activity {
         show(chipNext, next != null, next == null ? "" : App.t(R.string.player_next_episode, next[0], next[1]));
         String sd = subDubNow();
         show(chipDub, subDub().size() >= 2, App.t(R.string.player_sub_dub, sd));
+        if (!sd.equals(chipDub.getTag())) {   // its icon says which: SUB or DUB (or the first letters of another, like HIN)
+            chipDub.setTag(sd);
+            ImageView img = (ImageView) chipDub.getChildAt(0);
+            img.setImageDrawable(badge(sd.isEmpty() ? "SUB" : sd.substring(0, Math.min(3, sd.length())).toUpperCase(Locale.ROOT)));
+            img.getLayoutParams().width = dp(30);
+            img.requestLayout();
+        }
         show(chipCast, !App.tv && (casting != null || Cast.any()), casting != null ? App.t(R.string.cast_playing_on, casting) : App.t(R.string.cast_to_tv));
         // Under the title: the episode, then what is picked (quality, audio, Sub / Dub, subtitles, server)
         List<String> info = new ArrayList<>();
@@ -1590,7 +1615,10 @@ public class PlayerActivity extends Activity {
         page.rememberAudio(label);
         carryMs = player.getCurrentPosition();   // the same episode in the other language: carry on from here
         carryAt = SystemClock.elapsedRealtime();
-        if (!key.isEmpty()) page.switchServer(key);
+        if (!key.isEmpty()) {
+            for (Map.Entry<String, String[]> e : page.audios.entrySet()) e.getValue()[1] = e.getKey().equals(key) ? "1" : "";   // the pick is now the one playing
+            page.switchServer(key);
+        }
         else {
             int[] pe = pageEpisode();
             page.pendingEpisode = new int[]{Math.max(1, pe[0]), pe[1]};

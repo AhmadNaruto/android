@@ -114,6 +114,7 @@ public class WebActivity extends Activity {
     // The native player lists these (found on the page when a stream starts) and asks us to press one
     static WebActivity active;
     final java.util.Map<String, String[]> servers = new java.util.LinkedHashMap<>(), qualities = new java.util.LinkedHashMap<>(), audios = new java.util.LinkedHashMap<>();
+    String audiosAt;   // the page the Sub / Dub list belongs to
     String audioTriedAt = "";   // the page address the remembered Sub / Dub pick was last applied on
     String pendingServer;
     int[] pendingEpisode;      // {season, episode} picked in the player's Episodes list, opened when the page is back
@@ -391,6 +392,8 @@ public class WebActivity extends Activity {
 
             @Override public void doUpdateVisitedHistory(WebView v, String url, boolean reload) {
                 mainNavAt = SystemClock.uptimeMillis();
+                if (!Sniffer.path(url).equals(Sniffer.path(String.valueOf(audiosAt)))) audios.clear();   // another episode or title
+                audiosAt = url;
                 if (urlBar != null) urlBar.setText(url);
                 sniffer.page(url);
                 scheduleCapture();
@@ -466,8 +469,7 @@ public class WebActivity extends Activity {
     void onSeen() {
         if (!resumed || isFinishing()) return;
         servers.clear();
-        qualities.clear();
-        audios.clear();
+        qualities.clear();   // Sub / Dub stays until the page changes: a scan right after a switch may miss its menu
         scanDone = false;
         web.evaluateJavascript(CHIP, null);   // a stream is here: the button stays until the player takes it, or for you to press
         web.evaluateJavascript("postMessage({fp:'servers'},'*')", null);
@@ -528,12 +530,12 @@ public class WebActivity extends Activity {
         App.main.removeCallbacks(waitedHandoff);
         handoffWaiting = false;
         sniffer.switching();
-        web.evaluateJavascript("postMessage({fp:'click',k:" + JSONObject.quote(wantKey) + "},'*')", null);
+        web.evaluateJavascript(clickJs(wantKey), null);
         final String back = nowKey;
         App.main.postDelayed(() -> {
             if (!resumed || isFinishing() || sniffer.has() || back == null) return;
             sniffer.fresh();
-            web.evaluateJavascript("postMessage({fp:'click',k:" + JSONObject.quote(back) + "},'*')", null);
+            web.evaluateJavascript(clickJs(back), null);
         }, 9000);
         return true;
     }
@@ -583,6 +585,13 @@ public class WebActivity extends Activity {
         episodeFound = false;
         web.evaluateJavascript("postMessage({fp:'episode',s:" + season + ",e:" + episode + "},'*')", null);
         App.main.postDelayed(() -> { if (!episodeFound && !isFinishing()) toast(App.t(R.string.web_pick_episode, season, episode)); }, 4000);
+    }
+
+    /** Press a listed choice on the page; its name and kind go along, so frame.js can find it again if the page was redrawn. */
+    String clickJs(String key) {
+        String[] v = audios.containsKey(key) ? audios.get(key) : servers.containsKey(key) ? servers.get(key) : qualities.get(key);
+        String kind = audios.containsKey(key) ? "a" : qualities.containsKey(key) ? "q" : "s";
+        return "postMessage({fp:'click',k:" + JSONObject.quote(key) + ",kind:'" + kind + "',label:" + JSONObject.quote(v == null ? "" : v[0]) + "},'*')";
     }
 
     /** From the native player's Servers list: leave the player, press that button on the page, and go native again when its stream starts. */
@@ -718,6 +727,7 @@ public class WebActivity extends Activity {
                 JSONArray a = new JSONArray(json);
                 App.main.post(() -> {
                     try {
+                        for (int i = 0; i < a.length(); i++) if ("a".equals(a.getJSONObject(i).optString("kind"))) { audios.clear(); break; }   // a fresh Sub / Dub list
                         for (int i = 0; i < a.length(); i++) {
                             JSONObject o = a.getJSONObject(i);
                             String kind = o.optString("kind");
@@ -956,7 +966,7 @@ public class WebActivity extends Activity {
             String k = pendingServer;
             pendingServer = null;
             sniffer.fresh();
-            web.evaluateJavascript("postMessage({fp:'click',k:" + JSONObject.quote(k) + "},'*')", null);
+            web.evaluateJavascript(clickJs(k), null);
         }
         web.onResume();
         web.resumeTimers();
