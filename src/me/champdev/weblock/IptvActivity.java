@@ -102,7 +102,13 @@ public class IptvActivity extends Home {
         list.setPadding(0, dp(10), 0, dp(20));
         GradientDrawable ring = rounded(0x22FF3B5C, dp(14));
         ring.setStroke(dp(3), ACCENT);
-        list.setSelector(ring);
+        // Only while the grid has the remote (or a finger is on a tile): a plain shape stays drawn on the last tile when the
+        // remote moves up to the chips, which looks like two things have focus
+        android.graphics.drawable.StateListDrawable sel = new android.graphics.drawable.StateListDrawable();
+        sel.addState(new int[]{android.R.attr.state_focused}, ring);
+        sel.addState(new int[]{android.R.attr.state_pressed}, ring);
+        sel.addState(new int[0], new android.graphics.drawable.ColorDrawable(0));
+        list.setSelector(sel);
         list.setDrawSelectorOnTop(true);
         adapter = new BaseAdapter() {
             @Override public int getCount() { return shown.size(); }

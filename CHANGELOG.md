@@ -19,6 +19,7 @@ Each `vX.Y.Z` tag publishes the TV and Android APKs; its section below becomes t
 - **Hold to speed up**: hold the right side of the picture for 2x, the left side to go back at 2x.
 
 ### 🐞 Fixed
+- **IPTV lists on a TV**: the last channel tile kept its pink ring after the remote moved up to the chips, so two things looked selected.
 - **StreamCorner** showed a blank page (it refuses to start when the page's fetch is watched as it loads) and its live streams (FLV) never reached the player: both work now.
 - **Servers** on Cinejoy showed the player's two "10" skip buttons; it now finds the real server list (it opens a moment later).
 - **Sites that pass every stream through one proxy address** (NekoWatch and others): a new episode or the Dub version now goes to the native player instead of being taken for the old stream.
